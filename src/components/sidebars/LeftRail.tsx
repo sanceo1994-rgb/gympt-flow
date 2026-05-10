@@ -1,33 +1,28 @@
-import { Sparkles, TrendingUp, MapPin } from "lucide-react";
+import { TrendingUp, Sparkles } from "lucide-react";
 
 export function LeftRail() {
   return (
     <div className="space-y-3">
-      {/* Ad slot */}
-      <div className="rounded-2xl border border-border bg-card overflow-hidden">
-        <div className="relative h-32 bg-gradient-to-br from-primary to-[#FF6BA8]">
-          <div className="absolute inset-0 bg-grid opacity-20" />
-          <div className="absolute bottom-3 left-4 text-white">
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">AD</p>
-            <p className="text-[15px] font-extrabold leading-tight">짐피티 Pro<br />첫 달 50% 할인</p>
-          </div>
-        </div>
-        <div className="p-4">
-          <p className="text-[12px] text-ink-soft leading-relaxed">
-            학생 40명 + 알림톡 600건 포함. 지금 가입하면 한 달 무료.
-          </p>
-          <button className="mt-3 inline-flex h-9 items-center px-4 rounded-full bg-ink text-white text-[12px] font-bold w-full justify-center">
-            요금제 보기
-          </button>
-        </div>
+      {/* Ad slot — flat, friendly */}
+      <div className="rounded-2xl bg-white border border-border p-4">
+        <span className="inline-flex items-center px-2 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-black tracking-widest">AD</span>
+        <p className="mt-3 text-[16px] font-extrabold text-ink leading-tight">
+          짐피티 Pro<br />첫 달 50% 할인
+        </p>
+        <p className="mt-2 text-[12px] text-ink-soft leading-relaxed">
+          학생 40명 + 알림톡 600건 포함. 지금 가입하면 한 달 무료.
+        </p>
+        <button className="mt-4 inline-flex h-9 items-center px-4 rounded-full bg-ink text-white text-[12px] font-bold w-full justify-center">
+          요금제 보기
+        </button>
       </div>
 
       {/* Ranking */}
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="rounded-2xl bg-white border border-border p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary" />
-            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">인기 트레이너 랭킹</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">인기 트레이너</p>
           </div>
           <span className="text-[10px] text-muted-foreground">금주</span>
         </div>
@@ -53,7 +48,7 @@ export function LeftRail() {
       </div>
 
       {/* Tip */}
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="rounded-2xl bg-white border border-border p-4">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
           <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">짐피티 팁</p>
