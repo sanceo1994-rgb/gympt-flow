@@ -372,53 +372,6 @@ function Schedule() {
         </div>
       </section>
 
-      {/* SECTION 3 — AI result */}
-      <section className="mt-10 pb-4">
-        <SectionHeader index="03" title="AI 최적 시간표" subtitle="학생 선택과 닫힌 시간을 모두 고려해 자동 배정합니다." />
-
-        <div className="mt-4 rounded-2xl bg-ink text-white p-5 sm:p-6 relative overflow-hidden">
-          <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-primary/40 blur-3xl" />
-          <div className="flex items-start justify-between gap-3 flex-wrap relative">
-            <div>
-              <span className="chip bg-white/10 text-white"><Sparkles className="h-3 w-3" /> AI 결과</span>
-              <h3 className="mt-2 text-[22px] font-black leading-tight">
-                학생 6명 / <span className="text-primary">6명 자동 배정</span><br />
-                선호도 만족 <span className="text-primary">94%</span>
-              </h3>
-            </div>
-            <div className="flex gap-2">
-              <button className="h-10 px-4 rounded-full bg-white/10 text-white text-[12px] font-bold">다시 계산</button>
-              <button className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1">
-                <Check className="h-3.5 w-3.5" /> 확정 알림 보내기
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-border overflow-hidden">
-          <table className="w-full text-[13px]">
-            <thead className="bg-surface-muted">
-              <tr className="text-left text-[11px] font-bold uppercase text-ink-soft">
-                <th className="px-4 py-3">시간</th>
-                <th className="px-4 py-3">학생</th>
-                <th className="px-4 py-3 text-right">조치</th>
-              </tr>
-            </thead>
-            <tbody>
-              {AI_RESULT_INIT.map((r, i) => (
-                <tr key={i} className="border-t border-border">
-                  <td className="px-4 py-3 font-extrabold text-ink tabular-nums">{r.day} {r.hour}</td>
-                  <td className="px-4 py-3 text-ink">{r.name}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="h-7 px-3 rounded-full bg-white border border-border text-[11px] font-bold">변경</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
       {/* Edit dialog */}
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
         <DialogContent>
