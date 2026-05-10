@@ -50,7 +50,7 @@ function Hero() {
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
-              to="/dashboard"
+              to="/schedule"
               className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white text-[14px] font-bold shadow-pink hover:brightness-110"
             >
               무료로 시작하기 <ArrowRight className="ml-1 h-4 w-4" />
@@ -340,7 +340,7 @@ function FinalCTA() {
         <span className="grad-pink-text">일정은 짐피티가.</span>
       </h3>
       <div className="mt-5 flex justify-center gap-3 flex-wrap">
-        <Link to="/dashboard" className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white font-bold shadow-pink">
+        <Link to="/schedule" className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white font-bold shadow-pink">
           무료로 시작하기
         </Link>
         <Link to="/pricing" className="inline-flex h-12 items-center px-6 rounded-full bg-card border border-border-strong text-ink font-bold">

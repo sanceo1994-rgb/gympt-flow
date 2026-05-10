@@ -1,15 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
+import { Menu, X, CalendarDays, ClipboardList } from "lucide-react";
 import { useState } from "react";
 
 const NAV = [
   { to: "/", label: "홈" },
-  { to: "/dashboard", label: "트레이너 대시보드" },
-  { to: "/students", label: "내 학생" },
-  { to: "/schedule", label: "주간 일정" },
-  { to: "/booking", label: "학생 예약" },
-  { to: "/ai-result", label: "AI 시간표" },
-  { to: "/notifications", label: "알림" },
+  { to: "/schedule", label: "트레이너 일정 조율", icon: ClipboardList },
+  { to: "/booking", label: "학생 예약", icon: CalendarDays },
   { to: "/pricing", label: "요금제" },
 ];
 
@@ -18,7 +14,7 @@ export function TopBar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/70 bg-background/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-card/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-2">
@@ -30,17 +26,18 @@ export function TopBar() {
             </span>
           </Link>
           <nav className="hidden lg:flex items-center gap-1">
-            {NAV.slice(1, 6).map((n) => {
+            {NAV.slice(1, 3).map((n) => {
               const active = path === n.to;
+              const Icon = n.icon!;
               return (
                 <Link
                   key={n.to}
                   to={n.to}
-                  className={`px-3 py-1.5 rounded-full text-[13px] font-semibold transition ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition ${
                     active ? "bg-ink text-white" : "text-ink-soft hover:text-ink hover:bg-muted"
                   }`}
                 >
-                  {n.label}
+                  <Icon className="h-3.5 w-3.5" /> {n.label}
                 </Link>
               );
             })}
@@ -60,7 +57,7 @@ export function TopBar() {
             로그인
           </Link>
           <Link
-            to="/dashboard"
+            to="/schedule"
             className="inline-flex h-9 items-center px-4 rounded-full text-[13px] font-bold bg-primary text-white shadow-pop hover:brightness-110"
           >
             무료로 시작하기

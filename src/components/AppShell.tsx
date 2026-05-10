@@ -7,24 +7,33 @@ type Props = {
   children: ReactNode;
   left?: ReactNode;
   right?: ReactNode;
-  /** When true, sidebars render below center on mobile */
-  showSidebarsOnMobile?: boolean;
+  /** Remove the default white card wrapping the main column (use when page has its own surface) */
+  bare?: boolean;
 };
 
-export function AppShell({ children, left, right, showSidebarsOnMobile = false }: Props) {
+export function AppShell({ children, left, right, bare = false }: Props) {
   return (
-    <div className="min-h-screen bg-surface text-ink">
+    <div className="min-h-screen bg-surface-muted text-ink">
       <TopBar />
-      <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 lg:py-6">
-        <div className="grid grid-cols-12 gap-4 lg:gap-6">
+      <div className="mx-auto max-w-[1440px] px-3 sm:px-5 lg:px-6 py-4 lg:py-6">
+        <div className="grid grid-cols-12 gap-4 lg:gap-5">
+          {/* LEFT — clearly grey rail */}
           <aside className="hidden lg:block lg:col-span-3 xl:col-span-3">
-            <div className="sticky top-20 space-y-4">{left ?? <LeftRail />}</div>
+            <div className="sticky top-20 space-y-3">{left ?? <LeftRail />}</div>
           </aside>
+
+          {/* CENTER — only main content, white surface */}
           <main className="col-span-12 lg:col-span-6 xl:col-span-6">
-            <div className="panel p-4 sm:p-6 lg:p-8">{children}</div>
+            {bare ? (
+              <div className="rounded-3xl bg-card border border-border overflow-hidden">{children}</div>
+            ) : (
+              <div className="rounded-3xl bg-card border border-border p-4 sm:p-6 lg:p-8">{children}</div>
+            )}
           </main>
-          <aside className={`col-span-12 lg:col-span-3 xl:col-span-3 ${showSidebarsOnMobile ? "" : "hidden lg:block"}`}>
-            <div className="sticky top-20 space-y-4">{right ?? <RightRail />}</div>
+
+          {/* RIGHT — clearly grey rail */}
+          <aside className="hidden lg:block lg:col-span-3 xl:col-span-3">
+            <div className="sticky top-20 space-y-3">{right ?? <RightRail />}</div>
           </aside>
         </div>
       </div>
@@ -53,8 +62,8 @@ function Footer() {
           <div>
             <p className="font-semibold text-ink mb-2">서비스</p>
             <ul className="space-y-1.5 text-muted-foreground">
-              <li>트레이너 대시보드</li>
-              <li>학생 예약 링크</li>
+              <li>트레이너 일정 조율</li>
+              <li>학생 예약 페이지</li>
               <li>AI 최적 시간표</li>
               <li>알림톡</li>
             </ul>
