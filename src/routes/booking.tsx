@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React, { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Check, Ban, Info, X, MessageCircle, Lock } from "lucide-react";
+import { Check, Ban, Info, X, MessageCircle, Lock, Instagram, Megaphone, Award } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/booking")({
