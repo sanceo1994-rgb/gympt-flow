@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { ArrowRight, Check, Sparkles, Zap, Users, CalendarCheck, Bell, ShieldCheck, Star } from "lucide-react";
+import { ArrowRight, Check, Sparkles, Zap, Star } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import iconCalendar from "@/assets/icon-calendar.png";
 import iconChat from "@/assets/icon-chat.png";
-import iconTrophy from "@/assets/icon-trophy.png";
+import { Badge } from "@/components/Badge";
 
 export const Route = createFileRoute("/")({
   head: () => ({
