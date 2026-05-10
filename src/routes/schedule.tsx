@@ -125,7 +125,7 @@ function Schedule() {
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">트레이너 일정 조율</p>
           <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-[1.15] tracking-tight">
-            한 페이지에서 끝내는<br />주간 일정 조율
+            박재현 트레이너님!<br />저희가 시간을 조율해드릴게요
           </h1>
         </div>
         <div className="flex gap-2">
