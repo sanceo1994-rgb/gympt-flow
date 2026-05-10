@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Plus, Link as LinkIcon, Copy, Send } from "lucide-react";
 
 export const Route = createFileRoute("/schedule")({
@@ -56,8 +56,8 @@ function Schedule() {
           <div></div>
           {DAYS.map((d) => <div key={d} className="text-center font-bold text-ink-soft text-[12px] py-2">{d}</div>)}
           {TIMES.map((t) => (
-            <>
-              <div key={t} className="text-right pr-2 text-muted-foreground text-[12px] font-semibold self-center">{t}</div>
+            <React.Fragment key={t}>
+              <div className="text-right pr-2 text-muted-foreground text-[12px] font-semibold self-center">{t}</div>
               {DAYS.map((d) => {
                 const key = `${d}-${t}`;
                 const cap = slots[key];
@@ -80,7 +80,7 @@ function Schedule() {
                   </button>
                 );
               })}
-            </>
+            </React.Fragment>
           ))}
         </div>
       </div>
