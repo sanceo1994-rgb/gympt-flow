@@ -365,14 +365,3 @@ function SectionHead({ eyebrow, title, actionLabel, actionTo }: { eyebrow: strin
   );
 }
 
-function Badge({ children, tone }: { children: React.ReactNode; tone: "primary" | "ink" | "muted" | "warn" }) {
-  const tones = {
-    primary: "bg-primary-soft text-primary",
-    ink: "bg-ink text-white",
-    muted: "bg-muted text-ink-soft",
-    warn: "bg-warning/15 text-warning",
-  };
-  return <span className={`inline-flex items-center px-2.5 h-6 rounded-full text-[11px] font-bold ${tones[tone]}`}>{children}</span>;
-}
-
-export { Badge };
