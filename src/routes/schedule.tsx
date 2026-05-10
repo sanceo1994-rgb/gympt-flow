@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Plus, Link as LinkIcon, Copy, Send, Sparkles, Ban, Check, Clock, Users, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/schedule")({

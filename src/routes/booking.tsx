@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Check, Sparkles, Ban, Info, X } from "lucide-react";
 
