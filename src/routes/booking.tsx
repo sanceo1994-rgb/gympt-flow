@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React, { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Check, Ban, Info, X, MessageCircle, Lock } from "lucide-react";
+import { Check, Ban, Info, X, MessageCircle, Lock, Instagram, Megaphone, Award } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/booking")({
@@ -86,13 +86,56 @@ function Booking() {
 
   return (
     <AppShell>
+      {/* Trainer profile */}
+      <section className="rounded-2xl border border-border overflow-hidden bg-white">
+        <div className="relative h-24 bg-gradient-to-br from-primary to-[#FF6FB1]" />
+        <div className="px-5 sm:px-6 pb-5 -mt-10">
+          <div className="flex items-end gap-4">
+            <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink">박</div>
+            <div className="flex-1 pb-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">하이엔드 피트니스 · 강남점</p>
+              <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">박재현 트레이너</h1>
+            </div>
+            <a
+              href="https://instagram.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="h-10 px-3.5 rounded-full bg-ink text-white text-[12px] font-bold inline-flex items-center gap-1.5 hover:brightness-110"
+            >
+              <Instagram className="h-3.5 w-3.5" /> 인스타
+            </a>
+          </div>
+          <p className="mt-4 text-[13.5px] text-ink-soft leading-relaxed">
+            8년차 퍼스널 트레이너. 부상 없이 오래 가는 운동을 만들어요. 체형 교정 · 다이어트 · 근비대 전문.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-bold"><Award className="h-3 w-3" /> 2024 NPC 보디빌딩 1위</span>
+            <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-muted text-ink text-[11px] font-bold"><Award className="h-3 w-3" /> NSCA-CPT</span>
+            <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-muted text-ink text-[11px] font-bold"><Award className="h-3 w-3" /> 생활스포츠지도사 2급</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Announcement */}
+      <section className="mt-3 rounded-2xl border border-primary/20 bg-primary/[0.04] p-4 sm:p-5 flex gap-3">
+        <div className="h-8 w-8 rounded-full bg-primary text-white grid place-items-center shrink-0">
+          <Megaphone className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-primary">트레이너 공지</p>
+          <p className="mt-0.5 text-[13.5px] text-ink leading-relaxed">
+            5월 25일(월)은 세미나로 휴무입니다. 해당 주는 화·수·금에 더 많은 시간대를 열어두었으니 미리 선택 부탁드려요!
+          </p>
+        </div>
+      </section>
+
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div className="mt-6 flex items-start justify-between gap-3 flex-wrap">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">학생 예약 · 다음 주</p>
-          <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-[1.15] tracking-tight">
+          <h2 className="mt-1.5 text-[24px] sm:text-[28px] font-black text-ink leading-[1.15] tracking-tight">
             가능한 시간을<br />원하는 만큼 골라주세요
-          </h1>
+          </h2>
           <p className="mt-2 text-[13.5px] text-ink-soft leading-relaxed">
             색이 진할수록 다른 학생들이 많이 선택한 시간이에요. 트레이너님이 모두 모아 가장 잘 맞는 시간으로 확정해 드려요.
           </p>
