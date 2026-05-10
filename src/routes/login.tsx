@@ -64,7 +64,7 @@ function Login() {
 
           <p className="mt-6 text-center text-[13px] text-ink-soft">
             처음이신가요?{" "}
-            <Link to="/dashboard" className="text-primary font-bold hover:underline">무료 가입하기</Link>
+            <Link to="/schedule" className="text-primary font-bold hover:underline">무료 가입하기</Link>
           </p>
         </div>
       </div>
