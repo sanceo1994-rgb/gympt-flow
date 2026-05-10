@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import React, { useState } from "react";
-import { Link as LinkIcon, Copy, Send, Sparkles, Check, ChevronLeft, ChevronRight, Ban, Lock } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Send, Sparkles, Check, ChevronLeft, ChevronRight, Ban, Lock, Users, MailCheck, CalendarCheck, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/schedule")({
   head: () => ({
@@ -16,7 +17,6 @@ export const Route = createFileRoute("/schedule")({
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
 const HOURS = Array.from({ length: 17 }, (_, i) => 6 + i);
 
-// Map: slot key -> list of student names who selected it
 const PICKS: Record<string, string[]> = {
   "월-19": ["김지원", "한승호", "최유나", "이도현"],
   "월-20": ["김지원", "한승호", "박서윤", "최유나", "정수민"],
@@ -51,17 +51,26 @@ function getWeekLabel(offset: number) {
 }
 
 type Status = "응답완료" | "응답대기" | "불가";
-const STUDENTS: { name: string; status: Status; picks: string[] }[] = [
-  { name: "김지원", status: "응답완료", picks: ["월 19시", "월 20시", "수 19시", "금 19시"] },
-  { name: "박서윤", status: "응답완료", picks: ["화 07시", "수 19시", "금 19시", "금 20시"] },
-  { name: "최유나", status: "응답완료", picks: ["수 09시", "수 19시", "금 19시", "토 09시"] },
-  { name: "정수민", status: "응답완료", picks: ["화 07시", "토 09시", "토 11시"] },
-  { name: "한승호", status: "응답완료", picks: ["월 19시", "월 20시", "수 19시", "금 19시"] },
-  { name: "이도현", status: "응답대기", picks: [] },
-  { name: "오지훈", status: "불가", picks: [] },
+type Student = {
+  name: string;
+  status: Status;
+  picks: string[];
+  lastPT: string;
+  remaining: number;
+  total: number;
+};
+
+const STUDENTS: Student[] = [
+  { name: "김지원", status: "응답완료", picks: ["월 19시", "월 20시", "수 19시", "금 19시"], lastPT: "5.7 (목)", remaining: 14, total: 30 },
+  { name: "박서윤", status: "응답완료", picks: ["화 07시", "수 19시", "금 19시", "금 20시"], lastPT: "5.8 (금)", remaining: 7, total: 20 },
+  { name: "최유나", status: "응답완료", picks: ["수 09시", "수 19시", "금 19시", "토 09시"], lastPT: "5.6 (수)", remaining: 22, total: 40 },
+  { name: "정수민", status: "응답완료", picks: ["화 07시", "토 09시", "토 11시"], lastPT: "5.4 (월)", remaining: 3, total: 20 },
+  { name: "한승호", status: "응답완료", picks: ["월 19시", "월 20시", "수 19시", "금 19시"], lastPT: "5.9 (토)", remaining: 11, total: 24 },
+  { name: "이도현", status: "응답대기", picks: [], lastPT: "5.2 (토)", remaining: 5, total: 10 },
+  { name: "오지훈", status: "불가", picks: [], lastPT: "5.5 (화)", remaining: 8, total: 20 },
 ];
 
-const AI_RESULT = [
+const AI_RESULT_INIT = [
   { day: "월", hour: "19:00", name: "김지원" },
   { day: "월", hour: "20:00", name: "한승호" },
   { day: "화", hour: "07:00", name: "박서윤" },
@@ -73,6 +82,7 @@ const AI_RESULT = [
 function Schedule() {
   const [weekOffset, setWeekOffset] = useState(1);
   const [closed, setClosed] = useState<Set<string>>(new Set(["일-7", "일-8", "일-9", "일-10", "일-11", "일-12", "일-13", "일-14", "일-15", "일-16", "일-17", "일-18", "일-19", "일-20", "일-21", "일-22"]));
+  const [editing, setEditing] = useState<Student | null>(null);
 
   const toggleClosed = (key: string) => {
     setClosed((p) => {
@@ -83,7 +93,30 @@ function Schedule() {
     });
   };
 
-  const responded = STUDENTS.filter((s) => s.status !== "응답대기").length;
+  const closeDay = (d: string) => {
+    setClosed((p) => {
+      const n = new Set(p);
+      const allClosed = HOURS.every((h) => n.has(`${d}-${h}`));
+      HOURS.forEach((h) => (allClosed ? n.delete(`${d}-${h}`) : n.add(`${d}-${h}`)));
+      return n;
+    });
+  };
+
+  const closeHour = (h: number) => {
+    setClosed((p) => {
+      const n = new Set(p);
+      const allClosed = DAYS.every((d) => n.has(`${d}-${h}`));
+      DAYS.forEach((d) => (allClosed ? n.delete(`${d}-${h}`) : n.add(`${d}-${h}`)));
+      return n;
+    });
+  };
+
+  const stats = useMemo(() => {
+    const total = STUDENTS.length;
+    const responded = STUDENTS.filter((s) => s.status !== "응답대기").length;
+    const assignable = AI_RESULT_INIT.length;
+    return { total, responded, assignable };
+  }, []);
 
   return (
     <AppShell>
@@ -94,9 +127,6 @@ function Schedule() {
           <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-[1.15] tracking-tight">
             한 페이지에서 끝내는<br />주간 일정 조율
           </h1>
-          <p className="mt-2 text-[13.5px] text-ink-soft leading-relaxed">
-            주차를 정하고 → 학생 선택을 받고 → 안되는 시간만 닫으세요. AI가 나머지를 정리해 드려요.
-          </p>
         </div>
         <div className="flex gap-2">
           <button className="h-10 px-4 rounded-full bg-white border border-border-strong text-[13px] font-bold text-ink hover:bg-muted">초안 저장</button>
@@ -106,8 +136,15 @@ function Schedule() {
         </div>
       </div>
 
+      {/* DASHBOARD */}
+      <div className="mt-6 grid grid-cols-3 gap-3">
+        <KpiCard icon={<Users className="h-4 w-4" />} label="관리 회원" value={stats.total} suffix="명" />
+        <KpiCard icon={<MailCheck className="h-4 w-4" />} label="응답 완료" value={stats.responded} suffix={`/${stats.total}명`} accent />
+        <KpiCard icon={<CalendarCheck className="h-4 w-4" />} label="배정 가능" value={stats.assignable} suffix="명 (겹침 없음)" />
+      </div>
+
       {/* Week selector */}
-      <div className="mt-5 flex items-center justify-between rounded-2xl bg-surface-muted border border-border px-3 py-2">
+      <div className="mt-6 flex items-center justify-between rounded-2xl bg-surface-muted border border-border px-3 py-2">
         <button
           onClick={() => setWeekOffset((o) => Math.max(0, o - 1))}
           disabled={weekOffset <= 0}
@@ -142,9 +179,9 @@ function Schedule() {
       </div>
       <p className="mt-2 text-center text-[12px] font-bold text-ink tabular-nums">{getWeekLabel(weekOffset)}</p>
 
-      {/* SECTION 1 — Calendar with student picks heatmap */}
+      {/* SECTION 1 — Calendar */}
       <section className="mt-8">
-        <SectionHeader index="01" title="학생 선택 현황 + 안되는 시간 닫기" subtitle="셀이 진할수록 많이 선택된 시간. 클릭하면 그 시간을 닫을 수 있어요." />
+        <SectionHeader index="01" title="학생 선택 현황 + 안되는 시간 닫기" subtitle="셀 클릭으로 닫기/열기. 요일·시간 헤더를 누르면 행/열 전체를 한 번에 닫아요." />
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-soft">
           <div className="flex items-center gap-2">
@@ -165,15 +202,26 @@ function Schedule() {
           <div className="grid grid-cols-[44px_repeat(7,1fr)] bg-surface-muted border-b border-border">
             <div className="p-2 text-[10px] text-muted-foreground font-bold text-center">시간</div>
             {DAYS.map((d) => (
-              <div key={d} className="p-2 text-center text-[13px] font-extrabold text-ink">{d}</div>
+              <button
+                key={d}
+                onClick={() => closeDay(d)}
+                className="p-2 text-center text-[13px] font-extrabold text-ink hover:bg-white transition"
+                title="이 요일 전체 닫기/열기"
+              >
+                {d}
+              </button>
             ))}
           </div>
           <div className="grid grid-cols-[44px_repeat(7,1fr)]">
             {HOURS.map((h) => (
               <React.Fragment key={h}>
-                <div className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums">
+                <button
+                  onClick={() => closeHour(h)}
+                  className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums hover:bg-white transition"
+                  title="이 시간 전체 닫기/열기"
+                >
                   {String(h).padStart(2, "0")}
-                </div>
+                </button>
                 {DAYS.map((d) => {
                   const key = `${d}-${h}`;
                   const picks = PICKS[key] ?? [];
@@ -200,28 +248,11 @@ function Schedule() {
             ))}
           </div>
         </div>
-
-        {/* Share link */}
-        <div className="mt-4 rounded-2xl bg-surface-muted border border-border p-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-primary">학생 예약 링크</p>
-              <p className="text-[13px] text-ink-soft mt-0.5">학생은 가입 없이 이 링크에서 가능한 시간을 모두 골라요.</p>
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-2 px-4 h-12 rounded-xl bg-white border border-border">
-            <LinkIcon className="h-4 w-4 text-primary" />
-            <span className="flex-1 truncate text-[13px] font-mono text-ink">gympt.kr/b/dy-{getWeekLabel(weekOffset).replace(/\D/g, "").slice(0, 6)}</span>
-            <button className="h-8 px-3 rounded-full bg-ink text-white text-[12px] font-bold inline-flex items-center gap-1">
-              <Copy className="h-3 w-3" /> 복사
-            </button>
-          </div>
-        </div>
       </section>
 
       {/* SECTION 2 — Student responses */}
       <section className="mt-10">
-        <SectionHeader index="02" title="학생 응답" subtitle={`${responded} / ${STUDENTS.length}명 응답 완료`} />
+        <SectionHeader index="02" title="학생 응답" subtitle={`${stats.responded} / ${stats.total}명 응답 완료`} />
 
         <div className="mt-4 rounded-2xl border border-border overflow-hidden">
           <table className="w-full text-[13px]">
@@ -229,6 +260,8 @@ function Schedule() {
               <tr className="text-left text-[11px] font-bold uppercase text-ink-soft">
                 <th className="px-4 py-3">학생</th>
                 <th className="px-4 py-3">상태</th>
+                <th className="px-4 py-3">최근 PT</th>
+                <th className="px-4 py-3">남은 횟수</th>
                 <th className="px-4 py-3">선택한 시간</th>
                 <th className="px-4 py-3 text-right">조치</th>
               </tr>
@@ -243,6 +276,11 @@ function Schedule() {
                     </div>
                   </td>
                   <td className="px-4 py-3"><StatusBadge s={s.status} /></td>
+                  <td className="px-4 py-3 text-ink-soft tabular-nums">{s.lastPT}</td>
+                  <td className="px-4 py-3 tabular-nums">
+                    <span className={`font-extrabold ${s.remaining <= 5 ? "text-destructive" : "text-ink"}`}>{s.remaining}</span>
+                    <span className="text-muted-foreground"> / {s.total}회</span>
+                  </td>
                   <td className="px-4 py-3 text-ink-soft">
                     {s.picks.length === 0 ? <span className="text-muted-foreground">—</span> : (
                       <div className="flex flex-wrap gap-1">
@@ -255,13 +293,12 @@ function Schedule() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {s.status === "응답대기" ? (
-                      <button className="h-8 px-3 rounded-full bg-ink text-white text-[11px] font-bold">재알림</button>
-                    ) : s.status === "불가" ? (
-                      <span className="text-[11px] text-muted-foreground">제외됨</span>
-                    ) : (
-                      <button className="h-8 px-3 rounded-full bg-white border border-border text-[11px] font-bold text-ink">상세</button>
-                    )}
+                    <button
+                      onClick={() => setEditing(s)}
+                      className="h-8 px-3 rounded-full bg-ink text-white text-[11px] font-bold inline-flex items-center gap-1"
+                    >
+                      <Pencil className="h-3 w-3" /> 일정 조정
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -303,7 +340,7 @@ function Schedule() {
               </tr>
             </thead>
             <tbody>
-              {AI_RESULT.map((r, i) => (
+              {AI_RESULT_INIT.map((r, i) => (
                 <tr key={i} className="border-t border-border">
                   <td className="px-4 py-3 font-extrabold text-ink tabular-nums">{r.day} {r.hour}</td>
                   <td className="px-4 py-3 text-ink">{r.name}</td>
@@ -316,7 +353,48 @@ function Schedule() {
           </table>
         </div>
       </section>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing?.name} · 일정 수동 조정</DialogTitle>
+            <DialogDescription>학생의 응답과 무관하게 트레이너가 직접 시간을 지정합니다.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <label className="text-[12px] font-bold text-ink-soft">배정 요일 / 시간</label>
+            <div className="grid grid-cols-2 gap-2">
+              <select className="h-10 px-3 rounded-xl border border-border bg-white text-[13px] font-semibold">
+                {DAYS.map((d) => <option key={d}>{d}요일</option>)}
+              </select>
+              <select className="h-10 px-3 rounded-xl border border-border bg-white text-[13px] font-semibold">
+                {HOURS.map((h) => <option key={h}>{String(h).padStart(2, "0")}:00</option>)}
+              </select>
+            </div>
+            <label className="text-[12px] font-bold text-ink-soft mt-2">메모</label>
+            <textarea className="min-h-[72px] p-3 rounded-xl border border-border bg-white text-[13px]" placeholder="예: 다음 주는 출장으로 토요일 오전만 가능" />
+          </div>
+          <DialogFooter>
+            <button onClick={() => setEditing(null)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
+            <button onClick={() => setEditing(null)} className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-bold">저장</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
+  );
+}
+
+function KpiCard({ icon, label, value, suffix, accent }: { icon: React.ReactNode; label: string; value: number; suffix?: string; accent?: boolean }) {
+  return (
+    <div className={`rounded-2xl border p-4 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}>
+      <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${accent ? "text-primary" : "text-ink-soft"}`}>
+        {icon}{label}
+      </div>
+      <div className="mt-2 flex items-baseline gap-1">
+        <span className="text-[28px] font-black tabular-nums leading-none">{value}</span>
+        {suffix && <span className={`text-[12px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}>{suffix}</span>}
+      </div>
+    </div>
   );
 }
 
@@ -336,7 +414,7 @@ function StatusBadge({ s }: { s: Status }) {
   const map: Record<Status, string> = {
     응답완료: "bg-primary/15 text-primary",
     응답대기: "bg-muted text-ink-soft",
-    불가: "bg-ink text-white",
+    불가: "bg-destructive/15 text-destructive",
   };
   const icon = s === "불가" ? <Ban className="h-3 w-3" /> : null;
   return (

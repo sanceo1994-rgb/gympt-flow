@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React, { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Check, Ban, Info, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, Ban, Info, X, MessageCircle, Lock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -14,9 +15,8 @@ export const Route = createFileRoute("/booking")({
 });
 
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
-const HOURS = Array.from({ length: 17 }, (_, i) => 6 + i); // 06~22
+const HOURS = Array.from({ length: 17 }, (_, i) => 6 + i);
 
-// Pre-existing student demand (how many other students already picked each slot)
 const DEMAND: Record<string, number> = {
   "월-7": 1, "월-19": 4, "월-20": 5,
   "화-7": 3, "화-9": 1, "화-19": 4, "화-20": 2,
@@ -26,8 +26,10 @@ const DEMAND: Record<string, number> = {
   "토-9": 3, "토-10": 2, "토-11": 4, "토-14": 2,
 };
 
-// Trainer-closed slots
-const CLOSED = new Set<string>(["일-7", "일-8", "일-9", "일-10", "일-11", "일-12", "일-13", "일-14", "일-15", "일-16", "일-17", "일-18", "일-19", "일-20", "일-21", "일-22", "월-12", "월-13", "월-14"]);
+const CLOSED = new Set<string>([
+  "일-7","일-8","일-9","일-10","일-11","일-12","일-13","일-14","일-15","일-16","일-17","일-18","일-19","일-20","일-21","일-22",
+  "월-12","월-13","월-14",
+]);
 
 function heatLevel(n: number, isMine: boolean) {
   if (isMine) return 5;
@@ -38,32 +40,46 @@ function heatLevel(n: number, isMine: boolean) {
   return 4;
 }
 
-function getWeekLabel(offset: number) {
-  const base = new Date(2026, 4, 11); // May 11, 2026 Mon (placeholder anchor)
-  base.setDate(base.getDate() + offset * 7);
-  const end = new Date(base);
-  end.setDate(end.getDate() + 6);
-  const f = (d: Date) => `${d.getMonth() + 1}.${d.getDate()}`;
-  return `${f(base)} – ${f(end)}`;
-}
-
 function Booking() {
-  const [weekOffset, setWeekOffset] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [unavailable, setUnavailable] = useState(false);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
   const [activeDay, setActiveDay] = useState("화");
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [confirmUnavail, setConfirmUnavail] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  const requireAuth = (fn: () => void) => {
+    if (!loggedIn) { setLoginOpen(true); return; }
+    fn();
+  };
 
   const toggle = (key: string) => {
-    if (unavailable) return;
-    if (CLOSED.has(key)) return;
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
+    requireAuth(() => {
+      if (unavailable) return;
+      if (CLOSED.has(key)) return;
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
     });
+  };
+
+  const onUnavailableClick = () => {
+    requireAuth(() => {
+      if (unavailable) {
+        setUnavailable(false);
+      } else {
+        setConfirmUnavail(true);
+      }
+    });
+  };
+
+  const confirmUnavailable = () => {
+    setUnavailable(true);
+    setSelected(new Set());
+    setConfirmUnavail(false);
   };
 
   const selectedList = useMemo(() => Array.from(selected), [selected]);
@@ -73,7 +89,7 @@ function Booking() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">학생 예약</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">학생 예약 · 다음 주</p>
           <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-[1.15] tracking-tight">
             가능한 시간을<br />원하는 만큼 골라주세요
           </h1>
@@ -88,36 +104,13 @@ function Booking() {
         )}
       </div>
 
-      {/* Week selector */}
-      <div className="mt-6 flex items-center justify-between rounded-2xl bg-surface-muted border border-border px-3 py-2">
-        <button
-          onClick={() => setWeekOffset((o) => o - 1)}
-          disabled={weekOffset <= 0}
-          className="h-9 w-9 rounded-xl grid place-items-center text-ink-soft hover:bg-white disabled:opacity-30"
-          aria-label="이전 주"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <div className="text-center">
-          <p className="text-[11px] font-bold text-ink-soft">
-            {weekOffset === 0 ? "이번 주" : weekOffset === 1 ? "다음 주" : `${weekOffset}주 뒤`}
-          </p>
-          <p className="text-[14px] font-extrabold text-ink tabular-nums">{getWeekLabel(weekOffset)}</p>
+      {/* Week label only */}
+      <div className="mt-6 rounded-2xl bg-surface-muted border border-border px-5 py-4 flex items-center justify-between">
+        <div>
+          <p className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">조율 주차</p>
+          <p className="text-[18px] font-black text-ink mt-0.5">다음 주 · 5.18 (월) – 5.24 (일)</p>
         </div>
-        <button
-          onClick={() => setWeekOffset((o) => o + 1)}
-          disabled={weekOffset >= 4}
-          className="h-9 w-9 rounded-xl grid place-items-center text-ink-soft hover:bg-white disabled:opacity-30"
-          aria-label="다음 주"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Identity */}
-      <div className="mt-4 grid sm:grid-cols-2 gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="이름" className="h-12 px-4 rounded-xl bg-white border border-border text-[14px] font-semibold focus:border-primary outline-none" />
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="휴대폰 번호" className="h-12 px-4 rounded-xl bg-white border border-border text-[14px] font-semibold focus:border-primary outline-none" />
+        <span className="hidden sm:inline-flex chip bg-white text-ink-soft border border-border">트레이너 박재현</span>
       </div>
 
       {/* Heatmap legend */}
@@ -133,11 +126,11 @@ function Booking() {
         </div>
         <div className="flex items-center gap-3 text-[11px] text-ink-soft">
           <span className="inline-flex items-center gap-1.5"><span className="h-3 w-5 rounded-sm bg-ink" /> 내 선택</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-3 w-5 rounded-sm bg-muted line-through" /> 닫힘</span>
+          <span className="inline-flex items-center gap-1.5"><Lock className="h-3 w-3" /> 닫힘</span>
         </div>
       </div>
 
-      {/* DESKTOP — week heatmap */}
+      {/* DESKTOP */}
       <div className={`hidden sm:block pb-32 ${unavailable ? "opacity-40 pointer-events-none" : ""}`}>
         <div className="mt-4 rounded-2xl border border-border overflow-hidden">
           <div className="grid grid-cols-[44px_repeat(7,1fr)] bg-surface-muted border-b border-border">
@@ -168,9 +161,8 @@ function Booking() {
                         ${isMine ? "ring-2 ring-ink ring-inset z-10" : ""}
                       `}
                     >
-                      {isMine && (
-                        <Check className="absolute inset-0 m-auto h-4 w-4 text-white" />
-                      )}
+                      {closed ? <Lock className="absolute inset-0 m-auto h-3 w-3 text-muted-foreground/60" /> :
+                        isMine ? <Check className="absolute inset-0 m-auto h-4 w-4 text-white" /> : null}
                     </button>
                   );
                 })}
@@ -227,12 +219,12 @@ function Booking() {
       </div>
 
       {/* Floating banner */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(720px,calc(100vw-24px))]">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
         <div className="rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5">
           <button
-            onClick={() => { setUnavailable((v) => !v); if (!unavailable) setSelected(new Set()); }}
+            onClick={onUnavailableClick}
             className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${
-              unavailable ? "bg-primary text-white" : "bg-white/10 text-white hover:bg-white/20"
+              unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"
             }`}
           >
             <Ban className="h-3.5 w-3.5" /> {unavailable ? "PT 불가 ON" : "PT 불가"}
@@ -258,7 +250,8 @@ function Booking() {
           </div>
 
           <button
-            disabled={(!unavailable && selectedList.length === 0) || !name || !phone}
+            onClick={() => requireAuth(() => {})}
+            disabled={!unavailable && selectedList.length === 0}
             className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 disabled:opacity-40 hover:brightness-110"
           >
             제출 <Check className="h-4 w-4" />
@@ -266,11 +259,64 @@ function Booking() {
         </div>
         <div className="mt-1.5 flex items-center gap-1 text-[11px] text-ink-soft justify-center">
           <Info className="h-3 w-3" />
-          <span>이름·번호 입력 후 제출 가능</span>
+          <span>제출 시 로그인이 필요해요</span>
           <span className="mx-1">·</span>
           <Link to="/" className="font-semibold hover:text-primary">짐피티 소개</Link>
         </div>
       </div>
+
+      {/* Login modal */}
+      <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[20px] font-black">로그인하고 시간을 선택하세요</DialogTitle>
+            <DialogDescription>1초 카카오 로그인 또는 아이디로 시작할 수 있어요.</DialogDescription>
+          </DialogHeader>
+          <button
+            onClick={() => { setLoggedIn(true); setLoginOpen(false); }}
+            className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191600] text-[14px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95"
+          >
+            <MessageCircle className="h-4 w-4 fill-[#191600]" /> 카카오로 시작하기
+          </button>
+          <div className="flex items-center gap-2 my-1">
+            <span className="flex-1 h-px bg-border" />
+            <span className="text-[11px] text-muted-foreground font-bold">또는</span>
+            <span className="flex-1 h-px bg-border" />
+          </div>
+          <div className="grid gap-2">
+            <input placeholder="아이디" className="h-11 px-3.5 rounded-xl border border-border bg-white text-[14px] font-semibold focus:border-primary outline-none" />
+            <input type="password" placeholder="비밀번호" className="h-11 px-3.5 rounded-xl border border-border bg-white text-[14px] font-semibold focus:border-primary outline-none" />
+            <button
+              onClick={() => { setLoggedIn(true); setLoginOpen(false); }}
+              className="h-11 rounded-xl bg-ink text-white text-[13px] font-bold hover:brightness-110"
+            >
+              로그인
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground text-center mt-1">
+            계정이 없나요? <span className="text-ink font-bold">회원가입</span>
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unavailable confirm */}
+      <Dialog open={confirmUnavail} onOpenChange={setConfirmUnavail}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="h-10 w-10 rounded-full bg-destructive/15 text-destructive grid place-items-center mb-2">
+              <Ban className="h-5 w-5" />
+            </div>
+            <DialogTitle className="text-[18px] font-black">이번 주 PT 불가로 표시할까요?</DialogTitle>
+            <DialogDescription>
+              선택했던 시간이 모두 취소되고, 트레이너에게 “이번 주 불가”로 전달돼요.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button onClick={() => setConfirmUnavail(false)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
+            <button onClick={confirmUnavailable} className="h-10 px-4 rounded-full bg-destructive text-white text-[12px] font-bold">불가로 표시</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

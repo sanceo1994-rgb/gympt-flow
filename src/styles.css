@@ -234,10 +234,10 @@
       linear-gradient(
         to right,
         var(--surface-muted) 0%,
-        var(--surface-muted) 30%,
-        #ffffff 30%,
-        #ffffff 70%,
-        var(--surface-muted) 70%,
+        var(--surface-muted) 25%,
+        #ffffff 25%,
+        #ffffff 75%,
+        var(--surface-muted) 75%,
         var(--surface-muted) 100%
       );
   }

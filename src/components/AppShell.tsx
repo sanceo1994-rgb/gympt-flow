@@ -18,7 +18,7 @@ export function AppShell({ children, left, right }: Props) {
       {/* Vertical 3-band background — clearly separates rails (gray) from main (white) */}
       <div className="bg-bands">
         <div
-          className="mx-auto max-w-[1480px] grid gap-0 lg:grid-cols-[3fr_4fr_3fr]"
+          className="mx-auto max-w-[1600px] grid gap-0 lg:grid-cols-[1fr_2fr_1fr]"
         >
           {/* LEFT — gray */}
           <aside className="hidden lg:block px-5 py-6">
