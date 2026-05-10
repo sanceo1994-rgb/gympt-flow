@@ -36,23 +36,18 @@ export function RightRail() {
         </ol>
       </div>
 
-      {/* Promo ad */}
-      <div className="rounded-2xl border border-border bg-card overflow-hidden">
-        <div className="relative h-28 bg-ink overflow-hidden">
-          <div className="absolute -right-8 -bottom-8 h-32 w-32 rounded-full bg-primary/40 blur-2xl" />
-          <div className="absolute bottom-3 left-4 text-white">
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">EVENT</p>
-            <p className="text-[14px] font-extrabold leading-tight">동료쌤 초대 +<br />Basic 14일 무료</p>
-          </div>
-        </div>
-        <div className="p-4">
-          <p className="text-[12px] text-ink-soft leading-relaxed">
-            초대한 쌤이 첫 일정을 만들면 두 분 모두 14일 무료.
-          </p>
-          <Link to="/pricing" className="mt-3 inline-flex h-9 items-center px-4 rounded-full bg-primary text-white text-[12px] font-bold w-full justify-center">
-            지금 초대하기
-          </Link>
-        </div>
+      {/* Promo ad — flat */}
+      <div className="rounded-2xl bg-white border border-border p-4">
+        <span className="inline-flex items-center px-2 h-5 rounded-full bg-ink text-white text-[10px] font-black tracking-widest">EVENT</span>
+        <p className="mt-3 text-[15px] font-extrabold text-ink leading-tight">
+          동료쌤 초대 +<br />Basic 14일 무료
+        </p>
+        <p className="mt-2 text-[12px] text-ink-soft leading-relaxed">
+          초대한 쌤이 첫 일정을 만들면 두 분 모두 14일 무료.
+        </p>
+        <Link to="/pricing" className="mt-4 inline-flex h-9 items-center px-4 rounded-full bg-primary text-white text-[12px] font-bold w-full justify-center">
+          지금 초대하기
+        </Link>
       </div>
 
       {/* Notice */}
