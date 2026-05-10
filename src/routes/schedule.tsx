@@ -179,6 +179,71 @@ function Schedule() {
       </div>
       <p className="mt-2 text-center text-[12px] font-bold text-ink tabular-nums">{getWeekLabel(weekOffset)}</p>
 
+      {/* Pending responses + Quick Kakao re-notify */}
+      <div className="mt-6 rounded-2xl border border-border bg-white overflow-hidden">
+        <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-border bg-surface-muted">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[13px] font-black text-ink">아직 응답하지 않은 회원</span>
+            <span className="text-[12px] font-bold text-destructive tabular-nums">
+              {STUDENTS.filter((s) => s.status === "응답대기").length}명
+            </span>
+          </div>
+          <button className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95">
+            <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" /> 전체 카톡 재알림
+          </button>
+        </div>
+        <ul className="divide-y divide-border">
+          {STUDENTS.filter((s) => s.status === "응답대기").map((s) => (
+            <li key={s.name} className="flex items-center justify-between gap-3 px-5 py-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold text-ink">{s.name}</p>
+                  <p className="text-[11px] text-ink-soft">최근 PT {s.lastPT} · 잔여 <span className={s.remaining <= 5 ? "text-destructive font-bold" : ""}>{s.remaining}회</span></p>
+                </div>
+              </div>
+              <button className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0">
+                <MessageCircle className="h-3 w-3 fill-[#191600]" /> 재알림
+              </button>
+            </li>
+          ))}
+          {STUDENTS.filter((s) => s.status === "응답대기").length === 0 && (
+            <li className="px-5 py-6 text-center text-[12px] text-ink-soft">모든 회원이 응답을 완료했어요 ✓</li>
+          )}
+        </ul>
+      </div>
+
+      {/* AI 최적 시간표 — moved up */}
+      <div className="mt-4 rounded-2xl bg-ink text-white p-5 sm:p-6 relative overflow-hidden">
+        <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-primary/40 blur-3xl" />
+        <div className="relative flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="chip bg-white/10 text-white"><Sparkles className="h-3 w-3" /> AI 최적 시간표</span>
+            <h3 className="mt-2 text-[20px] sm:text-[22px] font-black leading-tight">
+              학생 6명 / <span className="text-primary">6명 자동 배정</span>
+              <span className="text-white/60 font-bold text-[14px]"> · 선호 만족 94%</span>
+            </h3>
+          </div>
+          <div className="flex gap-2">
+            <button className="h-9 px-3.5 rounded-full bg-white/10 text-white text-[12px] font-bold">다시 계산</button>
+            <button className="h-9 px-3.5 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1">
+              <Check className="h-3.5 w-3.5" /> 확정 알림
+            </button>
+          </div>
+        </div>
+        <div className="relative mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {AI_RESULT_INIT.map((r, i) => (
+            <div key={i} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{r.day}요일</p>
+                <p className="text-[15px] font-black tabular-nums">{r.hour}</p>
+              </div>
+              <span className="inline-flex items-center px-2 h-6 rounded-full bg-primary/20 text-primary text-[11px] font-extrabold">{r.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* SECTION 1 — Calendar */}
       <section className="mt-8">
         <SectionHeader index="01" title="학생 선택 현황 + 안되는 시간 닫기" subtitle="셀 클릭으로 닫기/열기. 요일·시간 헤더를 누르면 행/열 전체를 한 번에 닫아요." />
