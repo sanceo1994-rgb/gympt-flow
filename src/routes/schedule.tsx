@@ -384,7 +384,7 @@ function Schedule() {
                       key={key}
                       onClick={() => toggleClosed(key)}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
-                      className={`relative min-h-[68px] border-b border-l border-border transition group overflow-hidden text-left p-1.5
+                      className={`relative min-h-[68px] border-b border-l border-border transition group text-left p-1.5
                         ${isClosed ? "bg-muted text-muted-foreground/50" : `heat-${lvl} hover:ring-2 hover:ring-ink/40 hover:ring-inset`}
                       `}
                     >
