@@ -495,13 +495,14 @@ function Schedule() {
                               `}
                             >
                               {isClosed ? <Lock className="absolute inset-0 m-auto h-3 w-3" /> : cell ? (
-                                <button
-                                  type="button"
+                                <span
+                                  role="button"
+                                  tabIndex={0}
                                   onClick={(e) => { e.stopPropagation(); setActiveName(cell.name); }}
-                                  className="absolute inset-0 px-1 truncate"
+                                  className="absolute inset-0 grid place-items-center px-1 truncate cursor-pointer"
                                 >
                                   {cell.name}
-                                </button>
+                                </span>
                               ) : null}
                             </button>
                           );
