@@ -1,9 +1,20 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Trophy, Megaphone } from "lucide-react";
+import { MapPin, Trophy, Megaphone, Sparkles } from "lucide-react";
 
 export function RightRail() {
   return (
     <div className="space-y-3">
+      {/* Tip */}
+      <div className="rounded-2xl bg-white border border-border p-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">짐피티 팁</p>
+        </div>
+        <p className="mt-2 text-[13px] text-ink leading-relaxed">
+          매주 <b className="text-primary">화요일 오전</b>에 다음 주 일정을 열면 응답률이 평균 18% 더 높아요.
+        </p>
+      </div>
+
       {/* Gym ranking */}
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
