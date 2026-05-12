@@ -106,6 +106,17 @@ function Schedule() {
     AI_RESULT_INIT.map((r) => ({ name: r.name, day: r.day, hour: parseInt(r.hour, 10) }))
   );
   const [pendingMove, setPendingMove] = useState<{ day: string; hour: number } | null>(null);
+  const [confirm, setConfirm] = useState<null | { title: string; desc: string; toast: string; danger?: boolean }>(null);
+  const [sendToast, setSendToast] = useState<string | null>(null);
+
+  const askConfirm = (title: string, desc: string, toast: string, danger = false) => setConfirm({ title, desc, toast, danger });
+  const runConfirm = () => {
+    if (!confirm) return;
+    const t = confirm.toast;
+    setConfirm(null);
+    setSendToast(t);
+    setTimeout(() => setSendToast(null), 2400);
+  };
 
   const openEdit = (s: Student) => {
     setEditing(s);
