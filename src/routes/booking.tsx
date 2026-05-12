@@ -1,14 +1,17 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import React, { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Check, Ban, Info, X, MessageCircle, Lock, Instagram, Megaphone, Award } from "lucide-react";
+import { Check, Ban, Info, X, Lock, Instagram, Megaphone, Award, Coffee, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/use-auth";
+import { useServerFn } from "@tanstack/react-start";
+import { awardPoints, getMyWeekPoints } from "@/lib/points.functions";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
     meta: [
       { title: "학생 예약 — 짐피티 GymPT" },
-      { name: "description", content: "원하는 PT 시간을 원하는 만큼 선택하세요. 다른 학생들이 어느 시간을 많이 골랐는지 한눈에 보입니다." },
+      { name: "description", content: "원하는 PT 시간을 원하는 만큼 선택하세요. 비어있는 시간/5개 이상 선택 시 포인트도 적립돼요." },
     ],
   }),
   component: Booking,
@@ -41,25 +44,32 @@ function heatLevel(n: number, isMine: boolean) {
 }
 
 function Booking() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const award = useServerFn(awardPoints);
+  const fetchPts = useServerFn(getMyWeekPoints);
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [unavailable, setUnavailable] = useState(false);
   const [activeDay, setActiveDay] = useState("화");
   const [loginOpen, setLoginOpen] = useState(false);
   const [confirmUnavail, setConfirmUnavail] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ title: string; sub?: string } | null>(null);
+  const [weekPoints, setWeekPoints] = useState<number>(0);
 
+  useEffect(() => {
+    if (user) fetchPts().then((r) => setWeekPoints(r.total)).catch(() => {});
+  }, [user, fetchPts]);
 
   const requireAuth = (fn: () => void) => {
-    if (!loggedIn) { setLoginOpen(true); return; }
+    if (!user) { setLoginOpen(true); return; }
     fn();
   };
 
   const toggle = (key: string) => {
     requireAuth(() => {
-      if (unavailable) return;
-      if (CLOSED.has(key)) return;
+      if (unavailable || CLOSED.has(key)) return;
       setSelected((prev) => {
         const next = new Set(prev);
         if (next.has(key)) next.delete(key);
@@ -69,15 +79,7 @@ function Booking() {
     });
   };
 
-  const onUnavailableClick = () => {
-    requireAuth(() => {
-      if (unavailable) {
-        setUnavailable(false);
-      } else {
-        setConfirmUnavail(true);
-      }
-    });
-  };
+  const onUnavailableClick = () => requireAuth(() => unavailable ? setUnavailable(false) : setConfirmUnavail(true));
 
   const confirmUnavailable = () => {
     setUnavailable(true);
@@ -86,28 +88,55 @@ function Booking() {
   };
 
   const selectedList = useMemo(() => Array.from(selected), [selected]);
+  const hasEmpty = useMemo(() => selectedList.some((k) => !DEMAND[k]), [selectedList]);
+  const fivePlus = selectedList.length >= 5;
+
+  const showPointToast = (amount: number, reason: string) => {
+    setToast({ title: `+${amount}P 적립!`, sub: reason });
+    setTimeout(() => setToast(null), 3000);
+    setWeekPoints((p) => Math.min(10, p + amount));
+  };
+
+  const handleSubmit = () => requireAuth(async () => {
+    setSubmitted(true);
+    setToast({ title: unavailable ? "‘이번 주 PT 불가’로 전달했어요" : `${selectedList.length}개 시간이 트레이너에게 전달됐어요` });
+    setTimeout(() => setToast(null), 2400);
+
+    if (!unavailable) {
+      try {
+        if (hasEmpty) {
+          const r = await award({ data: { reason: "empty_slot" } });
+          if (r.awarded > 0) setTimeout(() => showPointToast(r.awarded, "비어있던 시간을 골라줬어요 ☕"), 1200);
+        }
+        if (fivePlus) {
+          const r = await award({ data: { reason: "five_or_more" } });
+          if (r.awarded > 0) setTimeout(() => showPointToast(r.awarded, "5개 이상 골라줬어요 ☕"), 1800);
+        }
+      } catch {}
+    }
+  });
 
   return (
     <AppShell>
-      {/* Trainer profile */}
-      <section className="relative rounded-2xl border border-border overflow-hidden bg-white">
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-br from-primary to-[#FF6FB1] z-0" />
-        <div className="relative z-10 px-5 sm:px-6 pb-5 pt-14">
+      {/* Trainer profile — restructured, no overlap */}
+      <section className="rounded-2xl border border-border overflow-hidden bg-white">
+        <div className="h-16 bg-gradient-to-br from-primary to-[#FF6FB1]" />
+        <div className="px-5 sm:px-6 -mt-10 pb-5">
           <div className="flex items-end gap-4">
-            <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">박</div>
-            <div className="flex-1 pb-1">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">하이엔드 피트니스 · 강남점</p>
-              <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">박재현 트레이너</h1>
+            <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm shrink-0">박</div>
+            <div className="flex-1 min-w-0 pb-1.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft truncate">하이엔드 피트니스 · 강남점</p>
+              <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight truncate">박재현 트레이너</h1>
             </div>
-            <a
-              href="https://instagram.com/"
-              target="_blank"
-              rel="noreferrer"
-              className="h-10 px-3.5 rounded-full bg-ink text-white text-[12px] font-bold inline-flex items-center gap-1.5 hover:brightness-110"
-            >
-              <Instagram className="h-3.5 w-3.5" /> 인스타
-            </a>
           </div>
+          <a
+            href="https://instagram.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 h-10 px-4 rounded-full bg-ink text-white text-[12px] font-bold inline-flex items-center gap-1.5 hover:brightness-110"
+          >
+            <Instagram className="h-3.5 w-3.5" /> 인스타그램
+          </a>
           <p className="mt-4 text-[13.5px] text-ink-soft leading-relaxed">
             안녕하세요, 8년차 퍼스널 트레이너 박재현입니다. 단기간의 결과보다는 <b className="text-ink">평생 가져갈 운동 습관</b>을 만드는 데 집중합니다.
             체형 분석 → 약점 보완 → 점진적 과부하의 3단계 프로세스로, 부상 없이 꾸준히 변화하는 몸을 만들어드려요.
@@ -160,8 +189,32 @@ function Booking() {
         ) : null}
       </div>
 
-      {/* Week label only */}
-      <div className="mt-6 rounded-2xl bg-surface-muted border border-border px-5 py-4 flex items-center justify-between">
+      {/* Point reward banner */}
+      <div className="mt-4 rounded-2xl border border-[oklch(0.92_0.10_70)] bg-[oklch(0.98_0.04_70)] p-4 flex items-start gap-3">
+        <div className="h-9 w-9 rounded-xl bg-[oklch(0.85_0.15_70)] grid place-items-center shrink-0">
+          <Coffee className="h-4.5 w-4.5 text-[oklch(0.30_0.15_50)]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-[13px] font-extrabold text-ink">
+              <span className="text-[oklch(0.45_0.18_50)]">짐피티 포인트</span> · 이번 주 {weekPoints}/10P 적립
+            </p>
+            {weekPoints >= 10 && <span className="text-[10px] font-bold text-[oklch(0.45_0.18_50)]">이번 주 최대치 도달</span>}
+          </div>
+          <p className="mt-0.5 text-[12px] text-ink-soft leading-relaxed">
+            <b className="text-ink">아무도 선택 안 한 시간</b>을 고르거나 <b className="text-ink">5개 이상</b>을 선택하면 +10P. 모아서 커피 한 잔 ☕
+          </p>
+          {!submitted && (hasEmpty || fivePlus) && weekPoints < 10 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {hasEmpty && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-white text-[oklch(0.45_0.18_50)] text-[11px] font-extrabold ring-1 ring-[oklch(0.85_0.15_70)]"><Sparkles className="h-3 w-3" /> 비어있는 시간 +10P 가능</span>}
+              {fivePlus && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-white text-[oklch(0.45_0.18_50)] text-[11px] font-extrabold ring-1 ring-[oklch(0.85_0.15_70)]"><Sparkles className="h-3 w-3" /> 5개 이상 +10P 가능</span>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Week label */}
+      <div className="mt-4 rounded-2xl bg-surface-muted border border-border px-5 py-4 flex items-center justify-between">
         <div>
           <p className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">조율 주차</p>
           <p className="text-[18px] font-black text-ink mt-0.5">다음 주 · 5.18 (월) – 5.24 (일)</p>
@@ -186,7 +239,7 @@ function Booking() {
         </div>
       </div>
 
-      {/* DESKTOP */}
+      {/* DESKTOP grid */}
       <div className={`hidden sm:block pb-32 ${unavailable ? "opacity-40 pointer-events-none" : ""}`}>
         <div className="mt-4 rounded-2xl border border-border overflow-hidden">
           <div className="grid grid-cols-[44px_repeat(7,1fr)] bg-surface-muted border-b border-border">
@@ -205,8 +258,7 @@ function Booking() {
                   const key = `${d}-${h}`;
                   const closed = CLOSED.has(key);
                   const isMine = selected.has(key);
-                  const baseDemand = DEMAND[key] ?? 0;
-                  const lvl = heatLevel(baseDemand, isMine);
+                  const lvl = heatLevel(DEMAND[key] ?? 0, isMine);
                   return (
                     <button
                       key={key}
@@ -234,11 +286,7 @@ function Booking() {
           {DAYS.map((d) => {
             const active = activeDay === d;
             return (
-              <button
-                key={d}
-                onClick={() => setActiveDay(d)}
-                className={`shrink-0 px-4 py-2.5 rounded-2xl flex flex-col items-center min-w-[56px] transition ${active ? "bg-ink text-white" : "bg-surface-muted text-ink-soft"}`}
-              >
+              <button key={d} onClick={() => setActiveDay(d)} className={`shrink-0 px-4 py-2.5 rounded-2xl flex flex-col items-center min-w-[56px] transition ${active ? "bg-ink text-white" : "bg-surface-muted text-ink-soft"}`}>
                 <span className="text-[16px] font-black">{d}</span>
               </button>
             );
@@ -252,21 +300,12 @@ function Booking() {
             const dem = DEMAND[key] ?? 0;
             const lvl = heatLevel(dem, isMine);
             return (
-              <button
-                key={key}
-                disabled={closed}
-                onClick={() => toggle(key)}
-                className={`w-full p-3 rounded-xl text-left transition heat-${lvl} ${closed ? "bg-muted opacity-50" : ""} ${isMine ? "ring-2 ring-ink" : "border border-border"}`}
-              >
+              <button key={key} disabled={closed} onClick={() => toggle(key)} className={`w-full p-3 rounded-xl text-left transition heat-${lvl} ${closed ? "bg-muted opacity-50" : ""} ${isMine ? "ring-2 ring-ink" : "border border-border"}`}>
                 <div className="flex items-center justify-between">
                   <p className="text-[16px] font-black tabular-nums">{String(h).padStart(2, "0")}:00</p>
-                  {isMine ? (
-                    <span className="h-7 w-7 rounded-full bg-white text-ink grid place-items-center"><Check className="h-4 w-4" /></span>
-                  ) : closed ? (
-                    <span className="text-[11px] text-muted-foreground">닫힘</span>
-                  ) : (
-                    <span className="text-[11px] font-bold text-ink-soft">{dem > 0 ? `${dem}명 선택` : "—"}</span>
-                  )}
+                  {isMine ? <span className="h-7 w-7 rounded-full bg-white text-ink grid place-items-center"><Check className="h-4 w-4" /></span>
+                    : closed ? <span className="text-[11px] text-muted-foreground">닫힘</span>
+                    : <span className="text-[11px] font-bold text-ink-soft">{dem > 0 ? `${dem}명 선택` : "—"}</span>}
                 </div>
               </button>
             );
@@ -277,12 +316,7 @@ function Booking() {
       {/* Floating banner */}
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
         <div className="rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5">
-          <button
-            onClick={onUnavailableClick}
-            className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${
-              unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"
-            }`}
-          >
+          <button onClick={onUnavailableClick} className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"}`}>
             <Ban className="h-3.5 w-3.5" /> {unavailable ? "PT 불가 ON" : "PT 불가"}
           </button>
 
@@ -296,24 +330,14 @@ function Booking() {
                 {selectedList.map((s) => (
                   <span key={s} className="shrink-0 inline-flex items-center gap-1.5 pl-2.5 pr-1.5 h-7 rounded-full bg-white/15 text-white text-[12px] font-bold">
                     {s.replace("-", " ")}시
-                    <button onClick={(e) => { e.stopPropagation(); setSelected((p) => { const n = new Set(p); n.delete(s); return n; }); }} className="opacity-70 hover:opacity-100">
-                      <X className="h-3 w-3" />
-                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setSelected((p) => { const n = new Set(p); n.delete(s); return n; }); }} className="opacity-70 hover:opacity-100"><X className="h-3 w-3" /></button>
                   </span>
                 ))}
               </div>
             )}
           </div>
 
-          <button
-            onClick={() => requireAuth(() => {
-              setSubmitted(true);
-              setToast(unavailable ? "‘이번 주 PT 불가’로 전달했어요" : `${selectedList.length}개 시간이 트레이너에게 전달됐어요`);
-              setTimeout(() => setToast(null), 2600);
-            })}
-            disabled={!unavailable && selectedList.length === 0}
-            className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 disabled:opacity-40 hover:brightness-110"
-          >
+          <button onClick={handleSubmit} disabled={!unavailable && selectedList.length === 0} className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 disabled:opacity-40 hover:brightness-110">
             {submitted ? "수정 제출" : "제출"} <Check className="h-4 w-4" />
           </button>
         </div>
@@ -325,37 +349,16 @@ function Booking() {
         </div>
       </div>
 
-      {/* Login modal */}
+      {/* Login redirect modal */}
       <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-[20px] font-black">로그인하고 시간을 선택하세요</DialogTitle>
-            <DialogDescription>1초 카카오 로그인 또는 아이디로 시작할 수 있어요.</DialogDescription>
+            <DialogDescription>1초 카카오 로그인 또는 이메일로 시작할 수 있어요.</DialogDescription>
           </DialogHeader>
-          <button
-            onClick={() => { setLoggedIn(true); setLoginOpen(false); }}
-            className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191600] text-[14px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95"
-          >
-            <MessageCircle className="h-4 w-4 fill-[#191600]" /> 카카오로 시작하기
+          <button onClick={() => navigate({ to: "/login" })} className="w-full h-12 rounded-xl bg-ink text-white text-[14px] font-extrabold">
+            로그인 / 회원가입 하러 가기
           </button>
-          <div className="flex items-center gap-2 my-1">
-            <span className="flex-1 h-px bg-border" />
-            <span className="text-[11px] text-muted-foreground font-bold">또는</span>
-            <span className="flex-1 h-px bg-border" />
-          </div>
-          <div className="grid gap-2">
-            <input placeholder="아이디" className="h-11 px-3.5 rounded-xl border border-border bg-white text-[14px] font-semibold focus:border-primary outline-none" />
-            <input type="password" placeholder="비밀번호" className="h-11 px-3.5 rounded-xl border border-border bg-white text-[14px] font-semibold focus:border-primary outline-none" />
-            <button
-              onClick={() => { setLoggedIn(true); setLoginOpen(false); }}
-              className="h-11 rounded-xl bg-ink text-white text-[13px] font-bold hover:brightness-110"
-            >
-              로그인
-            </button>
-          </div>
-          <p className="text-[11px] text-muted-foreground text-center mt-1">
-            계정이 없나요? <span className="text-ink font-bold">회원가입</span>
-          </p>
         </DialogContent>
       </Dialog>
 
@@ -367,9 +370,7 @@ function Booking() {
               <Ban className="h-5 w-5" />
             </div>
             <DialogTitle className="text-[18px] font-black">이번 주 PT 불가로 표시할까요?</DialogTitle>
-            <DialogDescription>
-              선택했던 시간이 모두 취소되고, 트레이너에게 “이번 주 불가”로 전달돼요.
-            </DialogDescription>
+            <DialogDescription>선택했던 시간이 모두 취소되고, 트레이너에게 “이번 주 불가”로 전달돼요.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <button onClick={() => setConfirmUnavail(false)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
@@ -377,14 +378,17 @@ function Booking() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Submit toast */}
+
+      {/* Toasts */}
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
           <div className="rounded-2xl bg-ink text-white px-4 py-3 shadow-pop flex items-center gap-2.5 min-w-[280px]">
-            <span className="h-7 w-7 rounded-full bg-primary grid place-items-center"><Check className="h-4 w-4 text-white" /></span>
+            <span className="h-8 w-8 rounded-full bg-primary grid place-items-center">
+              {toast.title.startsWith("+") ? <Coffee className="h-4 w-4 text-white" /> : <Check className="h-4 w-4 text-white" />}
+            </span>
             <div>
-              <p className="text-[13px] font-extrabold leading-tight">{toast}</p>
-              <p className="text-[11px] text-white/60 mt-0.5">언제든 다시 수정할 수 있어요</p>
+              <p className="text-[13px] font-extrabold leading-tight">{toast.title}</p>
+              {toast.sub && <p className="text-[11px] text-white/60 mt-0.5">{toast.sub}</p>}
             </div>
           </div>
         </div>
