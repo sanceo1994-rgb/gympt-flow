@@ -67,6 +67,9 @@ const STUDENTS: Student[] = [
   { name: "정수민", status: "응답완료", picks: ["화 07시", "토 09시", "토 11시"], lastPT: "5.4 (월)", remaining: 3, total: 20 },
   { name: "한승호", status: "응답완료", picks: ["월 19시", "월 20시", "수 19시", "금 19시"], lastPT: "5.9 (토)", remaining: 11, total: 24 },
   { name: "이도현", status: "응답대기", picks: [], lastPT: "5.2 (토)", remaining: 5, total: 10 },
+  { name: "김태현", status: "응답대기", picks: [], lastPT: "5.1 (금)", remaining: 9, total: 20 },
+  { name: "윤서아", status: "응답대기", picks: [], lastPT: "4.30 (목)", remaining: 4, total: 10 },
+  { name: "강민준", status: "응답대기", picks: [], lastPT: "5.3 (일)", remaining: 12, total: 24 },
   { name: "오지훈", status: "불가", picks: [], lastPT: "5.5 (화)", remaining: 8, total: 20 },
 ];
 
@@ -78,6 +81,13 @@ const AI_RESULT_INIT = [
   { day: "수", hour: "19:00", name: "이도현" },
   { day: "금", hour: "20:00", name: "정수민" },
 ];
+
+// AI가 어떤 시간에도 배정하지 못한 회원 (모두 겹치거나, 선호 시간이 닫힘)
+const AI_UNASSIGNED: { name: string; reason: string }[] = [
+  { name: "김태현", reason: "선호 시간 모두 닫힘" },
+  { name: "윤서아", reason: "다른 회원과 시간 충돌" },
+];
+
 
 function Schedule() {
   const [weekOffset, setWeekOffset] = useState(1);
