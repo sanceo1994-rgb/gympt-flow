@@ -9,12 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupEmailRouteImport } from './routes/signup-email'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as BookingRouteImport } from './routes/booking'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OnboardingRoleRouteImport } from './routes/onboarding.role'
 
+const SignupEmailRoute = SignupEmailRouteImport.update({
+  id: '/signup-email',
+  path: '/signup-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScheduleRoute = ScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
@@ -40,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoleRoute = OnboardingRoleRouteImport.update({
+  id: '/onboarding/role',
+  path: '/onboarding/role',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +59,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/schedule': typeof ScheduleRoute
+  '/signup-email': typeof SignupEmailRoute
+  '/onboarding/role': typeof OnboardingRoleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +68,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/schedule': typeof ScheduleRoute
+  '/signup-email': typeof SignupEmailRoute
+  '/onboarding/role': typeof OnboardingRoleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +78,37 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/schedule': typeof ScheduleRoute
+  '/signup-email': typeof SignupEmailRoute
+  '/onboarding/role': typeof OnboardingRoleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/booking' | '/login' | '/pricing' | '/schedule'
+  fullPaths:
+    | '/'
+    | '/booking'
+    | '/login'
+    | '/pricing'
+    | '/schedule'
+    | '/signup-email'
+    | '/onboarding/role'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/booking' | '/login' | '/pricing' | '/schedule'
-  id: '__root__' | '/' | '/booking' | '/login' | '/pricing' | '/schedule'
+  to:
+    | '/'
+    | '/booking'
+    | '/login'
+    | '/pricing'
+    | '/schedule'
+    | '/signup-email'
+    | '/onboarding/role'
+  id:
+    | '__root__'
+    | '/'
+    | '/booking'
+    | '/login'
+    | '/pricing'
+    | '/schedule'
+    | '/signup-email'
+    | '/onboarding/role'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,10 +117,19 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   ScheduleRoute: typeof ScheduleRoute
+  SignupEmailRoute: typeof SignupEmailRoute
+  OnboardingRoleRoute: typeof OnboardingRoleRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup-email': {
+      id: '/signup-email'
+      path: '/signup-email'
+      fullPath: '/signup-email'
+      preLoaderRoute: typeof SignupEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/schedule': {
       id: '/schedule'
       path: '/schedule'
@@ -116,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/role': {
+      id: '/onboarding/role'
+      path: '/onboarding/role'
+      fullPath: '/onboarding/role'
+      preLoaderRoute: typeof OnboardingRoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,17 +181,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   ScheduleRoute: ScheduleRoute,
+  SignupEmailRoute: SignupEmailRoute,
+  OnboardingRoleRoute: OnboardingRoleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
