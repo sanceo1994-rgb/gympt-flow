@@ -233,7 +233,7 @@ function Login() {
 }
 
 function Stepper({ step }: { step: Step }) {
-  const order: Step[] = ["method", "consent", "role", "confirm"];
+  const order: Step[] = ["consent", "role", "confirm"];
   const idx = order.indexOf(step);
   if (idx < 0) return null;
   return (
