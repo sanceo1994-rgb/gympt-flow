@@ -245,7 +245,9 @@ function Schedule() {
                   <p className="text-[11px] text-ink-soft">최근 PT {s.lastPT} · 잔여 <span className={s.remaining <= 5 ? "text-destructive font-bold" : ""}>{s.remaining}회</span></p>
                 </div>
               </div>
-              <button className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0">
+              <button
+                onClick={() => askConfirm(`${s.name}님에게 재알림을 보낼까요?`, "카카오톡으로 일정 응답 요청 알림을 다시 보냅니다.", `${s.name}님에게 재알림을 발송했어요 ✓`)}
+                className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0">
                 <MessageCircle className="h-3 w-3 fill-[#191600]" /> 재알림
               </button>
             </li>
