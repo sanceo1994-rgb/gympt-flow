@@ -294,41 +294,35 @@ function Schedule() {
           ))}
         </div>
 
-        <details className="relative mt-3 group">
-          <summary className="list-none cursor-pointer flex items-center justify-between rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 transition">
-            <span className="text-[12px] font-extrabold text-white/90">타임테이블 뷰로 보기</span>
-            <ChevronRight className="h-4 w-4 text-white/60 transition group-open:rotate-90" />
-          </summary>
-          <div className="mt-2 rounded-xl border border-white/10 overflow-hidden bg-white/[0.03]">
-            <div className="grid grid-cols-[36px_repeat(7,1fr)] bg-white/5 border-b border-white/10">
-              <div className="p-1.5 text-[10px] text-white/50 font-bold text-center">시간</div>
-              {DAYS.map((d) => (
-                <div key={d} className="p-1.5 text-center text-[11px] font-extrabold text-white/90">{d}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-[36px_repeat(7,1fr)]">
-              {HOURS.map((h) => {
-                const hasAny = DAYS.some((d) => assignments.some((a) => a.day === d && a.hour === h));
-                if (!hasAny) return null;
-                return (
-                  <React.Fragment key={h}>
-                    <div className="border-b border-white/10 bg-white/5 grid place-items-center text-[10px] font-bold text-white/50 tabular-nums">{String(h).padStart(2, "0")}</div>
-                    {DAYS.map((d) => {
-                      const a = assignments.find((x) => x.day === d && x.hour === h);
-                      return (
-                        <div key={`${d}-${h}`} className="h-9 border-b border-l border-white/10 grid place-items-center text-[10px] font-extrabold">
-                          {a ? (
-                            <span className="px-1.5 h-5 rounded-md bg-primary text-white truncate max-w-full">{a.name}</span>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                );
-              })}
-            </div>
+        <div className="relative mt-3 rounded-xl border border-white/10 overflow-hidden bg-white/[0.03]">
+          <div className="grid grid-cols-[36px_repeat(7,1fr)] bg-white/5 border-b border-white/10">
+            <div className="p-1.5 text-[10px] text-white/50 font-bold text-center">시간</div>
+            {DAYS.map((d) => (
+              <div key={d} className="p-1.5 text-center text-[11px] font-extrabold text-white/90">{d}</div>
+            ))}
           </div>
-        </details>
+          <div className="grid grid-cols-[36px_repeat(7,1fr)]">
+            {HOURS.map((h) => {
+              const hasAny = DAYS.some((d) => assignments.some((a) => a.day === d && a.hour === h));
+              if (!hasAny) return null;
+              return (
+                <React.Fragment key={h}>
+                  <div className="border-b border-white/10 bg-white/5 grid place-items-center text-[10px] font-bold text-white/50 tabular-nums">{String(h).padStart(2, "0")}</div>
+                  {DAYS.map((d) => {
+                    const a = assignments.find((x) => x.day === d && x.hour === h);
+                    return (
+                      <div key={`${d}-${h}`} className="h-9 border-b border-l border-white/10 grid place-items-center text-[10px] font-extrabold">
+                        {a ? (
+                          <span className="px-1.5 h-5 rounded-md bg-primary text-white whitespace-nowrap">{a.name}</span>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* SECTION 1 — Calendar */}
