@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TeamRouteImport } from './routes/team'
 import { Route as SignupEmailRouteImport } from './routes/signup-email'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -17,6 +18,11 @@ import { Route as BookingRouteImport } from './routes/booking'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OnboardingRoleRouteImport } from './routes/onboarding.role'
 
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupEmailRoute = SignupEmailRouteImport.update({
   id: '/signup-email',
   path: '/signup-email',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/schedule': typeof ScheduleRoute
   '/signup-email': typeof SignupEmailRoute
+  '/team': typeof TeamRoute
   '/onboarding/role': typeof OnboardingRoleRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/schedule': typeof ScheduleRoute
   '/signup-email': typeof SignupEmailRoute
+  '/team': typeof TeamRoute
   '/onboarding/role': typeof OnboardingRoleRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/schedule': typeof ScheduleRoute
   '/signup-email': typeof SignupEmailRoute
+  '/team': typeof TeamRoute
   '/onboarding/role': typeof OnboardingRoleRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/schedule'
     | '/signup-email'
+    | '/team'
     | '/onboarding/role'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/schedule'
     | '/signup-email'
+    | '/team'
     | '/onboarding/role'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/schedule'
     | '/signup-email'
+    | '/team'
     | '/onboarding/role'
   fileRoutesById: FileRoutesById
 }
@@ -118,11 +130,19 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   ScheduleRoute: typeof ScheduleRoute
   SignupEmailRoute: typeof SignupEmailRoute
+  TeamRoute: typeof TeamRoute
   OnboardingRoleRoute: typeof OnboardingRoleRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup-email': {
       id: '/signup-email'
       path: '/signup-email'
@@ -182,8 +202,19 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   ScheduleRoute: ScheduleRoute,
   SignupEmailRoute: SignupEmailRoute,
+  TeamRoute: TeamRoute,
   OnboardingRoleRoute: OnboardingRoleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
