@@ -13,7 +13,7 @@ export function AppShell({ children, left, right }: Props) {
   return (
     <div className="min-h-screen bg-surface-muted text-ink">
       <div className="bg-bands">
-        <div className="mx-auto max-w-[1600px] grid gap-0 lg:grid-cols-[1fr_2fr_1fr]">
+        <div className="mx-auto max-w-[1600px] grid gap-0 lg:grid-cols-[1fr_3fr_1fr]">
           <aside className="hidden lg:block px-5 py-6">
             <div className="sticky top-6">{left ?? <LeftRail />}</div>
           </aside>
