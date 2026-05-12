@@ -169,7 +169,9 @@ function Schedule() {
         </div>
         <div className="flex gap-2">
           <button className="h-10 px-4 rounded-full bg-white border border-border-strong text-[13px] font-bold text-ink hover:bg-muted">초안 저장</button>
-          <button className="h-10 px-4 rounded-full bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shadow-pop hover:brightness-110">
+          <button
+            onClick={() => askConfirm("학생들에게 요청을 보낼까요?", "응답 대기 회원과 미응답 회원 모두에게 카카오톡으로 일정 요청을 보냅니다.", "요청을 발송했어요 ✓")}
+            className="h-10 px-4 rounded-full bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shadow-pop hover:brightness-110">
             <Send className="h-3.5 w-3.5" /> 학생에게 요청 보내기
           </button>
         </div>
