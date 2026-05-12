@@ -142,18 +142,21 @@ function SocialBar() {
 
 function HowItWorks() {
   const steps = [
-    { n: "01", title: "선생님이 다음 주 가능 시간을 엽니다", desc: "요일·시간·정원만 입력하면 학생용 예약 링크가 즉시 생성돼요." },
-    { n: "02", title: "학생들이 원하는 시간을 선택합니다", desc: "1·2·3순위까지 골라요. 모바일에서 3초면 끝나요." },
-    { n: "03", title: "짐피티가 최적 시간표를 추천합니다", desc: "모든 학생의 만족도가 가장 높은 시간표를 자동 계산해 드려요." },
+    { n: "01", title: "선생님이 다음 주 가능 시간을 엽니다", desc: "요일·시간·정원만 입력하면 학생용 예약 링크가 즉시 생성돼요.", img: stepOpen },
+    { n: "02", title: "학생들이 원하는 시간을 선택합니다", desc: "원하는 만큼 골라요. 모바일에서 3초면 끝나요.", img: stepPick },
+    { n: "03", title: "짐피티가 최적 시간표를 추천합니다", desc: "아무도 빠지지 않게, 모두가 PT 받을 수 있는 시간표를 자동으로 만들어요.", img: stepAi },
   ];
   return (
     <section className="mt-14">
       <SectionHead eyebrow="작동 방식" title="3단계로 끝나는 다음 주 일정" />
       <div className="mt-6 grid md:grid-cols-3 gap-3">
         {steps.map((s) => (
-          <div key={s.n} className="panel p-6 relative">
-            <span className="text-[11px] font-black text-primary tracking-widest">{s.n}</span>
-            <h3 className="mt-2 text-[17px] font-extrabold text-ink leading-snug">{s.title}</h3>
+          <div key={s.n} className="panel p-6 relative overflow-hidden">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-[11px] font-black text-primary tracking-widest">{s.n}</span>
+              <img src={s.img} alt="" loading="lazy" width={512} height={512} className="h-20 w-20 -mt-2 -mr-2 object-contain drop-shadow-md" />
+            </div>
+            <h3 className="mt-1 text-[17px] font-extrabold text-ink leading-snug">{s.title}</h3>
             <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">{s.desc}</p>
           </div>
         ))}
