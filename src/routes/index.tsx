@@ -4,6 +4,9 @@ import { ArrowRight, Check, Sparkles, Zap, Star } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import iconCalendar from "@/assets/icon-calendar.png";
 import iconChat from "@/assets/icon-chat.png";
+import stepOpen from "@/assets/step-open.png";
+import stepPick from "@/assets/step-pick.png";
+import stepAi from "@/assets/step-ai.png";
 import { Badge } from "@/components/Badge";
 
 export const Route = createFileRoute("/")({
