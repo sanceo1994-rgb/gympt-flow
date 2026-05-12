@@ -149,11 +149,15 @@ function Booking() {
             색이 진할수록 다른 학생들이 많이 선택한 시간이에요. 트레이너님이 모두 모아 가장 잘 맞는 시간으로 확정해 드려요.
           </p>
         </div>
-        {selectedList.length > 0 && !unavailable && (
+        {submitted ? (
+          <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-[oklch(0.95_0.05_160)] text-[oklch(0.40_0.12_160)] text-[12px] font-extrabold">
+            <Check className="h-3.5 w-3.5" /> 제출 완료 · 상시 수정 가능
+          </span>
+        ) : selectedList.length > 0 && !unavailable ? (
           <span className="inline-flex items-center h-7 px-3 rounded-full bg-ink text-white text-[12px] font-bold tabular-nums">
             {selectedList.length}개 선택됨
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Week label only */}
