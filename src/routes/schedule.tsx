@@ -89,10 +89,28 @@ const AI_UNASSIGNED: { name: string; reason: string }[] = [
 ];
 
 
+function parsePick(s: string): { day: string; hour: number } | null {
+  const m = s.match(/(\S+)\s+(\d{1,2})시/);
+  if (!m) return null;
+  return { day: m[1], hour: parseInt(m[2], 10) };
+}
+
+type Assignment = { name: string; day: string; hour: number };
+
 function Schedule() {
   const [weekOffset, setWeekOffset] = useState(1);
   const [closed, setClosed] = useState<Set<string>>(new Set(["일-7", "일-8", "일-9", "일-10", "일-11", "일-12", "일-13", "일-14", "일-15", "일-16", "일-17", "일-18", "일-19", "일-20", "일-21", "일-22"]));
   const [editing, setEditing] = useState<Student | null>(null);
+  const [activeName, setActiveName] = useState<string | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>(
+    AI_RESULT_INIT.map((r) => ({ name: r.name, day: r.day, hour: parseInt(r.hour, 10) }))
+  );
+  const [pendingMove, setPendingMove] = useState<{ day: string; hour: number } | null>(null);
+
+  const openEdit = (s: Student) => {
+    setEditing(s);
+    setActiveName(s.name);
+  };
 
   const toggleClosed = (key: string) => {
     setClosed((p) => {
