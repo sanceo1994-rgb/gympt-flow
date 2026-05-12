@@ -51,7 +51,7 @@ function Booking() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [unavailable, setUnavailable] = useState(false);
-  const [activeDay, setActiveDay] = useState("화");
+  
   const [loginOpen, setLoginOpen] = useState(false);
   const [confirmUnavail, setConfirmUnavail] = useState(false);
   const [submitted, setSubmitted] = useState(false);
