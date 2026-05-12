@@ -91,15 +91,29 @@ function Hero() {
               <p className="text-[20px] font-extrabold text-ink">126</p>
             </div>
             <div className="col-span-2 panel p-4">
-              <p className="text-[11px] font-bold text-ink-soft uppercase">슬롯 점유율</p>
-              <div className="mt-2 flex items-end gap-1.5 h-14">
-                {[40, 70, 55, 95, 80, 35, 60].map((v, i) => (
-                  <div key={i} className="flex-1 rounded-md bg-primary/15 relative overflow-hidden">
-                    <div className="absolute bottom-0 left-0 right-0 bg-primary rounded-md" style={{ height: `${v}%` }} />
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold text-ink-soft uppercase">슬롯 점유율</p>
+                <p className="text-[10px] font-bold text-primary">평균 62%</p>
+              </div>
+              <div className="mt-2 grid grid-cols-7 gap-1.5 items-end h-16">
+                {[
+                  { d: "월", v: 40 },
+                  { d: "화", v: 70 },
+                  { d: "수", v: 55 },
+                  { d: "목", v: 95 },
+                  { d: "금", v: 80 },
+                  { d: "토", v: 35 },
+                  { d: "일", v: 60 },
+                ].map(({ d, v }) => (
+                  <div key={d} className="flex flex-col items-center justify-end gap-1 h-full">
+                    <span className="text-[9px] font-extrabold tabular-nums text-ink-soft">{v}%</span>
+                    <div className="w-full rounded-md bg-primary/15 relative overflow-hidden" style={{ height: "100%" }}>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary to-[#FF6FB1] rounded-md transition-all" style={{ height: `${v}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground font-semibold">
+              <div className="mt-1.5 grid grid-cols-7 gap-1.5 text-[10px] text-muted-foreground font-semibold text-center">
                 <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span>
               </div>
             </div>
