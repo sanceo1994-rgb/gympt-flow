@@ -626,6 +626,30 @@ function Schedule() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Generic confirm */}
+      <Dialog open={!!confirm} onOpenChange={(v) => !v && setConfirm(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[18px] font-black">{confirm?.title}</DialogTitle>
+            <DialogDescription>{confirm?.desc}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button onClick={() => setConfirm(null)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
+            <button onClick={runConfirm} className={`h-10 px-4 rounded-full text-white text-[12px] font-bold ${confirm?.danger ? "bg-destructive" : "bg-primary"}`}>확인</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send toast (floating) */}
+      {sendToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
+          <div className="rounded-2xl bg-ink text-white px-4 py-3 shadow-pop flex items-center gap-2.5 min-w-[280px]">
+            <span className="h-8 w-8 rounded-full bg-primary grid place-items-center"><Check className="h-4 w-4" /></span>
+            <p className="text-[13px] font-extrabold">{sendToast}</p>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
