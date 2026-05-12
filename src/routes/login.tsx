@@ -57,41 +57,51 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-muted text-ink">
-      <div className="mx-auto max-w-[1200px] min-h-screen grid lg:grid-cols-2">
-        {/* LEFT — pink dumbbell hero */}
-        <aside className="relative bg-gradient-to-br from-[oklch(0.96_0.06_350)] via-[oklch(0.95_0.08_355)] to-[oklch(0.92_0.10_345)] flex flex-col px-8 pt-8 pb-6 lg:pt-14 overflow-hidden">
-          <Link to="/" aria-label="뒤로" className="h-10 w-10 grid place-items-center rounded-full hover:bg-white/40 self-start lg:hidden">
-            <ChevronLeft className="h-5 w-5" />
+    <div className="min-h-screen bg-surface grid lg:grid-cols-2">
+      {/* LEFT — original brand visual (May 10) */}
+      <div className="hidden lg:flex relative overflow-hidden bg-ink text-white p-10">
+        <div className="absolute -right-20 -bottom-20 h-96 w-96 rounded-full bg-primary/40 blur-3xl" />
+        <div className="absolute inset-0 bg-grid opacity-[0.08]" />
+        <div className="relative flex flex-col h-full">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-xl bg-primary grid place-items-center text-white font-black">G</div>
+            <span className="font-extrabold tracking-tight">짐피티 GymPT</span>
           </Link>
-          <span className="hidden lg:inline-flex items-center gap-1.5 self-start chip bg-white/70 text-primary backdrop-blur">
-            <Sparkles className="h-3 w-3" /> 짐피티 GymPT
-          </span>
-          <h1 className="mt-4 text-[26px] sm:text-[32px] font-black leading-[1.2] tracking-tight">
-            짐피티 사용을<br />시작해볼까요?
-          </h1>
-          <p className="mt-3 text-[14px] text-ink-soft leading-relaxed max-w-sm">
-            반복되는 카톡 일정 조율, 이제 그만. 트레이너의 시간을 10배 빠르게 정리해드릴게요.
-          </p>
-          <div className="flex-1 grid place-items-center py-8">
-            <img src={heroImg} alt="짐피티 마스코트" width={320} height={320} className="h-64 w-64 lg:h-80 lg:w-80 object-contain drop-shadow-xl" />
+
+          <div className="mt-auto">
+            <img src={heroDumbbell} alt="" className="h-56 w-56 -ml-4" />
+            <h1 className="mt-6 text-[40px] font-black leading-[1.05]">
+              운동은 선생님이,<br /><span className="grad-pink-text">일정은 짐피티가.</span>
+            </h1>
+            <p className="mt-4 text-white/70 max-w-md">
+              매주 카톡으로 시간 묻지 마세요. 학생은 원하는 시간을 고르고, AI가 최적 시간표를 만들어드려요.
+            </p>
+            <div className="mt-6 flex gap-6 text-[13px] text-white/60">
+              <span><b className="text-white">1,200+</b> 트레이너</span>
+              <span><b className="text-white">12,000+</b> 학생</span>
+              <span><b className="text-white">92%</b> 1순위 매칭</span>
+            </div>
           </div>
-          <p className="hidden lg:block text-[11.5px] text-ink-soft">© 2026 GymPT — 트레이너의 시간을 지켜드려요</p>
-        </aside>
+        </div>
+      </div>
 
-        {/* RIGHT — stepped flow */}
-        <main className="bg-white flex flex-col px-6 sm:px-10 pt-8 pb-10 lg:pt-14 relative">
-          {step !== "method" && step !== "done" && (
-            <button
-              onClick={() => setStep(step === "consent" ? "method" : step === "role" ? "consent" : "role")}
-              className="self-start h-9 px-2.5 rounded-full inline-flex items-center gap-1 text-[12px] font-bold text-ink-soft hover:bg-muted"
-            >
-              <ChevronLeft className="h-4 w-4" /> 이전
-            </button>
-          )}
+      {/* RIGHT — stepped flow */}
+      <main className="bg-white flex flex-col px-6 sm:px-10 pt-8 pb-10 lg:pt-14 relative">
+        <Link to="/" className="lg:hidden flex items-center gap-2 mb-4 self-start">
+          <div className="h-8 w-8 rounded-xl bg-primary grid place-items-center text-white font-black text-[13px]">G</div>
+          <span className="font-extrabold text-ink text-[14px]">짐피티 GymPT</span>
+        </Link>
+        {step !== "method" && step !== "done" && (
+          <button
+            onClick={() => setStep(step === "consent" ? "method" : step === "role" ? "consent" : "role")}
+            className="self-start h-9 px-2.5 rounded-full inline-flex items-center gap-1 text-[12px] font-bold text-ink-soft hover:bg-muted"
+          >
+            <ChevronLeft className="h-4 w-4" /> 이전
+          </button>
+        )}
 
-          <div className="flex-1 flex flex-col justify-center max-w-md w-full mx-auto">
-            <Stepper step={step} />
+        <div className="flex-1 flex flex-col justify-center max-w-md w-full mx-auto">
+          {step !== "method" && <Stepper step={step} />}
 
             {step === "method" && (
               <div className="mt-6">
