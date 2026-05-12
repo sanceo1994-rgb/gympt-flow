@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { TrendingUp, LayoutGrid, Calendar, Users } from "lucide-react";
 import logo from "@/assets/gympt-logo.png";
