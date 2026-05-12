@@ -1,8 +1,41 @@
-import { TrendingUp, Sparkles } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { TrendingUp } from "lucide-react";
+import logo from "@/assets/gympt-logo.png";
+
+const TRAINERS: { name: string; sub: string; color: string }[] = [
+  { name: "김도윤 트레이너", sub: "강남 · 132명", color: "#FFB199" },
+  { name: "이서연 트레이너", sub: "성수 · 121명", color: "#A0D8FF" },
+  { name: "박민호 트레이너", sub: "잠실 · 98명", color: "#C5B6FF" },
+  { name: "최하늘 트레이너", sub: "분당 · 87명", color: "#FFE08A" },
+  { name: "조유나 트레이너", sub: "마포 · 76명", color: "#B6E8C5" },
+];
 
 export function LeftRail() {
   return (
     <div className="space-y-3">
+      {/* Brand / slogan */}
+      <Link to="/" className="block group">
+        <div className="rounded-2xl bg-white border border-border p-4">
+          <div className="flex items-center gap-2.5">
+            <img src={logo} alt="GymPT" width={36} height={36} className="h-9 w-9 object-contain" />
+            <div className="leading-none">
+              <p className="text-[18px] font-black tracking-tight text-ink">짐피티<span className="text-primary">.</span></p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-ink-soft">GymPT</p>
+            </div>
+          </div>
+          <p className="mt-3 text-[13px] font-extrabold text-ink leading-snug">
+            트레이너의 시간을<br />
+            <span className="text-primary">10배 빠르게</span> 조율해요.
+          </p>
+          <p className="mt-1.5 text-[11px] text-ink-soft leading-relaxed">
+            반복되는 카톡 일정 조율, 이제 그만.
+          </p>
+        </div>
+      </Link>
+
+      {/* Spacer */}
+      <div className="h-2" />
+
       {/* Ad slot — flat, friendly */}
       <div className="rounded-2xl bg-white border border-border p-4">
         <span className="inline-flex items-center px-2 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-black tracking-widest">AD</span>
@@ -27,17 +60,18 @@ export function LeftRail() {
           <span className="text-[10px] text-muted-foreground">금주</span>
         </div>
         <ol className="mt-3 space-y-2.5 text-[13px]">
-          {[
-            ["김도윤 트레이너", "강남 · 132명"],
-            ["이서연 트레이너", "성수 · 121명"],
-            ["박민호 트레이너", "잠실 · 98명"],
-            ["최하늘 트레이너", "분당 · 87명"],
-            ["조유나 트레이너", "마포 · 76명"],
-          ].map(([name, sub], i) => (
-            <li key={i} className="flex items-center gap-3">
-              <span className={`h-6 w-6 rounded-md grid place-items-center text-[11px] font-black ${i === 0 ? "bg-primary text-white" : i < 3 ? "bg-ink text-white" : "bg-muted text-ink-soft"}`}>
+          {TRAINERS.map(({ name, sub, color }, i) => (
+            <li key={i} className="flex items-center gap-2.5">
+              <span className={`h-5 w-5 rounded-md grid place-items-center text-[10px] font-black shrink-0 ${i === 0 ? "bg-primary text-white" : i < 3 ? "bg-ink text-white" : "bg-muted text-ink-soft"}`}>
                 {i + 1}
               </span>
+              {/* Kakao-style avatar */}
+              <div
+                className="h-8 w-8 rounded-xl grid place-items-center text-[12px] font-black text-white shrink-0 ring-1 ring-black/5"
+                style={{ backgroundColor: color }}
+              >
+                <span className="text-ink/80">{name[0]}</span>
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-ink leading-tight truncate">{name}</p>
                 <p className="text-[11px] text-muted-foreground truncate">{sub}</p>
@@ -45,17 +79,6 @@ export function LeftRail() {
             </li>
           ))}
         </ol>
-      </div>
-
-      {/* Tip */}
-      <div className="rounded-2xl bg-white border border-border p-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">짐피티 팁</p>
-        </div>
-        <p className="mt-2 text-[13px] text-ink leading-relaxed">
-          매주 <b className="text-primary">화요일 오전</b>에 다음 주 일정을 열면 응답률이 평균 18% 더 높아요.
-        </p>
       </div>
     </div>
   );
