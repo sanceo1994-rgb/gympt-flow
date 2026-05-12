@@ -306,11 +306,15 @@ function Booking() {
           </div>
 
           <button
-            onClick={() => requireAuth(() => {})}
+            onClick={() => requireAuth(() => {
+              setSubmitted(true);
+              setToast(unavailable ? "‘이번 주 PT 불가’로 전달했어요" : `${selectedList.length}개 시간이 트레이너에게 전달됐어요`);
+              setTimeout(() => setToast(null), 2600);
+            })}
             disabled={!unavailable && selectedList.length === 0}
             className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 disabled:opacity-40 hover:brightness-110"
           >
-            제출 <Check className="h-4 w-4" />
+            {submitted ? "수정 제출" : "제출"} <Check className="h-4 w-4" />
           </button>
         </div>
         <div className="mt-1.5 flex items-center gap-1 text-[11px] text-ink-soft justify-center">
