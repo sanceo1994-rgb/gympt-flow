@@ -229,7 +229,9 @@ function Schedule() {
               {STUDENTS.filter((s) => s.status === "응답대기").length}명
             </span>
           </div>
-          <button className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95">
+          <button
+            onClick={() => askConfirm("전체 카톡 재알림을 보낼까요?", `미응답 회원 ${STUDENTS.filter((s) => s.status === "응답대기").length}명에게 카카오톡 알림을 다시 보냅니다.`, "전체 재알림을 발송했어요 ✓")}
+            className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95">
             <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" /> 전체 카톡 재알림
           </button>
         </div>
