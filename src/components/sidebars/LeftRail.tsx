@@ -13,20 +13,20 @@ const TRAINERS: { name: string; sub: string; color: string }[] = [
 export function LeftRail() {
   return (
     <div className="space-y-3">
-      {/* Brand / slogan — directly on gray, no card */}
-      <Link to="/" className="block px-1 pt-1 pb-2">
-        <div className="flex items-center gap-2.5">
+      {/* Brand / slogan — directly on gray, centered-ish */}
+      <Link to="/" className="block px-4 pt-2 pb-3">
+        <div className="flex items-center justify-center gap-2.5">
           <img src={logo} alt="GymPT" width={36} height={36} className="h-9 w-9 object-contain" />
           <div className="leading-none">
             <p className="text-[20px] font-black tracking-tight text-ink">짐피티<span className="text-primary">.</span></p>
             <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-ink-soft">GymPT</p>
           </div>
         </div>
-        <p className="mt-4 text-[14px] font-extrabold text-ink leading-snug tracking-tight">
+        <p className="mt-4 text-center text-[14px] font-extrabold text-ink leading-snug tracking-tight">
           트레이너의 시간을<br />
           <span className="text-primary">10배 빠르게</span> 조율해요.
         </p>
-        <p className="mt-1.5 text-[11.5px] text-ink-soft leading-relaxed">
+        <p className="mt-1.5 text-center text-[11.5px] text-ink-soft leading-relaxed">
           반복되는 카톡 일정 조율, 이제 그만.
         </p>
       </Link>
