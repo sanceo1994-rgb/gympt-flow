@@ -393,19 +393,16 @@ function Schedule() {
                       ) : picks.length > 0 ? (
                         <>
                           <span className={`absolute top-1 left-1.5 text-[10px] font-black tabular-nums leading-none ${lvl >= 4 ? "text-white" : "text-ink"}`}>{picks.length}</span>
-                          <div className="mt-3.5 grid grid-cols-2 [@media(min-width:1280px)]:grid-cols-3 gap-[3px]">
-                            {picks.slice(0, 5).map((n) => (
+                          <div className="mt-3.5 flex flex-wrap gap-[3px] justify-center">
+                            {picks.map((n) => (
                               <span
                                 key={n}
-                                className={`px-1 py-[1px] rounded-[4px] text-[9px] font-extrabold leading-tight truncate text-center
+                                className={`px-1 py-[1px] rounded-[4px] text-[9px] font-extrabold leading-tight whitespace-nowrap
                                   ${lvl >= 4 ? "bg-white/25 text-white" : "bg-white/80 text-ink ring-1 ring-black/5"}`}
                               >
                                 {n}
                               </span>
                             ))}
-                            {picks.length > 5 && (
-                              <span className={`px-1 py-[1px] rounded-[4px] text-[9px] font-extrabold leading-tight text-center ${lvl >= 4 ? "bg-white/15 text-white/80" : "bg-muted text-ink-soft"}`}>+{picks.length - 5}</span>
-                            )}
                           </div>
                         </>
                       ) : null}
