@@ -47,6 +47,9 @@ function Booking() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [confirmUnavail, setConfirmUnavail] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
 
   const requireAuth = (fn: () => void) => {
     if (!loggedIn) { setLoginOpen(true); return; }
