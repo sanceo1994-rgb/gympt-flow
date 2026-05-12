@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, LayoutGrid, Calendar, Users } from "lucide-react";
 import logo from "@/assets/gympt-logo.png";
 
 const TRAINERS: { name: string; sub: string; color: string }[] = [
@@ -31,7 +31,23 @@ export function LeftRail() {
         </p>
       </Link>
 
-      <div className="h-3" />
+      {/* Quick nav */}
+      <nav className="grid grid-cols-3 gap-1.5 px-1">
+        <Link to="/schedule" className="rounded-xl bg-white border border-border px-2 py-2.5 text-center hover:border-ink/40 transition flex flex-col items-center gap-1">
+          <Calendar className="h-3.5 w-3.5 text-ink-soft" />
+          <span className="text-[11px] font-bold text-ink">조율</span>
+        </Link>
+        <Link to="/booking" className="rounded-xl bg-white border border-border px-2 py-2.5 text-center hover:border-ink/40 transition flex flex-col items-center gap-1">
+          <LayoutGrid className="h-3.5 w-3.5 text-ink-soft" />
+          <span className="text-[11px] font-bold text-ink">예약</span>
+        </Link>
+        <Link to="/team" className="rounded-xl bg-white border border-border px-2 py-2.5 text-center hover:border-ink/40 transition flex flex-col items-center gap-1">
+          <Users className="h-3.5 w-3.5 text-ink-soft" />
+          <span className="text-[11px] font-bold text-ink">팀플랜</span>
+        </Link>
+      </nav>
+
+      <div className="h-1" />
 
       {/* Ad slot — flat, friendly */}
       <div className="rounded-2xl bg-white border border-border p-4">
@@ -80,3 +96,4 @@ export function LeftRail() {
     </div>
   );
 }
+
