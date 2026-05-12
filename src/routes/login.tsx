@@ -1,164 +1,288 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ChevronLeft, MessageCircle, Check, Mail } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles } from "lucide-react";
 import heroImg from "@/assets/login-hero.png";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import trainerImg from "@/assets/role-trainer.png";
+import studentImg from "@/assets/role-student.png";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "로그인 — 짐피티 GymPT" }] }),
   component: Login,
 });
 
+type Step = "method" | "consent" | "role" | "confirm" | "done";
+type Role = "trainer" | "student";
+
+const KAKAO_MOCK = {
+  name: "박재현",
+  email: "jaehyun.park@kakao.com",
+  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jaehyun&backgroundColor=ffd5dc",
+};
+
 function Login() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [consentOpen, setConsentOpen] = useState(false);
-  const [pendingMethod, setPendingMethod] = useState<"kakao" | "email" | null>(null);
-  const [agree, setAgree] = useState({ all: false, tos: false, priv: false, age: false });
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user) navigate({ to: "/onboarding/role" });
-  }, [user, navigate]);
+  const [step, setStep] = useState<Step>("method");
+  const [method, setMethod] = useState<"kakao" | "email">("kakao");
+  const [agree, setAgree] = useState({ tos: false, priv: false, age: false });
+  const [role, setRole] = useState<Role | null>(null);
+  const [profile, setProfile] = useState({ name: "", email: "", avatar: "" });
+  const [emailPw, setEmailPw] = useState({ email: "", password: "" });
+  const [welcome, setWelcome] = useState<string | null>(null);
 
   const allOk = agree.tos && agree.priv && agree.age;
-  const toggleAll = (v: boolean) => setAgree({ all: v, tos: v, priv: v, age: v });
-  const toggle = (k: "tos" | "priv" | "age") => {
-    const next = { ...agree, [k]: !agree[k] };
-    next.all = next.tos && next.priv && next.age;
-    setAgree(next);
+  const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
+
+  const startMethod = (m: "kakao" | "email") => {
+    setMethod(m);
+    setStep("consent");
   };
 
-  const startKakao = () => { setPendingMethod("kakao"); setConsentOpen(true); };
-  const startEmail = () => { setPendingMethod("email"); setConsentOpen(true); };
-
-  const proceed = async () => {
-    setError(null);
-    if (!allOk) { setError("필수 항목에 모두 동의해주세요."); return; }
-    if (pendingMethod === "kakao") {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "kakao",
-        options: { redirectTo: window.location.origin + "/onboarding/role" },
-      });
-      if (error) setError("카카오 로그인 설정이 필요합니다. 운영자에게 문의해주세요.");
+  const afterConsent = () => {
+    if (method === "kakao") {
+      setProfile(KAKAO_MOCK);
     } else {
-      navigate({ to: "/signup-email" });
+      setProfile({ name: "", email: emailPw.email, avatar: "" });
     }
+    setStep("role");
+  };
+
+  const completeSignup = () => {
+    const user = { ...profile, role };
+    try { localStorage.setItem("gympt-user", JSON.stringify(user)); } catch {}
+    setWelcome(profile.name || "회원");
+    setTimeout(() => {
+      navigate({ to: role === "trainer" ? "/schedule" : "/booking" });
+    }, 1600);
   };
 
   return (
     <div className="min-h-screen bg-surface-muted text-ink">
       <div className="mx-auto max-w-[1200px] min-h-screen grid lg:grid-cols-2">
-        {/* LEFT — hero (existing content) */}
-        <aside className="relative bg-white lg:bg-transparent flex flex-col px-8 pt-8 pb-6 lg:pt-16">
-          <Link to="/" aria-label="뒤로" className="h-10 w-10 grid place-items-center rounded-full hover:bg-muted self-start lg:hidden">
+        {/* LEFT — pink dumbbell hero */}
+        <aside className="relative bg-gradient-to-br from-[oklch(0.96_0.06_350)] via-[oklch(0.95_0.08_355)] to-[oklch(0.92_0.10_345)] flex flex-col px-8 pt-8 pb-6 lg:pt-14 overflow-hidden">
+          <Link to="/" aria-label="뒤로" className="h-10 w-10 grid place-items-center rounded-full hover:bg-white/40 self-start lg:hidden">
             <ChevronLeft className="h-5 w-5" />
           </Link>
-          <h1 className="mt-2 text-[26px] sm:text-[32px] font-black leading-[1.2] tracking-tight">
+          <span className="hidden lg:inline-flex items-center gap-1.5 self-start chip bg-white/70 text-primary backdrop-blur">
+            <Sparkles className="h-3 w-3" /> 짐피티 GymPT
+          </span>
+          <h1 className="mt-4 text-[26px] sm:text-[32px] font-black leading-[1.2] tracking-tight">
             짐피티 사용을<br />시작해볼까요?
           </h1>
           <p className="mt-3 text-[14px] text-ink-soft leading-relaxed max-w-sm">
             반복되는 카톡 일정 조율, 이제 그만. 트레이너의 시간을 10배 빠르게 정리해드릴게요.
           </p>
           <div className="flex-1 grid place-items-center py-8">
-            <img src={heroImg} alt="" width={320} height={320} className="h-64 w-64 lg:h-80 lg:w-80 object-contain" />
+            <img src={heroImg} alt="짐피티 마스코트" width={320} height={320} className="h-64 w-64 lg:h-80 lg:w-80 object-contain drop-shadow-xl" />
           </div>
+          <p className="hidden lg:block text-[11.5px] text-ink-soft">© 2026 GymPT — 트레이너의 시간을 지켜드려요</p>
         </aside>
 
-        {/* RIGHT — auth methods (Kakao primary) */}
-        <main className="bg-white flex flex-col px-8 pt-8 pb-10 lg:pt-16 lg:px-12">
-          <div className="hidden lg:flex justify-end">
-            <a href="https://pf.kakao.com" target="_blank" rel="noreferrer" className="h-9 px-3 rounded-xl border border-border text-[12px] font-bold text-ink hover:bg-muted">고객센터</a>
-          </div>
-
-          <div className="flex-1 flex flex-col justify-center max-w-sm w-full mx-auto">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">로그인 / 회원가입</p>
-            <h2 className="mt-3 text-[22px] font-black leading-tight">3초 만에 시작하기</h2>
-            <p className="mt-2 text-[13px] text-ink-soft">카카오로 가장 빠르게 가입할 수 있어요.</p>
-
+        {/* RIGHT — stepped flow */}
+        <main className="bg-white flex flex-col px-6 sm:px-10 pt-8 pb-10 lg:pt-14 relative">
+          {step !== "method" && step !== "done" && (
             <button
-              onClick={startKakao}
-              className="mt-6 h-14 rounded-2xl bg-[#FEE500] text-[#191600] text-[15px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95"
+              onClick={() => setStep(step === "consent" ? "method" : step === "role" ? "consent" : "role")}
+              className="self-start h-9 px-2.5 rounded-full inline-flex items-center gap-1 text-[12px] font-bold text-ink-soft hover:bg-muted"
             >
-              <MessageCircle className="h-4 w-4 fill-[#191600]" /> 카카오로 시작하기
+              <ChevronLeft className="h-4 w-4" /> 이전
             </button>
+          )}
 
-            <div className="mt-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-[11px] font-bold text-ink-soft">또는</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
+          <div className="flex-1 flex flex-col justify-center max-w-md w-full mx-auto">
+            <Stepper step={step} />
 
-            <button
-              onClick={startEmail}
-              className="mt-5 h-12 rounded-2xl bg-white border border-border-strong text-ink text-[13.5px] font-bold inline-flex items-center justify-center gap-2 hover:bg-muted"
-            >
-              <Mail className="h-4 w-4" /> 이메일로 직접 가입
-            </button>
+            {step === "method" && (
+              <div className="mt-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">로그인 / 회원가입</p>
+                <h2 className="mt-3 text-[24px] font-black leading-tight">3초 만에 시작하기</h2>
+                <p className="mt-2 text-[13px] text-ink-soft">카카오로 가장 빠르게 가입할 수 있어요.</p>
 
-            <p className="mt-6 text-[11.5px] text-ink-soft">
-              가입 시 이름·프로필 사진·이메일을 카카오에서 받아옵니다.
-            </p>
+                <button
+                  onClick={() => startMethod("kakao")}
+                  className="mt-6 h-14 w-full rounded-2xl bg-[#FEE500] text-[#191600] text-[15px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95"
+                >
+                  <MessageCircle className="h-4 w-4 fill-[#191600]" /> 카카오로 시작하기
+                </button>
+
+                <div className="mt-5 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-[11px] font-bold text-ink-soft">또는</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
+                <button
+                  onClick={() => startMethod("email")}
+                  className="mt-5 h-12 w-full rounded-2xl bg-white border border-border-strong text-ink text-[13.5px] font-bold inline-flex items-center justify-center gap-2 hover:bg-muted"
+                >
+                  <Mail className="h-4 w-4" /> 이메일로 직접 가입
+                </button>
+
+                <p className="mt-6 text-[11.5px] text-ink-soft">가입 시 카카오에서 이름·프로필·이메일을 불러옵니다.</p>
+              </div>
+            )}
+
+            {step === "consent" && (
+              <div className="mt-6">
+                <h2 className="text-[22px] font-black leading-tight">잠깐, 약관에 동의해주세요</h2>
+                <p className="mt-2 text-[13px] text-ink-soft">가입을 위해 필수 약관에 동의가 필요해요.</p>
+
+                <div className="mt-5 rounded-2xl border border-border bg-surface-muted p-4">
+                  <CheckRow bold label="전체 동의" checked={allOk} onChange={() => toggleAll(!allOk)} />
+                  <div className="mt-3 grid gap-2 pl-1">
+                    <CheckRow label="(필수) 만 14세 이상입니다" checked={agree.age} onChange={() => setAgree((a) => ({ ...a, age: !a.age }))} />
+                    <CheckRow label="(필수) 이용약관 동의" checked={agree.tos} onChange={() => setAgree((a) => ({ ...a, tos: !a.tos }))} link="#" />
+                    <CheckRow label="(필수) 개인정보 수집·이용 동의" checked={agree.priv} onChange={() => setAgree((a) => ({ ...a, priv: !a.priv }))} link="#" />
+                  </div>
+                </div>
+
+                <button
+                  onClick={afterConsent}
+                  disabled={!allOk}
+                  className="mt-6 h-12 w-full rounded-2xl bg-ink text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2"
+                >
+                  동의하고 계속하기 <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {step === "role" && (
+              <div className="mt-6">
+                <h2 className="text-[22px] font-black leading-tight">어떤 역할로 시작할까요?</h2>
+                <p className="mt-2 text-[13px] text-ink-soft">나중에 언제든 바꿀 수 있어요.</p>
+
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <RoleCard title="트레이너" sub="회원 일정 자동 조율" img={trainerImg} active={role === "trainer"} onClick={() => setRole("trainer")} />
+                  <RoleCard title="학생 / 회원" sub="원하는 시간 선택" img={studentImg} active={role === "student"} onClick={() => setRole("student")} />
+                </div>
+
+                <button
+                  onClick={() => setStep("confirm")}
+                  disabled={!role}
+                  className="mt-6 h-12 w-full rounded-2xl bg-ink text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2"
+                >
+                  다음 <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {step === "confirm" && (
+              <div className="mt-6">
+                <h2 className="text-[22px] font-black leading-tight">가입 정보를 확인해주세요</h2>
+                <p className="mt-2 text-[13px] text-ink-soft">
+                  {method === "kakao" ? "카카오에서 받아온 정보예요. 필요하면 수정할 수 있어요." : "기본 정보를 입력해주세요."}
+                </p>
+
+                <div className="mt-5 flex items-center gap-3">
+                  {profile.avatar ? (
+                    <img src={profile.avatar} alt="" className="h-16 w-16 rounded-2xl bg-muted object-cover ring-2 ring-border" />
+                  ) : (
+                    <div className="h-16 w-16 rounded-2xl bg-surface-muted grid place-items-center text-[22px] font-black text-ink ring-2 ring-border">
+                      {profile.name?.[0] || "?"}
+                    </div>
+                  )}
+                  <span className="chip bg-primary/10 text-primary">{role === "trainer" ? "트레이너" : "학생 / 회원"}</span>
+                </div>
+
+                <div className="mt-5 grid gap-3">
+                  <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" />
+                  <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
+                  {method === "email" && (
+                    <Field label="비밀번호" type="password" value={emailPw.password} onChange={(v) => setEmailPw((p) => ({ ...p, password: v }))} placeholder="8자 이상" />
+                  )}
+                </div>
+
+                <button
+                  onClick={completeSignup}
+                  disabled={!profile.name || !profile.email}
+                  className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
+                >
+                  <Check className="h-4 w-4" /> 회원가입 완료
+                </button>
+                <p className="mt-3 text-center text-[11px] text-ink-soft">DB 연결은 추후 적용됩니다 — 지금은 가상 회원가입으로 진행돼요.</p>
+              </div>
+            )}
           </div>
         </main>
       </div>
 
-      {/* Consent dialog — shown only after picking a method */}
-      <Dialog open={consentOpen} onOpenChange={(v) => { setConsentOpen(v); if (!v) setError(null); }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-[20px] font-black">잠깐, 약관에 동의해주세요</DialogTitle>
-            <DialogDescription>가입을 진행하기 전, 필수 약관에 동의가 필요해요.</DialogDescription>
-          </DialogHeader>
-
-          <div className="rounded-2xl border border-border bg-surface-muted p-4">
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <Checkbox checked={agree.all} onChange={() => toggleAll(!agree.all)} />
-              <span className="text-[14px] font-extrabold text-ink">전체 동의</span>
-            </label>
-            <div className="mt-3 grid gap-2 pl-1">
-              <Row label="(필수) 만 14세 이상입니다" checked={agree.age} onChange={() => toggle("age")} />
-              <Row label="(필수) 이용약관 동의" checked={agree.tos} onChange={() => toggle("tos")} link="#" />
-              <Row label="(필수) 개인정보 수집·이용 동의" checked={agree.priv} onChange={() => toggle("priv")} link="#" />
+      {/* Welcome floating toast */}
+      <Dialog open={!!welcome} onOpenChange={(v) => !v && setWelcome(null)}>
+        <DialogContent className="max-w-sm border-0 p-0 bg-transparent shadow-none">
+          <div className="rounded-3xl bg-white shadow-pop border border-border p-6 text-center">
+            <div className="mx-auto h-16 w-16 rounded-full bg-primary/15 grid place-items-center mb-3">
+              <Sparkles className="h-7 w-7 text-primary" />
             </div>
+            <h3 className="text-[22px] font-black tracking-tight text-ink">환영합니다, {welcome}님!</h3>
+            <p className="mt-1.5 text-[13px] text-ink-soft">짐피티가 일정 조율을 도와드릴게요.</p>
           </div>
-
-          {error && <p className="text-[12px] text-destructive font-bold">{error}</p>}
-
-          <button
-            onClick={proceed}
-            disabled={!allOk}
-            className="h-12 rounded-2xl bg-ink text-white text-[14px] font-extrabold disabled:opacity-40"
-          >
-            동의하고 계속하기
-          </button>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
 
-function Row({ label, checked, onChange, link }: { label: string; checked: boolean; onChange: () => void; link?: string }) {
+function Stepper({ step }: { step: Step }) {
+  const order: Step[] = ["method", "consent", "role", "confirm"];
+  const idx = order.indexOf(step);
+  if (idx < 0) return null;
+  return (
+    <div className="flex items-center gap-1.5">
+      {order.map((s, i) => (
+        <div key={s} className={`h-1.5 rounded-full transition-all ${i <= idx ? "bg-primary" : "bg-muted"} ${i === idx ? "w-8" : "w-5"}`} />
+      ))}
+      <span className="ml-2 text-[11px] font-bold text-ink-soft tabular-nums">{idx + 1} / {order.length}</span>
+    </div>
+  );
+}
+
+function CheckRow({ label, checked, onChange, link, bold }: { label: string; checked: boolean; onChange: () => void; link?: string; bold?: boolean }) {
   return (
     <label className="flex items-center gap-2.5 cursor-pointer">
-      <Checkbox checked={checked} onChange={onChange} />
-      <span className="flex-1 text-[13px] text-ink-soft">{label}</span>
+      <button
+        type="button"
+        onClick={onChange}
+        className={`h-5 w-5 rounded-md grid place-items-center transition shrink-0 ${checked ? "bg-primary text-white" : "bg-white border border-border-strong"}`}
+        aria-pressed={checked}
+      >
+        {checked && <Check className="h-3.5 w-3.5" />}
+      </button>
+      <span className={`flex-1 text-[13px] ${bold ? "font-extrabold text-ink" : "text-ink-soft"}`}>{label}</span>
       {link && <a href={link} className="text-[11px] text-ink-soft underline">보기</a>}
     </label>
   );
 }
 
-function Checkbox({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+function RoleCard({ title, sub, img, active, onClick }: { title: string; sub: string; img: string; active: boolean; onClick: () => void }) {
   return (
     <button
-      type="button"
-      onClick={onChange}
-      className={`h-5 w-5 rounded-md grid place-items-center transition shrink-0 ${checked ? "bg-primary text-white" : "bg-white border border-border-strong"}`}
-      aria-pressed={checked}
+      onClick={onClick}
+      className={`group relative rounded-2xl border-2 p-4 text-left transition bg-white ${active ? "border-primary shadow-pop -translate-y-0.5" : "border-border hover:border-ink/50"}`}
     >
-      {checked && <Check className="h-3.5 w-3.5" />}
+      <div className="aspect-square w-full grid place-items-center">
+        <img src={img} alt="" className="h-24 w-24 object-contain drop-shadow-md" />
+      </div>
+      <h3 className="mt-1 text-[15px] font-black tracking-tight">{title}</h3>
+      <p className="mt-0.5 text-[11.5px] text-ink-soft">{sub}</p>
+      <span className={`absolute top-3 right-3 h-5 w-5 rounded-full grid place-items-center transition ${active ? "bg-primary text-white" : "bg-muted text-transparent"}`}>
+        <Check className="h-3 w-3" />
+      </span>
     </button>
+  );
+}
+
+function Field({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="mt-1.5 h-11 w-full px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[14px] font-semibold text-ink"
+      />
+    </label>
   );
 }
