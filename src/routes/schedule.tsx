@@ -230,7 +230,8 @@ function Schedule() {
           <div>
             <span className="chip bg-white/10 text-white"><Sparkles className="h-3 w-3" /> AI 최적 시간표</span>
             <h3 className="mt-2 text-[20px] sm:text-[22px] font-black leading-tight">
-              학생 6명 / <span className="text-primary">6명 자동 배정</span>
+              학생 {STUDENTS.filter(s => s.status === "응답완료").length}명 중{" "}
+              <span className="text-primary">{AI_RESULT_INIT.length}명 자동 배정</span>
               <span className="text-white/60 font-bold text-[14px]"> · 선호 만족 94%</span>
             </h3>
           </div>
@@ -241,17 +242,45 @@ function Schedule() {
             </button>
           </div>
         </div>
-        <div className="relative mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {AI_RESULT_INIT.map((r, i) => (
-            <div key={i} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{r.day}요일</p>
-                <p className="text-[15px] font-black tabular-nums">{r.hour}</p>
-              </div>
-              <span className="inline-flex items-center px-2 h-6 rounded-full bg-primary/20 text-primary text-[11px] font-extrabold">{r.name}</span>
+
+        {/* 조율 불가 회원 */}
+        {AI_UNASSIGNED.length > 0 && (
+          <div className="relative mt-4 rounded-xl bg-destructive/15 border border-destructive/30 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Ban className="h-3.5 w-3.5 text-[#FF8A8A]" />
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#FFB4B4]">조율 불가 · {AI_UNASSIGNED.length}명</p>
             </div>
-          ))}
-        </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {AI_UNASSIGNED.map((u) => (
+                <span key={u.name} className="inline-flex items-center gap-1.5 pl-1 pr-2.5 h-7 rounded-full bg-white/10 text-white text-[11px] font-bold">
+                  <span className="h-5 w-5 rounded-full bg-white/20 grid place-items-center text-[10px]">{u.name[0]}</span>
+                  {u.name}
+                  <span className="text-white/50 font-medium">· {u.reason}</span>
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-white/60">아래 ‘학생 응답’에서 일정 조정으로 직접 배정해 주세요.</p>
+          </div>
+        )}
+
+        {/* Collapsible assigned timetable */}
+        <details className="relative mt-3 group">
+          <summary className="list-none cursor-pointer flex items-center justify-between rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 transition">
+            <span className="text-[12px] font-extrabold text-white/90">배정된 {AI_RESULT_INIT.length}명 보기</span>
+            <ChevronRight className="h-4 w-4 text-white/60 transition group-open:rotate-90" />
+          </summary>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {AI_RESULT_INIT.map((r, i) => (
+              <div key={i} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{r.day}요일</p>
+                  <p className="text-[15px] font-black tabular-nums">{r.hour}</p>
+                </div>
+                <span className="inline-flex items-center px-2 h-6 rounded-full bg-primary/20 text-primary text-[11px] font-extrabold">{r.name}</span>
+              </div>
+            ))}
+          </div>
+        </details>
       </div>
 
       {/* SECTION 1 — Calendar */}
