@@ -49,7 +49,10 @@ function Login() {
 
   const completeSignup = () => {
     const user = { ...profile, role };
-    try { localStorage.setItem("gympt-user", JSON.stringify(user)); } catch {}
+    try {
+      localStorage.setItem("gympt-user", JSON.stringify(user));
+      window.dispatchEvent(new Event("gympt-auth"));
+    } catch {}
     setWelcome(profile.name || "회원");
     setTimeout(() => {
       navigate({ to: role === "trainer" ? "/schedule" : "/booking" });
