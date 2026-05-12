@@ -424,7 +424,7 @@ function Schedule() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => setEditing(s)}
+                      onClick={() => openEdit(s)}
                       className="h-8 px-3 rounded-full bg-ink text-white text-[11px] font-bold inline-flex items-center gap-1"
                     >
                       <Pencil className="h-3 w-3" /> 일정 조정
