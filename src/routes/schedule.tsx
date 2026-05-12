@@ -272,7 +272,9 @@ function Schedule() {
           </div>
           <div className="flex gap-2">
             <button className="h-9 px-3.5 rounded-full bg-white/10 text-white text-[12px] font-bold">다시 계산</button>
-            <button className="h-9 px-3.5 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1">
+            <button
+              onClick={() => askConfirm("배정된 일정을 학생에게 확정 알릴까요?", "AI가 배정한 시간을 모든 회원에게 카카오톡으로 확정 알림합니다. 변경사항도 함께 전달돼요.", "확정 알림을 발송했어요 ✓")}
+              className="h-9 px-3.5 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1">
               <Check className="h-3.5 w-3.5" /> 확정 알림
             </button>
           </div>
