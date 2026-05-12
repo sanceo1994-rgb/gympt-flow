@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, LayoutGrid, Calendar, Users } from "lucide-react";
 import logo from "@/assets/gympt-logo.png";
 
 const TRAINERS: { name: string; sub: string; color: string }[] = [
