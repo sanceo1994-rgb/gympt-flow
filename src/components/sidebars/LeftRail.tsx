@@ -31,7 +31,14 @@ export function LeftRail() {
         </p>
       </Link>
 
-      <div className="h-3" />
+      {/* Quick nav */}
+      <nav className="grid grid-cols-3 gap-1.5 px-1">
+        <NavTile to="/schedule" icon={<Calendar className="h-3.5 w-3.5" />} label="조율" />
+        <NavTile to="/booking" icon={<LayoutGrid className="h-3.5 w-3.5" />} label="예약" />
+        <NavTile to="/team" icon={<Users className="h-3.5 w-3.5" />} label="팀플랜" />
+      </nav>
+
+      <div className="h-1" />
 
       {/* Ad slot — flat, friendly */}
       <div className="rounded-2xl bg-white border border-border p-4">
