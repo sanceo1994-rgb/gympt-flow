@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles } from "lucide-react";
-import heroImg from "@/assets/login-hero.png";
+import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
