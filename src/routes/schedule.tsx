@@ -67,6 +67,9 @@ const STUDENTS: Student[] = [
   { name: "정수민", status: "응답완료", picks: ["화 07시", "토 09시", "토 11시"], lastPT: "5.4 (월)", remaining: 3, total: 20 },
   { name: "한승호", status: "응답완료", picks: ["월 19시", "월 20시", "수 19시", "금 19시"], lastPT: "5.9 (토)", remaining: 11, total: 24 },
   { name: "이도현", status: "응답대기", picks: [], lastPT: "5.2 (토)", remaining: 5, total: 10 },
+  { name: "김태현", status: "응답대기", picks: [], lastPT: "5.1 (금)", remaining: 9, total: 20 },
+  { name: "윤서아", status: "응답대기", picks: [], lastPT: "4.30 (목)", remaining: 4, total: 10 },
+  { name: "강민준", status: "응답대기", picks: [], lastPT: "5.3 (일)", remaining: 12, total: 24 },
   { name: "오지훈", status: "불가", picks: [], lastPT: "5.5 (화)", remaining: 8, total: 20 },
 ];
 
@@ -79,10 +82,35 @@ const AI_RESULT_INIT = [
   { day: "금", hour: "20:00", name: "정수민" },
 ];
 
+// AI가 어떤 시간에도 배정하지 못한 회원 (모두 겹치거나, 선호 시간이 닫힘)
+const AI_UNASSIGNED: { name: string; reason: string }[] = [
+  { name: "김태현", reason: "선호 시간 모두 닫힘" },
+  { name: "윤서아", reason: "다른 회원과 시간 충돌" },
+];
+
+
+function parsePick(s: string): { day: string; hour: number } | null {
+  const m = s.match(/(\S+)\s+(\d{1,2})시/);
+  if (!m) return null;
+  return { day: m[1], hour: parseInt(m[2], 10) };
+}
+
+type Assignment = { name: string; day: string; hour: number };
+
 function Schedule() {
   const [weekOffset, setWeekOffset] = useState(1);
   const [closed, setClosed] = useState<Set<string>>(new Set(["일-7", "일-8", "일-9", "일-10", "일-11", "일-12", "일-13", "일-14", "일-15", "일-16", "일-17", "일-18", "일-19", "일-20", "일-21", "일-22"]));
   const [editing, setEditing] = useState<Student | null>(null);
+  const [activeName, setActiveName] = useState<string | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>(
+    AI_RESULT_INIT.map((r) => ({ name: r.name, day: r.day, hour: parseInt(r.hour, 10) }))
+  );
+  const [pendingMove, setPendingMove] = useState<{ day: string; hour: number } | null>(null);
+
+  const openEdit = (s: Student) => {
+    setEditing(s);
+    setActiveName(s.name);
+  };
 
   const toggleClosed = (key: string) => {
     setClosed((p) => {
@@ -220,7 +248,8 @@ function Schedule() {
           <div>
             <span className="chip bg-white/10 text-white"><Sparkles className="h-3 w-3" /> AI 최적 시간표</span>
             <h3 className="mt-2 text-[20px] sm:text-[22px] font-black leading-tight">
-              학생 6명 / <span className="text-primary">6명 자동 배정</span>
+              학생 {STUDENTS.filter(s => s.status === "응답완료").length}명 중{" "}
+              <span className="text-primary">{AI_RESULT_INIT.length}명 자동 배정</span>
               <span className="text-white/60 font-bold text-[14px]"> · 선호 만족 94%</span>
             </h3>
           </div>
@@ -231,17 +260,45 @@ function Schedule() {
             </button>
           </div>
         </div>
-        <div className="relative mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {AI_RESULT_INIT.map((r, i) => (
-            <div key={i} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{r.day}요일</p>
-                <p className="text-[15px] font-black tabular-nums">{r.hour}</p>
-              </div>
-              <span className="inline-flex items-center px-2 h-6 rounded-full bg-primary/20 text-primary text-[11px] font-extrabold">{r.name}</span>
+
+        {/* 조율 불가 회원 */}
+        {AI_UNASSIGNED.length > 0 && (
+          <div className="relative mt-4 rounded-xl bg-destructive/15 border border-destructive/30 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Ban className="h-3.5 w-3.5 text-[#FF8A8A]" />
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#FFB4B4]">조율 불가 · {AI_UNASSIGNED.length}명</p>
             </div>
-          ))}
-        </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {AI_UNASSIGNED.map((u) => (
+                <span key={u.name} className="inline-flex items-center gap-1.5 pl-1 pr-2.5 h-7 rounded-full bg-white/10 text-white text-[11px] font-bold">
+                  <span className="h-5 w-5 rounded-full bg-white/20 grid place-items-center text-[10px]">{u.name[0]}</span>
+                  {u.name}
+                  <span className="text-white/50 font-medium">· {u.reason}</span>
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-white/60">아래 ‘학생 응답’에서 일정 조정으로 직접 배정해 주세요.</p>
+          </div>
+        )}
+
+        {/* Collapsible assigned timetable */}
+        <details className="relative mt-3 group">
+          <summary className="list-none cursor-pointer flex items-center justify-between rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 transition">
+            <span className="text-[12px] font-extrabold text-white/90">배정된 {AI_RESULT_INIT.length}명 보기</span>
+            <ChevronRight className="h-4 w-4 text-white/60 transition group-open:rotate-90" />
+          </summary>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {AI_RESULT_INIT.map((r, i) => (
+              <div key={i} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{r.day}요일</p>
+                  <p className="text-[15px] font-black tabular-nums">{r.hour}</p>
+                </div>
+                <span className="inline-flex items-center px-2 h-6 rounded-full bg-primary/20 text-primary text-[11px] font-extrabold">{r.name}</span>
+              </div>
+            ))}
+          </div>
+        </details>
       </div>
 
       {/* SECTION 1 — Calendar */}
@@ -297,14 +354,22 @@ function Schedule() {
                       key={key}
                       onClick={() => toggleClosed(key)}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
-                      className={`relative h-11 border-b border-l border-border transition group
+                      className={`relative h-14 border-b border-l border-border transition group overflow-hidden text-left
                         ${isClosed ? "bg-muted text-muted-foreground/50" : `heat-${lvl} hover:ring-2 hover:ring-ink/40 hover:ring-inset`}
                       `}
                     >
                       {isClosed ? (
                         <Lock className="absolute inset-0 m-auto h-3.5 w-3.5" />
                       ) : picks.length > 0 ? (
-                        <span className={`text-[11px] font-black tabular-nums ${lvl >= 4 ? "text-white" : "text-ink"}`}>{picks.length}</span>
+                        <>
+                          <span className={`absolute top-0.5 left-1 text-[10px] font-black tabular-nums leading-none ${lvl >= 4 ? "text-white" : "text-ink"}`}>{picks.length}</span>
+                          <div className={`absolute inset-x-0.5 bottom-0.5 top-3.5 flex flex-col gap-[1px] text-[9px] font-bold leading-tight ${lvl >= 4 ? "text-white" : "text-ink"}`}>
+                            {picks.slice(0, 3).map((n) => (
+                              <span key={n} className="truncate">{n}</span>
+                            ))}
+                            {picks.length > 3 && <span className={`${lvl >= 4 ? "text-white/70" : "text-ink-soft"}`}>+{picks.length - 3}</span>}
+                          </div>
+                        </>
                       ) : null}
                     </button>
                   );
@@ -359,7 +424,7 @@ function Schedule() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => setEditing(s)}
+                      onClick={() => openEdit(s)}
                       className="h-8 px-3 rounded-full bg-ink text-white text-[11px] font-bold inline-flex items-center gap-1"
                     >
                       <Pencil className="h-3 w-3" /> 일정 조정
@@ -372,29 +437,144 @@ function Schedule() {
         </div>
       </section>
 
-      {/* Edit dialog */}
-      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent>
+      {/* Edit dialog — full timetable + manual move */}
+      <Dialog open={!!editing} onOpenChange={(v) => { if (!v) { setEditing(null); setActiveName(null); setPendingMove(null); } }}>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{editing?.name} · 일정 수동 조정</DialogTitle>
-            <DialogDescription>학생의 응답과 무관하게 트레이너가 직접 시간을 지정합니다.</DialogDescription>
+            <DialogTitle>AI 최적 시간표 · 수동 조정</DialogTitle>
+            <DialogDescription>
+              배정된 회원을 클릭한 뒤, 옮기고 싶은 칸을 누르세요. <b className="text-primary">파란색</b>은 선택된 회원이 희망한 시간이에요.
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-3">
-            <label className="text-[12px] font-bold text-ink-soft">배정 요일 / 시간</label>
-            <div className="grid grid-cols-2 gap-2">
-              <select className="h-10 px-3 rounded-xl border border-border bg-white text-[13px] font-semibold">
-                {DAYS.map((d) => <option key={d}>{d}요일</option>)}
-              </select>
-              <select className="h-10 px-3 rounded-xl border border-border bg-white text-[13px] font-semibold">
-                {HOURS.map((h) => <option key={h}>{String(h).padStart(2, "0")}:00</option>)}
-              </select>
-            </div>
-            <label className="text-[12px] font-bold text-ink-soft mt-2">메모</label>
-            <textarea className="min-h-[72px] p-3 rounded-xl border border-border bg-white text-[13px]" placeholder="예: 다음 주는 출장으로 토요일 오전만 가능" />
-          </div>
+
+          {(() => {
+            const active = STUDENTS.find((s) => s.name === activeName);
+            const wishSet = new Set(
+              (active?.picks ?? [])
+                .map(parsePick)
+                .filter(Boolean)
+                .map((p) => `${p!.day}-${p!.hour}`)
+            );
+            const cellByKey = new Map(assignments.map((a) => [`${a.day}-${a.hour}`, a]));
+
+            return (
+              <>
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="grid grid-cols-[40px_repeat(7,1fr)] bg-surface-muted border-b border-border">
+                    <div className="p-1.5 text-[10px] text-muted-foreground font-bold text-center">시간</div>
+                    {DAYS.map((d) => (
+                      <div key={d} className="p-1.5 text-center text-[12px] font-extrabold text-ink">{d}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-[40px_repeat(7,1fr)] max-h-[360px] overflow-y-auto">
+                    {HOURS.map((h) => (
+                      <React.Fragment key={h}>
+                        <div className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums">
+                          {String(h).padStart(2, "0")}
+                        </div>
+                        {DAYS.map((d) => {
+                          const key = `${d}-${h}`;
+                          const isClosed = closed.has(key);
+                          const cell = cellByKey.get(key);
+                          const isWish = wishSet.has(key);
+                          const isMine = cell?.name === activeName;
+                          return (
+                            <button
+                              key={key}
+                              disabled={isClosed}
+                              onClick={() => {
+                                if (!activeName) return;
+                                if (cell && cell.name === activeName) return;
+                                setPendingMove({ day: d, hour: h });
+                              }}
+                              className={`relative h-10 border-b border-l border-border text-[10px] font-bold transition
+                                ${isClosed ? "bg-muted text-muted-foreground/50 cursor-not-allowed" : ""}
+                                ${!isClosed && isWish ? "bg-[oklch(0.93_0.08_240)] text-[oklch(0.30_0.16_245)]" : ""}
+                                ${!isClosed && isMine ? "bg-primary text-white" : ""}
+                                ${!isClosed && !isMine ? "hover:ring-2 hover:ring-ink/30 hover:ring-inset" : ""}
+                              `}
+                            >
+                              {isClosed ? <Lock className="absolute inset-0 m-auto h-3 w-3" /> : cell ? (
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => { e.stopPropagation(); setActiveName(cell.name); }}
+                                  className="absolute inset-0 grid place-items-center px-1 truncate cursor-pointer"
+                                >
+                                  {cell.name}
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Active chip selector */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-ink-soft">조정 대상:</span>
+                  {assignments.map((a) => (
+                    <button
+                      key={a.name}
+                      onClick={() => setActiveName(a.name)}
+                      className={`inline-flex items-center px-2.5 h-7 rounded-full text-[11px] font-extrabold transition ${
+                        activeName === a.name ? "bg-primary text-white" : "bg-muted text-ink hover:bg-ink/10"
+                      }`}
+                    >
+                      {a.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Floating move bar */}
+                {activeName && (
+                  <div className="rounded-xl bg-ink text-white px-4 py-3 flex items-center justify-between gap-3">
+                    <div className="text-[13px] font-bold">
+                      <b className="text-primary">{activeName}</b>님을 어디로 옮길까요?
+                    </div>
+                    <span className="text-[11px] text-white/60">옮길 칸을 클릭</span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
           <DialogFooter>
-            <button onClick={() => setEditing(null)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
-            <button onClick={() => setEditing(null)} className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-bold">저장</button>
+            <button onClick={() => { setEditing(null); setActiveName(null); }} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">닫기</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm move */}
+      <Dialog open={!!pendingMove} onOpenChange={(v) => !v && setPendingMove(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[18px] font-black">
+              {activeName}님을 {pendingMove?.day}요일 {String(pendingMove?.hour ?? 0).padStart(2, "0")}:00로 옮길까요?
+            </DialogTitle>
+            <DialogDescription>
+              해당 시간에 다른 회원이 배정되어 있다면 자동으로 비웁니다. 변경 내용은 ‘확정 알림’ 전까지 학생에게 전송되지 않아요.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button onClick={() => setPendingMove(null)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
+            <button
+              onClick={() => {
+                if (!activeName || !pendingMove) return;
+                setAssignments((prev) => {
+                  const filtered = prev.filter(
+                    (a) => a.name !== activeName && !(a.day === pendingMove.day && a.hour === pendingMove.hour)
+                  );
+                  return [...filtered, { name: activeName, day: pendingMove.day, hour: pendingMove.hour }];
+                });
+                setPendingMove(null);
+              }}
+              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-bold"
+            >
+              이 시간으로 설정
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

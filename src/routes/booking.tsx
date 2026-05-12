@@ -47,6 +47,9 @@ function Booking() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [confirmUnavail, setConfirmUnavail] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
 
   const requireAuth = (fn: () => void) => {
     if (!loggedIn) { setLoginOpen(true); return; }
@@ -87,11 +90,11 @@ function Booking() {
   return (
     <AppShell>
       {/* Trainer profile */}
-      <section className="rounded-2xl border border-border overflow-hidden bg-white">
-        <div className="relative h-24 bg-gradient-to-br from-primary to-[#FF6FB1]" />
-        <div className="px-5 sm:px-6 pb-5 -mt-10">
+      <section className="relative rounded-2xl border border-border overflow-hidden bg-white">
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-br from-primary to-[#FF6FB1] z-0" />
+        <div className="relative z-10 px-5 sm:px-6 pb-5 pt-14">
           <div className="flex items-end gap-4">
-            <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink">박</div>
+            <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">박</div>
             <div className="flex-1 pb-1">
               <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">하이엔드 피트니스 · 강남점</p>
               <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">박재현 트레이너</h1>
@@ -106,12 +109,18 @@ function Booking() {
             </a>
           </div>
           <p className="mt-4 text-[13.5px] text-ink-soft leading-relaxed">
-            8년차 퍼스널 트레이너. 부상 없이 오래 가는 운동을 만들어요. 체형 교정 · 다이어트 · 근비대 전문.
+            안녕하세요, 8년차 퍼스널 트레이너 박재현입니다. 단기간의 결과보다는 <b className="text-ink">평생 가져갈 운동 습관</b>을 만드는 데 집중합니다.
+            체형 분석 → 약점 보완 → 점진적 과부하의 3단계 프로세스로, 부상 없이 꾸준히 변화하는 몸을 만들어드려요.
+          </p>
+          <p className="mt-2 text-[13.5px] text-ink-soft leading-relaxed">
+            지금까지 <b className="text-ink">320명+</b> 회원님의 다이어트, 체형교정, 근비대 목표를 함께 달성했습니다.
+            첫 수업 전 1:1 상담에서 운동 경험과 목표를 충분히 이야기 나눈 뒤 맞춤 플랜을 설계해드리니 편하게 문의 주세요.
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-bold"><Award className="h-3 w-3" /> 2024 NPC 보디빌딩 1위</span>
             <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-muted text-ink text-[11px] font-bold"><Award className="h-3 w-3" /> NSCA-CPT</span>
             <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-muted text-ink text-[11px] font-bold"><Award className="h-3 w-3" /> 생활스포츠지도사 2급</span>
+            <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-muted text-ink text-[11px] font-bold"><Award className="h-3 w-3" /> FMS Lv.2</span>
           </div>
         </div>
       </section>
@@ -140,11 +149,15 @@ function Booking() {
             색이 진할수록 다른 학생들이 많이 선택한 시간이에요. 트레이너님이 모두 모아 가장 잘 맞는 시간으로 확정해 드려요.
           </p>
         </div>
-        {selectedList.length > 0 && !unavailable && (
+        {submitted ? (
+          <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-[oklch(0.95_0.05_160)] text-[oklch(0.40_0.12_160)] text-[12px] font-extrabold">
+            <Check className="h-3.5 w-3.5" /> 제출 완료 · 상시 수정 가능
+          </span>
+        ) : selectedList.length > 0 && !unavailable ? (
           <span className="inline-flex items-center h-7 px-3 rounded-full bg-ink text-white text-[12px] font-bold tabular-nums">
             {selectedList.length}개 선택됨
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Week label only */}
@@ -293,11 +306,15 @@ function Booking() {
           </div>
 
           <button
-            onClick={() => requireAuth(() => {})}
+            onClick={() => requireAuth(() => {
+              setSubmitted(true);
+              setToast(unavailable ? "‘이번 주 PT 불가’로 전달했어요" : `${selectedList.length}개 시간이 트레이너에게 전달됐어요`);
+              setTimeout(() => setToast(null), 2600);
+            })}
             disabled={!unavailable && selectedList.length === 0}
             className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 disabled:opacity-40 hover:brightness-110"
           >
-            제출 <Check className="h-4 w-4" />
+            {submitted ? "수정 제출" : "제출"} <Check className="h-4 w-4" />
           </button>
         </div>
         <div className="mt-1.5 flex items-center gap-1 text-[11px] text-ink-soft justify-center">
@@ -360,6 +377,18 @@ function Booking() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Submit toast */}
+      {toast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
+          <div className="rounded-2xl bg-ink text-white px-4 py-3 shadow-pop flex items-center gap-2.5 min-w-[280px]">
+            <span className="h-7 w-7 rounded-full bg-primary grid place-items-center"><Check className="h-4 w-4 text-white" /></span>
+            <div>
+              <p className="text-[13px] font-extrabold leading-tight">{toast}</p>
+              <p className="text-[11px] text-white/60 mt-0.5">언제든 다시 수정할 수 있어요</p>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
