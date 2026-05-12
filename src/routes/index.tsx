@@ -212,26 +212,27 @@ function AISection() {
     <section className="mt-14 panel p-6 sm:p-8">
       <div className="flex items-center gap-2">
         <span className="chip"><Zap className="h-3 w-3" /> 핵심 기술</span>
-        <span className="text-[12px] text-muted-foreground">선착순 ❌ · 만족도 최적화 ✅</span>
+        <span className="text-[12px] text-muted-foreground">아무도 빠지지 않게 · 모두가 PT</span>
       </div>
       <h3 className="mt-3 text-[26px] font-black text-ink leading-tight">
-        선착순이 아니라,<br />
-        <span className="grad-pink-text">모두에게 더 잘 맞는</span> 시간표
+        한 명도 놓치지 않는<br />
+        <span className="grad-pink-text">모두를 위한</span> 시간표
       </h3>
       <p className="mt-3 text-[14px] text-ink-soft leading-relaxed max-w-2xl">
-        짐피티는 학생의 1·2·3순위를 점수로 환산해, 정원을 넘기지 않으면서
-        가장 많은 학생을 1순위에 배정하는 시간표를 계산해요.
+        짐피티는 누가 더 빨랐는지를 보지 않아요. 모든 학생의 가능 시간을 한꺼번에 맞춰서,
+        <b className="text-ink"> 한 명이라도 더 PT를 받을 수 있는</b> 조합을 찾아드려요.
+        붐비는 시간은 정원만큼만, 비어있던 시간은 자연스럽게 채우면서요.
       </p>
-      <div className="mt-6 grid sm:grid-cols-4 gap-3">
+      <div className="mt-6 grid sm:grid-cols-3 gap-3">
         {[
-          ["1순위", "+100점"],
-          ["2순위", "+70점"],
-          ["3순위", "+40점"],
-          ["미배정", "−1000점"],
-        ].map(([k, v], i) => (
-          <div key={i} className={`rounded-xl p-4 ${i === 0 ? "bg-primary text-white" : "bg-surface-muted"}`}>
-            <p className={`text-[11px] font-bold uppercase ${i === 0 ? "text-white/80" : "text-ink-soft"}`}>{k}</p>
-            <p className={`mt-1 text-[20px] font-black ${i === 0 ? "text-white" : "text-ink"}`}>{v}</p>
+          { k: "전원 배정", v: "최우선 목표", hi: true, desc: "한 명이라도 빠지면 다시 계산" },
+          { k: "정원 보호", v: "혼잡 방지", desc: "트레이너님 페이스를 지켜요" },
+          { k: "빈 시간 활용", v: "유연 분산", desc: "비어있던 슬롯을 자연스럽게 채워요" },
+        ].map((r, i) => (
+          <div key={i} className={`rounded-xl p-4 ${r.hi ? "bg-primary text-white" : "bg-surface-muted"}`}>
+            <p className={`text-[11px] font-bold uppercase ${r.hi ? "text-white/80" : "text-ink-soft"}`}>{r.k}</p>
+            <p className={`mt-1 text-[18px] font-black ${r.hi ? "text-white" : "text-ink"}`}>{r.v}</p>
+            <p className={`mt-1 text-[11.5px] ${r.hi ? "text-white/80" : "text-ink-soft"} leading-relaxed`}>{r.desc}</p>
           </div>
         ))}
       </div>
