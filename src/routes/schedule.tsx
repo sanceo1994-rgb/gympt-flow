@@ -336,14 +336,22 @@ function Schedule() {
                       key={key}
                       onClick={() => toggleClosed(key)}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
-                      className={`relative h-11 border-b border-l border-border transition group
+                      className={`relative h-14 border-b border-l border-border transition group overflow-hidden text-left
                         ${isClosed ? "bg-muted text-muted-foreground/50" : `heat-${lvl} hover:ring-2 hover:ring-ink/40 hover:ring-inset`}
                       `}
                     >
                       {isClosed ? (
                         <Lock className="absolute inset-0 m-auto h-3.5 w-3.5" />
                       ) : picks.length > 0 ? (
-                        <span className={`text-[11px] font-black tabular-nums ${lvl >= 4 ? "text-white" : "text-ink"}`}>{picks.length}</span>
+                        <>
+                          <span className={`absolute top-0.5 left-1 text-[10px] font-black tabular-nums leading-none ${lvl >= 4 ? "text-white" : "text-ink"}`}>{picks.length}</span>
+                          <div className={`absolute inset-x-0.5 bottom-0.5 top-3.5 flex flex-col gap-[1px] text-[9px] font-bold leading-tight ${lvl >= 4 ? "text-white" : "text-ink"}`}>
+                            {picks.slice(0, 3).map((n) => (
+                              <span key={n} className="truncate">{n}</span>
+                            ))}
+                            {picks.length > 3 && <span className={`${lvl >= 4 ? "text-white/70" : "text-ink-soft"}`}>+{picks.length - 3}</span>}
+                          </div>
+                        </>
                       ) : null}
                     </button>
                   );
