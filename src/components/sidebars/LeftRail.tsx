@@ -87,3 +87,12 @@ export function LeftRail() {
     </div>
   );
 }
+
+function NavTile({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+  return (
+    <Link to={to} className="rounded-xl bg-white border border-border px-2 py-2.5 text-center hover:border-ink/40 transition flex flex-col items-center gap-1">
+      <span className="text-ink-soft">{icon}</span>
+      <span className="text-[11px] font-bold text-ink">{label}</span>
+    </Link>
+  );
+}
