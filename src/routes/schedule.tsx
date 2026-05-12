@@ -281,22 +281,52 @@ function Schedule() {
           </div>
         )}
 
-        {/* Collapsible assigned timetable */}
+        {/* Assigned list (always visible) + collapsible timetable view */}
+        <div className="relative mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {AI_RESULT_INIT.map((r, i) => (
+            <div key={i} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{r.day}요일</p>
+                <p className="text-[15px] font-black tabular-nums">{r.hour}</p>
+              </div>
+              <span className="inline-flex items-center px-2 h-6 rounded-full bg-primary/20 text-primary text-[11px] font-extrabold">{r.name}</span>
+            </div>
+          ))}
+        </div>
+
         <details className="relative mt-3 group">
           <summary className="list-none cursor-pointer flex items-center justify-between rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 transition">
-            <span className="text-[12px] font-extrabold text-white/90">배정된 {AI_RESULT_INIT.length}명 보기</span>
+            <span className="text-[12px] font-extrabold text-white/90">타임테이블 뷰로 보기</span>
             <ChevronRight className="h-4 w-4 text-white/60 transition group-open:rotate-90" />
           </summary>
-          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {AI_RESULT_INIT.map((r, i) => (
-              <div key={i} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{r.day}요일</p>
-                  <p className="text-[15px] font-black tabular-nums">{r.hour}</p>
-                </div>
-                <span className="inline-flex items-center px-2 h-6 rounded-full bg-primary/20 text-primary text-[11px] font-extrabold">{r.name}</span>
-              </div>
-            ))}
+          <div className="mt-2 rounded-xl border border-white/10 overflow-hidden bg-white/[0.03]">
+            <div className="grid grid-cols-[36px_repeat(7,1fr)] bg-white/5 border-b border-white/10">
+              <div className="p-1.5 text-[10px] text-white/50 font-bold text-center">시간</div>
+              {DAYS.map((d) => (
+                <div key={d} className="p-1.5 text-center text-[11px] font-extrabold text-white/90">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-[36px_repeat(7,1fr)]">
+              {HOURS.map((h) => {
+                const hasAny = DAYS.some((d) => assignments.some((a) => a.day === d && a.hour === h));
+                if (!hasAny) return null;
+                return (
+                  <React.Fragment key={h}>
+                    <div className="border-b border-white/10 bg-white/5 grid place-items-center text-[10px] font-bold text-white/50 tabular-nums">{String(h).padStart(2, "0")}</div>
+                    {DAYS.map((d) => {
+                      const a = assignments.find((x) => x.day === d && x.hour === h);
+                      return (
+                        <div key={`${d}-${h}`} className="h-9 border-b border-l border-white/10 grid place-items-center text-[10px] font-extrabold">
+                          {a ? (
+                            <span className="px-1.5 h-5 rounded-md bg-primary text-white truncate max-w-full">{a.name}</span>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </div>
         </details>
       </div>
@@ -354,7 +384,7 @@ function Schedule() {
                       key={key}
                       onClick={() => toggleClosed(key)}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
-                      className={`relative h-14 border-b border-l border-border transition group overflow-hidden text-left
+                      className={`relative min-h-[68px] border-b border-l border-border transition group overflow-hidden text-left p-1.5
                         ${isClosed ? "bg-muted text-muted-foreground/50" : `heat-${lvl} hover:ring-2 hover:ring-ink/40 hover:ring-inset`}
                       `}
                     >
@@ -362,12 +392,20 @@ function Schedule() {
                         <Lock className="absolute inset-0 m-auto h-3.5 w-3.5" />
                       ) : picks.length > 0 ? (
                         <>
-                          <span className={`absolute top-0.5 left-1 text-[10px] font-black tabular-nums leading-none ${lvl >= 4 ? "text-white" : "text-ink"}`}>{picks.length}</span>
-                          <div className={`absolute inset-x-0.5 bottom-0.5 top-3.5 flex flex-col gap-[1px] text-[9px] font-bold leading-tight ${lvl >= 4 ? "text-white" : "text-ink"}`}>
-                            {picks.slice(0, 3).map((n) => (
-                              <span key={n} className="truncate">{n}</span>
+                          <span className={`absolute top-1 left-1.5 text-[10px] font-black tabular-nums leading-none ${lvl >= 4 ? "text-white" : "text-ink"}`}>{picks.length}</span>
+                          <div className="mt-3.5 grid grid-cols-2 [@media(min-width:1280px)]:grid-cols-3 gap-[3px]">
+                            {picks.slice(0, 5).map((n) => (
+                              <span
+                                key={n}
+                                className={`px-1 py-[1px] rounded-[4px] text-[9px] font-extrabold leading-tight truncate text-center
+                                  ${lvl >= 4 ? "bg-white/25 text-white" : "bg-white/80 text-ink ring-1 ring-black/5"}`}
+                              >
+                                {n}
+                              </span>
                             ))}
-                            {picks.length > 3 && <span className={`${lvl >= 4 ? "text-white/70" : "text-ink-soft"}`}>+{picks.length - 3}</span>}
+                            {picks.length > 5 && (
+                              <span className={`px-1 py-[1px] rounded-[4px] text-[9px] font-extrabold leading-tight text-center ${lvl >= 4 ? "bg-white/15 text-white/80" : "bg-muted text-ink-soft"}`}>+{picks.length - 5}</span>
+                            )}
                           </div>
                         </>
                       ) : null}
@@ -387,13 +425,13 @@ function Schedule() {
         <div className="mt-4 rounded-2xl border border-border overflow-hidden">
           <table className="w-full text-[13px]">
             <thead className="bg-surface-muted">
-              <tr className="text-left text-[11px] font-bold uppercase text-ink-soft">
-                <th className="px-4 py-3">학생</th>
-                <th className="px-4 py-3">상태</th>
-                <th className="px-4 py-3">최근 PT</th>
-                <th className="px-4 py-3">남은 횟수</th>
-                <th className="px-4 py-3">선택한 시간</th>
-                <th className="px-4 py-3 text-right">조치</th>
+              <tr className="text-[11px] font-bold uppercase text-ink-soft">
+                <th className="px-4 py-3 text-center">학생</th>
+                <th className="px-4 py-3 text-center">상태</th>
+                <th className="px-4 py-3 text-center">최근 PT</th>
+                <th className="px-4 py-3 text-center">남은 횟수</th>
+                <th className="px-4 py-3 text-center">선택한 시간</th>
+                <th className="px-4 py-3 text-center">조치</th>
               </tr>
             </thead>
             <tbody>
