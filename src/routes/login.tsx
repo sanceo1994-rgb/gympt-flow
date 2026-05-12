@@ -214,8 +214,7 @@ function Login() {
               </div>
             )}
           </div>
-        </main>
-      </div>
+      </main>
 
       {/* Welcome floating toast */}
       <Dialog open={!!welcome} onOpenChange={(v) => !v && setWelcome(null)}>
