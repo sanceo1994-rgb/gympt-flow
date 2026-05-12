@@ -4,6 +4,9 @@ import { ArrowRight, Check, Sparkles, Zap, Star } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import iconCalendar from "@/assets/icon-calendar.png";
 import iconChat from "@/assets/icon-chat.png";
+import stepOpen from "@/assets/step-open.png";
+import stepPick from "@/assets/step-pick.png";
+import stepAi from "@/assets/step-ai.png";
 import { Badge } from "@/components/Badge";
 
 export const Route = createFileRoute("/")({
@@ -91,15 +94,29 @@ function Hero() {
               <p className="text-[20px] font-extrabold text-ink">126</p>
             </div>
             <div className="col-span-2 panel p-4">
-              <p className="text-[11px] font-bold text-ink-soft uppercase">슬롯 점유율</p>
-              <div className="mt-2 flex items-end gap-1.5 h-14">
-                {[40, 70, 55, 95, 80, 35, 60].map((v, i) => (
-                  <div key={i} className="flex-1 rounded-md bg-primary/15 relative overflow-hidden">
-                    <div className="absolute bottom-0 left-0 right-0 bg-primary rounded-md" style={{ height: `${v}%` }} />
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold text-ink-soft uppercase">슬롯 점유율</p>
+                <p className="text-[10px] font-bold text-primary">평균 62%</p>
+              </div>
+              <div className="mt-2 grid grid-cols-7 gap-1.5 items-end h-16">
+                {[
+                  { d: "월", v: 40 },
+                  { d: "화", v: 70 },
+                  { d: "수", v: 55 },
+                  { d: "목", v: 95 },
+                  { d: "금", v: 80 },
+                  { d: "토", v: 35 },
+                  { d: "일", v: 60 },
+                ].map(({ d, v }) => (
+                  <div key={d} className="flex flex-col items-center justify-end gap-1 h-full">
+                    <span className="text-[9px] font-extrabold tabular-nums text-ink-soft">{v}%</span>
+                    <div className="w-full rounded-md bg-primary/15 relative overflow-hidden" style={{ height: "100%" }}>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary to-[#FF6FB1] rounded-md transition-all" style={{ height: `${v}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground font-semibold">
+              <div className="mt-1.5 grid grid-cols-7 gap-1.5 text-[10px] text-muted-foreground font-semibold text-center">
                 <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span>
               </div>
             </div>
@@ -125,18 +142,21 @@ function SocialBar() {
 
 function HowItWorks() {
   const steps = [
-    { n: "01", title: "선생님이 다음 주 가능 시간을 엽니다", desc: "요일·시간·정원만 입력하면 학생용 예약 링크가 즉시 생성돼요." },
-    { n: "02", title: "학생들이 원하는 시간을 선택합니다", desc: "1·2·3순위까지 골라요. 모바일에서 3초면 끝나요." },
-    { n: "03", title: "짐피티가 최적 시간표를 추천합니다", desc: "모든 학생의 만족도가 가장 높은 시간표를 자동 계산해 드려요." },
+    { n: "01", title: "선생님이 다음 주 가능 시간을 엽니다", desc: "요일·시간·정원만 입력하면 학생용 예약 링크가 즉시 생성돼요.", img: stepOpen },
+    { n: "02", title: "학생들이 원하는 시간을 선택합니다", desc: "원하는 만큼 골라요. 모바일에서 3초면 끝나요.", img: stepPick },
+    { n: "03", title: "짐피티가 최적 시간표를 추천합니다", desc: "아무도 빠지지 않게, 모두가 PT 받을 수 있는 시간표를 자동으로 만들어요.", img: stepAi },
   ];
   return (
     <section className="mt-14">
       <SectionHead eyebrow="작동 방식" title="3단계로 끝나는 다음 주 일정" />
       <div className="mt-6 grid md:grid-cols-3 gap-3">
         {steps.map((s) => (
-          <div key={s.n} className="panel p-6 relative">
-            <span className="text-[11px] font-black text-primary tracking-widest">{s.n}</span>
-            <h3 className="mt-2 text-[17px] font-extrabold text-ink leading-snug">{s.title}</h3>
+          <div key={s.n} className="panel p-6 relative overflow-hidden">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-[11px] font-black text-primary tracking-widest">{s.n}</span>
+              <img src={s.img} alt="" loading="lazy" width={512} height={512} className="h-20 w-20 -mt-2 -mr-2 object-contain drop-shadow-md" />
+            </div>
+            <h3 className="mt-1 text-[17px] font-extrabold text-ink leading-snug">{s.title}</h3>
             <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">{s.desc}</p>
           </div>
         ))}
@@ -192,26 +212,27 @@ function AISection() {
     <section className="mt-14 panel p-6 sm:p-8">
       <div className="flex items-center gap-2">
         <span className="chip"><Zap className="h-3 w-3" /> 핵심 기술</span>
-        <span className="text-[12px] text-muted-foreground">선착순 ❌ · 만족도 최적화 ✅</span>
+        <span className="text-[12px] text-muted-foreground">아무도 빠지지 않게 · 모두가 PT</span>
       </div>
       <h3 className="mt-3 text-[26px] font-black text-ink leading-tight">
-        선착순이 아니라,<br />
-        <span className="grad-pink-text">모두에게 더 잘 맞는</span> 시간표
+        한 명도 놓치지 않는<br />
+        <span className="grad-pink-text">모두를 위한</span> 시간표
       </h3>
       <p className="mt-3 text-[14px] text-ink-soft leading-relaxed max-w-2xl">
-        짐피티는 학생의 1·2·3순위를 점수로 환산해, 정원을 넘기지 않으면서
-        가장 많은 학생을 1순위에 배정하는 시간표를 계산해요.
+        짐피티는 누가 더 빨랐는지를 보지 않아요. 모든 학생의 가능 시간을 한꺼번에 맞춰서,
+        <b className="text-ink"> 한 명이라도 더 PT를 받을 수 있는</b> 조합을 찾아드려요.
+        붐비는 시간은 정원만큼만, 비어있던 시간은 자연스럽게 채우면서요.
       </p>
-      <div className="mt-6 grid sm:grid-cols-4 gap-3">
+      <div className="mt-6 grid sm:grid-cols-3 gap-3">
         {[
-          ["1순위", "+100점"],
-          ["2순위", "+70점"],
-          ["3순위", "+40점"],
-          ["미배정", "−1000점"],
-        ].map(([k, v], i) => (
-          <div key={i} className={`rounded-xl p-4 ${i === 0 ? "bg-primary text-white" : "bg-surface-muted"}`}>
-            <p className={`text-[11px] font-bold uppercase ${i === 0 ? "text-white/80" : "text-ink-soft"}`}>{k}</p>
-            <p className={`mt-1 text-[20px] font-black ${i === 0 ? "text-white" : "text-ink"}`}>{v}</p>
+          { k: "전원 배정", v: "최우선 목표", hi: true, desc: "한 명이라도 빠지면 다시 계산" },
+          { k: "정원 보호", v: "혼잡 방지", desc: "트레이너님 페이스를 지켜요" },
+          { k: "빈 시간 활용", v: "유연 분산", desc: "비어있던 슬롯을 자연스럽게 채워요" },
+        ].map((r, i) => (
+          <div key={i} className={`rounded-xl p-4 ${r.hi ? "bg-primary text-white" : "bg-surface-muted"}`}>
+            <p className={`text-[11px] font-bold uppercase ${r.hi ? "text-white/80" : "text-ink-soft"}`}>{r.k}</p>
+            <p className={`mt-1 text-[18px] font-black ${r.hi ? "text-white" : "text-ink"}`}>{r.v}</p>
+            <p className={`mt-1 text-[11.5px] ${r.hi ? "text-white/80" : "text-ink-soft"} leading-relaxed`}>{r.desc}</p>
           </div>
         ))}
       </div>

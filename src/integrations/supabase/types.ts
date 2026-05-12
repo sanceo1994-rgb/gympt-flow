@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          trainer_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          trainer_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          trainer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       points: {
         Row: {
           amount: number
@@ -68,6 +97,122 @@ export type Database = {
         }
         Relationships: []
       }
+      student_selections: {
+        Row: {
+          created_at: string
+          id: string
+          schedule_id: string
+          slot_id: string | null
+          status: Database["public"]["Enums"]["selection_status"]
+          student_name: string
+          student_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          schedule_id: string
+          slot_id?: string | null
+          status?: Database["public"]["Enums"]["selection_status"]
+          student_name: string
+          student_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          schedule_id?: string
+          slot_id?: string | null
+          status?: Database["public"]["Enums"]["selection_status"]
+          student_name?: string
+          student_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_selections_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_selections_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "time_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_slots: {
+        Row: {
+          capacity: number
+          day_of_week: number
+          hour: number
+          id: string
+          is_closed: boolean
+          schedule_id: string
+        }
+        Insert: {
+          capacity?: number
+          day_of_week: number
+          hour: number
+          id?: string
+          is_closed?: boolean
+          schedule_id: string
+        }
+        Update: {
+          capacity?: number
+          day_of_week?: number
+          hour?: number
+          id?: string
+          is_closed?: boolean
+          schedule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_slots_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trainers: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          gym: string | null
+          id: string
+          instagram_url: string | null
+          intro: string | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          gym?: string | null
+          id?: string
+          instagram_url?: string | null
+          intro?: string | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          gym?: string | null
+          id?: string
+          instagram_url?: string | null
+          intro?: string | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -89,6 +234,35 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_schedules: {
+        Row: {
+          created_at: string
+          id: string
+          trainer_id: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          trainer_id: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          trainer_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_schedules_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -108,6 +282,7 @@ export type Database = {
     }
     Enums: {
       app_role: "trainer" | "student"
+      selection_status: "selected" | "unavailable" | "confirmed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -236,6 +411,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["trainer", "student"],
+      selection_status: ["selected", "unavailable", "confirmed"],
     },
   },
 } as const
