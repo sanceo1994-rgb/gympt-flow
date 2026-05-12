@@ -377,6 +377,18 @@ function Booking() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Submit toast */}
+      {toast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
+          <div className="rounded-2xl bg-ink text-white px-4 py-3 shadow-pop flex items-center gap-2.5 min-w-[280px]">
+            <span className="h-7 w-7 rounded-full bg-primary grid place-items-center"><Check className="h-4 w-4 text-white" /></span>
+            <div>
+              <p className="text-[13px] font-extrabold leading-tight">{toast}</p>
+              <p className="text-[11px] text-white/60 mt-0.5">언제든 다시 수정할 수 있어요</p>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
