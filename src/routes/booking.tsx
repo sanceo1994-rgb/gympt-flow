@@ -90,11 +90,11 @@ function Booking() {
   return (
     <AppShell>
       {/* Trainer profile */}
-      <section className="rounded-2xl border border-border overflow-hidden bg-white">
-        <div className="relative h-24 bg-gradient-to-br from-primary to-[#FF6FB1]" />
-        <div className="px-5 sm:px-6 pb-5 -mt-10">
+      <section className="relative rounded-2xl border border-border overflow-hidden bg-white">
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-br from-primary to-[#FF6FB1] z-0" />
+        <div className="relative z-10 px-5 sm:px-6 pb-5 pt-14">
           <div className="flex items-end gap-4">
-            <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink">박</div>
+            <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">박</div>
             <div className="flex-1 pb-1">
               <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">하이엔드 피트니스 · 강남점</p>
               <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">박재현 트레이너</h1>
@@ -109,12 +109,18 @@ function Booking() {
             </a>
           </div>
           <p className="mt-4 text-[13.5px] text-ink-soft leading-relaxed">
-            8년차 퍼스널 트레이너. 부상 없이 오래 가는 운동을 만들어요. 체형 교정 · 다이어트 · 근비대 전문.
+            안녕하세요, 8년차 퍼스널 트레이너 박재현입니다. 단기간의 결과보다는 <b className="text-ink">평생 가져갈 운동 습관</b>을 만드는 데 집중합니다.
+            체형 분석 → 약점 보완 → 점진적 과부하의 3단계 프로세스로, 부상 없이 꾸준히 변화하는 몸을 만들어드려요.
+          </p>
+          <p className="mt-2 text-[13.5px] text-ink-soft leading-relaxed">
+            지금까지 <b className="text-ink">320명+</b> 회원님의 다이어트, 체형교정, 근비대 목표를 함께 달성했습니다.
+            첫 수업 전 1:1 상담에서 운동 경험과 목표를 충분히 이야기 나눈 뒤 맞춤 플랜을 설계해드리니 편하게 문의 주세요.
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-bold"><Award className="h-3 w-3" /> 2024 NPC 보디빌딩 1위</span>
             <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-muted text-ink text-[11px] font-bold"><Award className="h-3 w-3" /> NSCA-CPT</span>
             <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-muted text-ink text-[11px] font-bold"><Award className="h-3 w-3" /> 생활스포츠지도사 2급</span>
+            <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-muted text-ink text-[11px] font-bold"><Award className="h-3 w-3" /> FMS Lv.2</span>
           </div>
         </div>
       </section>
