@@ -239,16 +239,16 @@ function Booking() {
         </div>
       </div>
 
-      {/* DESKTOP grid */}
-      <div className={`hidden sm:block pb-32 ${unavailable ? "opacity-40 pointer-events-none" : ""}`}>
+      {/* Unified responsive timetable — 7 days × hours, larger touch cells on mobile */}
+      <div className={`pb-32 ${unavailable ? "opacity-40 pointer-events-none" : ""}`}>
         <div className="mt-4 rounded-2xl border border-border overflow-hidden">
-          <div className="grid grid-cols-[44px_repeat(7,1fr)] bg-surface-muted border-b border-border">
-            <div className="p-2 text-[10px] text-muted-foreground font-bold text-center">시간</div>
+          <div className="grid grid-cols-[36px_repeat(7,1fr)] sm:grid-cols-[44px_repeat(7,1fr)] bg-surface-muted border-b border-border">
+            <div className="p-1.5 sm:p-2 text-[10px] text-muted-foreground font-bold text-center">시간</div>
             {DAYS.map((d) => (
-              <div key={d} className="p-2 text-center text-[13px] font-extrabold text-ink">{d}</div>
+              <div key={d} className="p-2 text-center text-[13px] sm:text-[13px] font-extrabold text-ink">{d}</div>
             ))}
           </div>
-          <div className="grid grid-cols-[44px_repeat(7,1fr)]">
+          <div className="grid grid-cols-[36px_repeat(7,1fr)] sm:grid-cols-[44px_repeat(7,1fr)]">
             {HOURS.map((h) => (
               <React.Fragment key={h}>
                 <div className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums">
@@ -258,19 +258,21 @@ function Booking() {
                   const key = `${d}-${h}`;
                   const closed = CLOSED.has(key);
                   const isMine = selected.has(key);
-                  const lvl = heatLevel(DEMAND[key] ?? 0, isMine);
+                  const dem = DEMAND[key] ?? 0;
+                  const lvl = heatLevel(dem, isMine);
                   return (
                     <button
                       key={key}
                       disabled={closed}
                       onClick={() => toggle(key)}
-                      className={`relative h-10 border-b border-l border-border transition group heat-${lvl}
-                        ${closed ? "bg-muted text-muted-foreground/60 cursor-not-allowed" : "hover:ring-2 hover:ring-ink/40 hover:ring-inset"}
+                      className={`relative h-12 sm:h-10 border-b border-l border-border transition group heat-${lvl}
+                        ${closed ? "bg-muted text-muted-foreground/60 cursor-not-allowed" : "active:scale-[0.97] hover:ring-2 hover:ring-ink/40 hover:ring-inset"}
                         ${isMine ? "ring-2 ring-ink ring-inset z-10" : ""}
                       `}
                     >
                       {closed ? <Lock className="absolute inset-0 m-auto h-3 w-3 text-muted-foreground/60" /> :
-                        isMine ? <Check className="absolute inset-0 m-auto h-4 w-4 text-white" /> : null}
+                        isMine ? <Check className="absolute inset-0 m-auto h-4 w-4 text-white" /> :
+                        dem > 0 ? <span className={`absolute inset-0 grid place-items-center text-[10px] font-extrabold tabular-nums ${lvl >= 3 ? "text-white/80" : "text-ink/50"} sm:hidden`}>{dem}</span> : null}
                     </button>
                   );
                 })}
@@ -278,39 +280,7 @@ function Booking() {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* MOBILE */}
-      <div className={`sm:hidden pb-32 ${unavailable ? "opacity-40 pointer-events-none" : ""}`}>
-        <div className="mt-3 -mx-5 px-5 flex gap-2 overflow-x-auto pb-2 marquee-mask">
-          {DAYS.map((d) => {
-            const active = activeDay === d;
-            return (
-              <button key={d} onClick={() => setActiveDay(d)} className={`shrink-0 px-4 py-2.5 rounded-2xl flex flex-col items-center min-w-[56px] transition ${active ? "bg-ink text-white" : "bg-surface-muted text-ink-soft"}`}>
-                <span className="text-[16px] font-black">{d}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-2 grid gap-1.5">
-          {HOURS.map((h) => {
-            const key = `${activeDay}-${h}`;
-            const closed = CLOSED.has(key);
-            const isMine = selected.has(key);
-            const dem = DEMAND[key] ?? 0;
-            const lvl = heatLevel(dem, isMine);
-            return (
-              <button key={key} disabled={closed} onClick={() => toggle(key)} className={`w-full p-3 rounded-xl text-left transition heat-${lvl} ${closed ? "bg-muted opacity-50" : ""} ${isMine ? "ring-2 ring-ink" : "border border-border"}`}>
-                <div className="flex items-center justify-between">
-                  <p className="text-[16px] font-black tabular-nums">{String(h).padStart(2, "0")}:00</p>
-                  {isMine ? <span className="h-7 w-7 rounded-full bg-white text-ink grid place-items-center"><Check className="h-4 w-4" /></span>
-                    : closed ? <span className="text-[11px] text-muted-foreground">닫힘</span>
-                    : <span className="text-[11px] font-bold text-ink-soft">{dem > 0 ? `${dem}명 선택` : "—"}</span>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <p className="mt-2 text-center text-[11px] text-ink-soft sm:hidden">셀을 탭해서 가능한 시간을 골라주세요. 가로로 한 화면에 보여요.</p>
       </div>
 
       {/* Floating banner */}
