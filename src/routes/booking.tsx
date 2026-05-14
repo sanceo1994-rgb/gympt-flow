@@ -59,7 +59,9 @@ function Booking() {
   const [weekPoints, setWeekPoints] = useState<number>(0);
 
   useEffect(() => {
-    if (user) fetchPts().then((r) => setWeekPoints(r.total)).catch(() => {});
+    if (user && !String(user.id).startsWith("virtual-")) {
+      fetchPts().then((r) => setWeekPoints(r.total)).catch(() => {});
+    }
   }, [user, fetchPts]);
 
   const requireAuth = (fn: () => void) => {
