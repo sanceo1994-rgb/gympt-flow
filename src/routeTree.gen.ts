@@ -10,8 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamRouteImport } from './routes/team'
+import { Route as StudentsRouteImport } from './routes/students'
 import { Route as SignupEmailRouteImport } from './routes/signup-email'
 import { Route as ScheduleRouteImport } from './routes/schedule'
+import { Route as PtHistoryRouteImport } from './routes/pt-history'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as BookingRouteImport } from './routes/booking'
@@ -23,6 +26,11 @@ const TeamRoute = TeamRouteImport.update({
   path: '/team',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentsRoute = StudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupEmailRoute = SignupEmailRouteImport.update({
   id: '/signup-email',
   path: '/signup-email',
@@ -31,6 +39,16 @@ const SignupEmailRoute = SignupEmailRouteImport.update({
 const ScheduleRoute = ScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PtHistoryRoute = PtHistoryRouteImport.update({
+  id: '/pt-history',
+  path: '/pt-history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -64,8 +82,11 @@ export interface FileRoutesByFullPath {
   '/booking': typeof BookingRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
+  '/profile': typeof ProfileRoute
+  '/pt-history': typeof PtHistoryRoute
   '/schedule': typeof ScheduleRoute
   '/signup-email': typeof SignupEmailRoute
+  '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
   '/onboarding/role': typeof OnboardingRoleRoute
 }
@@ -74,8 +95,11 @@ export interface FileRoutesByTo {
   '/booking': typeof BookingRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
+  '/profile': typeof ProfileRoute
+  '/pt-history': typeof PtHistoryRoute
   '/schedule': typeof ScheduleRoute
   '/signup-email': typeof SignupEmailRoute
+  '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
   '/onboarding/role': typeof OnboardingRoleRoute
 }
@@ -85,8 +109,11 @@ export interface FileRoutesById {
   '/booking': typeof BookingRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
+  '/profile': typeof ProfileRoute
+  '/pt-history': typeof PtHistoryRoute
   '/schedule': typeof ScheduleRoute
   '/signup-email': typeof SignupEmailRoute
+  '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
   '/onboarding/role': typeof OnboardingRoleRoute
 }
@@ -97,8 +124,11 @@ export interface FileRouteTypes {
     | '/booking'
     | '/login'
     | '/pricing'
+    | '/profile'
+    | '/pt-history'
     | '/schedule'
     | '/signup-email'
+    | '/students'
     | '/team'
     | '/onboarding/role'
   fileRoutesByTo: FileRoutesByTo
@@ -107,8 +137,11 @@ export interface FileRouteTypes {
     | '/booking'
     | '/login'
     | '/pricing'
+    | '/profile'
+    | '/pt-history'
     | '/schedule'
     | '/signup-email'
+    | '/students'
     | '/team'
     | '/onboarding/role'
   id:
@@ -117,8 +150,11 @@ export interface FileRouteTypes {
     | '/booking'
     | '/login'
     | '/pricing'
+    | '/profile'
+    | '/pt-history'
     | '/schedule'
     | '/signup-email'
+    | '/students'
     | '/team'
     | '/onboarding/role'
   fileRoutesById: FileRoutesById
@@ -128,8 +164,11 @@ export interface RootRouteChildren {
   BookingRoute: typeof BookingRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
+  ProfileRoute: typeof ProfileRoute
+  PtHistoryRoute: typeof PtHistoryRoute
   ScheduleRoute: typeof ScheduleRoute
   SignupEmailRoute: typeof SignupEmailRoute
+  StudentsRoute: typeof StudentsRoute
   TeamRoute: typeof TeamRoute
   OnboardingRoleRoute: typeof OnboardingRoleRoute
 }
@@ -141,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/team'
       fullPath: '/team'
       preLoaderRoute: typeof TeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/students': {
+      id: '/students'
+      path: '/students'
+      fullPath: '/students'
+      preLoaderRoute: typeof StudentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup-email': {
@@ -155,6 +201,20 @@ declare module '@tanstack/react-router' {
       path: '/schedule'
       fullPath: '/schedule'
       preLoaderRoute: typeof ScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pt-history': {
+      id: '/pt-history'
+      path: '/pt-history'
+      fullPath: '/pt-history'
+      preLoaderRoute: typeof PtHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -200,8 +260,11 @@ const rootRouteChildren: RootRouteChildren = {
   BookingRoute: BookingRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
+  ProfileRoute: ProfileRoute,
+  PtHistoryRoute: PtHistoryRoute,
   ScheduleRoute: ScheduleRoute,
   SignupEmailRoute: SignupEmailRoute,
+  StudentsRoute: StudentsRoute,
   TeamRoute: TeamRoute,
   OnboardingRoleRoute: OnboardingRoleRoute,
 }

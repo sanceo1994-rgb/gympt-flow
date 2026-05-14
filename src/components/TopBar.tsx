@@ -22,7 +22,7 @@ export function TopBar() {
               <span className="font-black text-[15px]">G</span>
             </div>
             <span className="text-[17px] font-extrabold tracking-tight text-ink">
-              짐피티<span className="text-muted-foreground font-medium">  GymPT</span>
+              픽짐피티<span className="text-muted-foreground font-medium">  PickGymPT</span>
             </span>
           </Link>
           <nav className="hidden lg:flex items-center gap-1">

@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { Check, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/pricing")({
-  head: () => ({ meta: [{ title: "요금제 — 짐피티 GymPT" }] }),
+  head: () => ({ meta: [{ title: "요금제 — 픽짐피티 PickGymPT" }] }),
   component: Pricing,
 });
 

@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 export const Route = createFileRoute("/schedule")({
   head: () => ({
     meta: [
-      { title: "트레이너 일정 조율 — 짐피티 GymPT" },
+      { title: "트레이너 일정 조율 — 픽짐피티 PickGymPT" },
       { name: "description", content: "달력으로 학생 응답을 한눈에 확인하고, 안되는 시간만 닫으면 AI가 최적 시간표를 만들어드려요." },
     ],
   }),
@@ -239,8 +239,11 @@ function Schedule() {
         <div className="flex gap-2">
           <button
             onClick={() => { setPanel("invite"); setPanelWeek(weekOffset); setPanelSelected(new Set(STUDENTS.map((s) => s.name))); }}
-            className="h-10 px-4 rounded-full bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shadow-pop hover:brightness-110">
-            <Send className="h-3.5 w-3.5" /> 학생에게 요청 보내기
+            className="h-10 pl-1.5 pr-4 rounded-full bg-primary text-white text-[13px] font-bold inline-flex items-center gap-2 shadow-pop hover:brightness-110">
+            <span className="h-7 w-7 rounded-full bg-[#FEE500] grid place-items-center">
+              <MessageCircle className="h-3.5 w-3.5 fill-[#191600] text-[#191600]" />
+            </span>
+            학생에게 요청 보내기
           </button>
         </div>
       </div>
@@ -545,13 +548,13 @@ function Schedule() {
           <table className="w-full text-[13px]">
             <thead className="bg-surface-muted">
               <tr className="text-[11px] font-bold uppercase text-ink-soft">
-                <th className="px-4 py-3 text-center">학생</th>
-                <th className="px-4 py-3 text-center">상태</th>
-                <th className="px-4 py-3 text-center">최근 PT</th>
-                <th className="px-4 py-3 text-center">남은 횟수</th>
-                <th className="px-4 py-3 text-center">선택한 시간</th>
-                <th className="px-4 py-3 text-center">조치</th>
-                <th className="px-4 py-3 text-center">알림</th>
+                <th className="px-4 py-3 text-left">학생 <span className="text-muted-foreground/70 normal-case font-bold">(등록일)</span></th>
+                <th className="px-3 py-3 text-center">상태</th>
+                <th className="px-3 py-3 text-center">최근 PT</th>
+                <th className="px-3 py-3 text-center">남은 횟수</th>
+                <th className="px-3 py-3 text-center">선택한 시간</th>
+                <th className="px-3 py-3 text-center">조치</th>
+                <th className="px-3 py-3 text-center">개별 통지</th>
               </tr>
             </thead>
             <tbody>
@@ -562,7 +565,7 @@ function Schedule() {
                       <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
                       <div className="min-w-0 leading-tight">
                         <p className="font-bold text-ink text-[13px]">{s.name}</p>
-                        <p className="text-[10.5px] text-muted-foreground mt-0.5">등록일: {s.joinedAt}</p>
+                        <p className="text-[10.5px] text-muted-foreground/70 font-bold mt-0.5 tabular-nums">{s.joinedAt}</p>
                       </div>
                     </div>
                   </td>
@@ -591,13 +594,13 @@ function Schedule() {
                       <Pencil className="h-3 w-3" /> 일정 조정
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-3 py-3 text-center">
                     <button
                       onClick={() => fireToast(`${s.name}님에게 카카오톡 알림을 발송했어요 ✓`)}
-                      className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95"
-                      title="개별 카카오톡 알림"
+                      className="h-8 w-8 rounded-full bg-[#FEE500] text-[#191600] inline-flex items-center justify-center hover:brightness-95"
+                      title="카카오톡 개별 알림"
                     >
-                      <MessageCircle className="h-3 w-3 fill-[#191600]" /> 카톡
+                      <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" />
                     </button>
                   </td>
                 </tr>
@@ -749,7 +752,7 @@ function Schedule() {
 
       {/* Right-side panel — invite or confirm */}
       <Sheet open={!!panel} onOpenChange={(v) => !v && setPanel(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+        <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
           <SheetHeader>
             <span className="inline-flex w-fit chip bg-primary/10 text-primary">
               {panel === "invite" ? <><Send className="h-3 w-3" /> 응답 요청</> : <><Check className="h-3 w-3" /> 확정 알림</>}
