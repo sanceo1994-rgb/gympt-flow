@@ -284,8 +284,18 @@ function Booking() {
       </div>
 
       {/* Floating banner */}
+      {(() => {
+        const willEarn = !unavailable && !submitted && weekPoints < 10 && (hasEmpty || fivePlus);
+        return (
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
-        <div className="rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5">
+        {willEarn && (
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+            <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-primary text-white text-[11px] font-extrabold shadow-pink whitespace-nowrap">
+              <Sparkles className="h-3 w-3" /> +10P 적립 예정
+            </span>
+          </div>
+        )}
+        <div className={`rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5 transition ${willEarn ? "ring-2 ring-primary" : ""}`}>
           <button onClick={onUnavailableClick} className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"}`}>
             <Ban className="h-3.5 w-3.5" /> {unavailable ? "PT 불가 ON" : "PT 불가"}
           </button>
