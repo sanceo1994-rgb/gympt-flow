@@ -91,17 +91,34 @@ const AI_UNASSIGNED: { name: string; reason: string }[] = [
   { name: "윤서아", reason: "다른 회원과 시간 충돌" },
 ];
 
-const ACTIVITY_LOG = [
-  { who: "김지원", what: "월 19시·금 19시 선택 추가", when: "방금 전" },
-  { who: "박서윤", what: "화 07시 선택 취소", when: "8분 전" },
-  { who: "최유나", what: "수 09시·토 09시 선택", when: "23분 전" },
-  { who: "정수민", what: "‘이번 주 PT 불가’로 응답", when: "1시간 전" },
-  { who: "한승호", what: "월 20시·수 19시 선택 수정", when: "2시간 전" },
-  { who: "이도현", what: "수 19시 선택 추가", when: "3시간 전" },
-  { who: "김지원", what: "‘다음 주 가능 시간’ 카톡 응답 시작", when: "5시간 전" },
-  { who: "박서윤", what: "금 20시 선택 추가", when: "어제" },
-  { who: "최유나", what: "토 09시 선택 수정", when: "어제" },
-  { who: "정수민", what: "토 09시·토 11시 선택", when: "2일 전" },
+type ActivityItem =
+  | { kind: "edit"; who: string; what: string; when: string }
+  | { kind: "completed"; who: string; sessionNo: number; remaining: number; when: string };
+
+const ACTIVITY_LOG: ActivityItem[] = [
+  { kind: "completed", who: "김지원", sessionNo: 16, remaining: 14, when: "방금 전" },
+  { kind: "edit", who: "김지원", what: "월 19시·금 19시 선택 추가", when: "5분 전" },
+  { kind: "edit", who: "박서윤", what: "화 07시 선택 취소", when: "8분 전" },
+  { kind: "completed", who: "박서윤", sessionNo: 13, remaining: 7, when: "20분 전" },
+  { kind: "edit", who: "최유나", what: "수 09시·토 09시 선택", when: "23분 전" },
+  { kind: "edit", who: "정수민", what: "‘이번 주 PT 불가’로 응답", when: "1시간 전" },
+  { kind: "completed", who: "최유나", sessionNo: 18, remaining: 22, when: "2시간 전" },
+  { kind: "edit", who: "한승호", what: "월 20시·수 19시 선택 수정", when: "2시간 전" },
+  { kind: "edit", who: "이도현", what: "수 19시 선택 추가", when: "3시간 전" },
+  { kind: "edit", who: "김지원", what: "‘다음 주 가능 시간’ 카톡 응답 시작", when: "5시간 전" },
+  { kind: "edit", who: "박서윤", what: "금 20시 선택 추가", when: "어제" },
+  { kind: "edit", who: "최유나", what: "토 09시 선택 수정", when: "어제" },
+  { kind: "edit", who: "정수민", what: "토 09시·토 11시 선택", when: "2일 전" },
+];
+
+const BODY_GROUPS: { name: string; items: string[] }[] = [
+  { name: "가슴", items: ["벤치프레스", "인클라인 벤치", "체스트프레스", "딥스", "케이블 플라이"] },
+  { name: "등", items: ["데드리프트", "랫풀다운", "바벨로우", "시티드로우", "풀업"] },
+  { name: "하체", items: ["스쿼트", "레그프레스", "런지", "레그익스텐션", "레그컬"] },
+  { name: "어깨", items: ["오버헤드프레스", "사이드 레터럴", "프론트 레이즈", "리어 델트", "쉬러그"] },
+  { name: "이두", items: ["바벨컬", "덤벨컬", "해머컬", "프리처컬"] },
+  { name: "삼두", items: ["케이블 푸쉬다운", "라잉 익스텐션", "딥스", "오버헤드 익스텐션"] },
+  { name: "코어", items: ["플랭크", "행잉 레그레이즈", "케이블 크런치", "러시안 트위스트"] },
 ];
 
 function parsePick(s: string): { day: string; hour: number } | null {
