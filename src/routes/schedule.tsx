@@ -286,7 +286,7 @@ function Schedule() {
       </div>
 
       {/* DASHBOARD */}
-      <div className="mt-6 grid grid-cols-3 gap-3">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <KpiCard icon={<Users className="h-4 w-4" />} label="관리 회원" value={stats.total} suffix="명" />
         <KpiCard icon={<MailCheck className="h-4 w-4" />} label="응답 완료" value={stats.responded} suffix={`/${stats.total}명`} accent />
         <KpiCard icon={<CalendarCheck className="h-4 w-4" />} label="배정 가능" value={stats.assignable} suffix="명 (겹침 없음)" />
@@ -594,24 +594,24 @@ function Schedule() {
       <section className="mt-10">
         <SectionHeader index="02" title="학생 응답" subtitle={`${stats.responded} / ${stats.total}명 응답 완료`} />
 
-        <div className="mt-4 rounded-2xl border border-border overflow-hidden">
-          <table className="w-full text-[13px]">
+        <div className="mt-4 rounded-2xl border border-border overflow-x-auto">
+          <table className="w-full min-w-[760px] text-[13px]">
             <thead className="bg-surface-muted">
               <tr className="text-[11px] font-bold uppercase text-ink-soft">
                 <th className="px-4 py-3 text-left">학생 <span className="text-muted-foreground/70 normal-case font-bold">(등록일)</span></th>
-                <th className="px-3 py-3 text-center">상태</th>
-                <th className="px-3 py-3 text-center">최근 PT</th>
-                <th className="px-3 py-3 text-center">남은 횟수</th>
-                <th className="px-3 py-3 text-center">선택한 시간</th>
-                <th className="px-3 py-3 text-center">조치</th>
-                <th className="px-3 py-3 text-center">개별 통지</th>
+                <th className="px-2 py-3 text-center">상태</th>
+                <th className="px-2 py-3 text-center">최근 PT</th>
+                <th className="px-2 py-3 text-center">남은 횟수</th>
+                <th className="px-2 py-3 text-center">선택한 시간</th>
+                <th className="px-2 py-3 text-center whitespace-nowrap">수동 일정 조정</th>
+                <th className="px-2 py-3 text-center">개별 통지</th>
               </tr>
             </thead>
             <tbody>
               {STUDENTS.map((s) => (
-                <tr key={s.name} className="border-t border-border align-top">
+                <tr key={s.name} className="border-t border-border align-middle">
                   <td className="px-4 py-3">
-                    <div className="flex items-start gap-2.5">
+                    <div className="flex items-center gap-2.5">
                       <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
                       <div className="min-w-0 leading-tight">
                         <p className="font-bold text-ink text-[13px]">{s.name}</p>
@@ -619,32 +619,33 @@ function Schedule() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3"><StatusBadge s={s.status} /></td>
-                  <td className="px-4 py-3 text-ink-soft tabular-nums">{s.lastPT}</td>
-                  <td className="px-4 py-3 tabular-nums">
+                  <td className="px-2 py-3 text-center"><StatusBadge s={s.status} /></td>
+                  <td className="px-2 py-3 text-center text-ink-soft tabular-nums whitespace-nowrap">{s.lastPT}</td>
+                  <td className="px-2 py-3 text-center tabular-nums whitespace-nowrap">
                     <span className={`font-extrabold ${s.remaining <= 5 ? "text-destructive" : "text-ink"}`}>{s.remaining}</span>
                     <span className="text-muted-foreground"> / {s.total}회</span>
                   </td>
-                  <td className="px-4 py-3 text-ink-soft">
-                    {s.picks.length === 0 ? <span className="text-muted-foreground">—</span> : (
-                      <div className="flex flex-wrap gap-1">
+                  <td className="px-2 py-3 text-ink-soft">
+                    {s.picks.length === 0 ? <div className="text-center text-muted-foreground">—</div> : (
+                      <div className="flex flex-wrap gap-1 justify-center">
                         {s.picks.map((p) => (
-                          <span key={p} className="inline-flex items-center px-2 h-6 rounded-full text-[11px] font-bold bg-muted text-ink">
+                          <span key={p} className="inline-flex items-center px-2 h-6 rounded-full text-[11px] font-bold bg-muted text-ink whitespace-nowrap">
                             {p}
                           </span>
                         ))}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-2 py-3 text-center">
                     <button
                       onClick={() => openEdit(s)}
-                      className="h-8 px-3 rounded-full bg-ink text-white text-[11px] font-bold inline-flex items-center gap-1"
+                      className="h-8 w-8 rounded-full bg-ink text-white inline-flex items-center justify-center hover:brightness-110"
+                      title="수동 일정 조정"
                     >
-                      <Pencil className="h-3 w-3" /> 일정 조정
+                      <Pencil className="h-3.5 w-3.5" />
                     </button>
                   </td>
-                  <td className="px-3 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     <button
                       onClick={() => fireToast(`${s.name}님에게 카카오톡 알림을 발송했어요 ✓`)}
                       className="h-8 w-8 rounded-full bg-[#FEE500] text-[#191600] inline-flex items-center justify-center hover:brightness-95"
