@@ -594,8 +594,8 @@ function Schedule() {
       <section className="mt-10">
         <SectionHeader index="02" title="학생 응답" subtitle={`${stats.responded} / ${stats.total}명 응답 완료`} />
 
-        <div className="mt-4 rounded-2xl border border-border overflow-hidden">
-          <table className="w-full text-[13px]">
+        <div className="mt-4 rounded-2xl border border-border overflow-x-auto">
+          <table className="w-full min-w-[760px] text-[13px]">
             <thead className="bg-surface-muted">
               <tr className="text-[11px] font-bold uppercase text-ink-soft">
                 <th className="px-4 py-3 text-left">학생 <span className="text-muted-foreground/70 normal-case font-bold">(등록일)</span></th>
