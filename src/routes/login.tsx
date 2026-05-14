@@ -29,21 +29,18 @@ function Login() {
   const [profile, setProfile] = useState({ name: "", email: "", avatar: "" });
   const [emailPw, setEmailPw] = useState({ email: "", password: "" });
   const [welcome, setWelcome] = useState<string | null>(null);
+  const [matchOpen, setMatchOpen] = useState(false);
+  const [matchPhone, setMatchPhone] = useState("");
+  const [matchedTrainer, setMatchedTrainer] = useState<{ name: string; gym: string; avatar: string } | null>(null);
 
   const allOk = agree.tos && agree.priv && agree.age;
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
 
-  const startMethod = (m: "kakao" | "email") => {
-    setMethod(m);
-    setStep("consent");
-  };
+  const startMethod = (m: "kakao" | "email") => { setMethod(m); setStep("consent"); };
 
   const afterConsent = () => {
-    if (method === "kakao") {
-      setProfile(KAKAO_MOCK);
-    } else {
-      setProfile({ name: "", email: emailPw.email, avatar: "" });
-    }
+    if (method === "kakao") setProfile(KAKAO_MOCK);
+    else setProfile({ name: "", email: emailPw.email, avatar: "" });
     setStep("role");
   };
 
@@ -55,9 +52,18 @@ function Login() {
     } catch {}
     setWelcome(profile.name || "회원");
     setTimeout(() => {
-      navigate({ to: role === "trainer" ? "/schedule" : "/booking" });
+      setWelcome(null);
+      if (role === "student") setMatchOpen(true);
+      else navigate({ to: "/schedule" });
     }, 1600);
   };
+
+  const tryMatch = () => {
+    // Mock: any phone "matches" 박재현 트레이너
+    setMatchedTrainer({ name: "박재현", gym: "하이엔드 강남점", avatar: KAKAO_MOCK.avatar });
+  };
+  const confirmMatch = () => { setMatchOpen(false); navigate({ to: "/booking" }); };
+  const rejectMatch = () => { setMatchedTrainer(null); setMatchPhone(""); };
 
   return (
     <div className="min-h-screen bg-surface grid lg:grid-cols-2">
