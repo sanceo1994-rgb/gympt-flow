@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { TrendingUp, LayoutGrid, Calendar, Users } from "lucide-react";
-import logo from "@/assets/gympt-logo.png";
+import { TrendingUp, LayoutGrid, Calendar, Users, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import logo from "@/assets/pickgympt-logo.png";
 
 const TRAINERS: { name: string; sub: string; color: string }[] = [
   { name: "김도윤 트레이너", sub: "강남 · 132명", color: "#FFB199" },
@@ -11,23 +12,17 @@ const TRAINERS: { name: string; sub: string; color: string }[] = [
 ];
 
 export function LeftRail() {
+  const [bizOpen, setBizOpen] = useState(false);
+
   return (
     <div className="space-y-3">
-      {/* Brand / slogan — directly on gray, centered-ish */}
+      {/* Brand / slogan — directly on gray, centered */}
       <Link to="/" className="block px-4 pt-2 pb-3">
-        <div className="flex items-center justify-center gap-2.5">
-          <img src={logo} alt="PickGymPT" width={36} height={36} className="h-9 w-9 object-contain" />
-          <div className="leading-none">
-            <p className="text-[20px] font-black tracking-tight text-ink">픽짐피티<span className="text-primary">.</span></p>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-ink-soft">PickGymPT</p>
-          </div>
+        <div className="flex items-center justify-center">
+          <img src={logo} alt="픽짐피티" className="h-12 w-auto object-contain" />
         </div>
-        <p className="mt-4 text-center text-[14px] font-extrabold text-ink leading-snug tracking-tight">
-          트레이너의 시간을<br />
-          <span className="text-primary">10배 빠르게</span> 조율해요.
-        </p>
-        <p className="mt-1.5 text-center text-[11.5px] text-ink-soft leading-relaxed">
-          반복되는 카톡 일정 조율, 이제 그만.
+        <p className="mt-3 text-center text-[13px] font-bold text-ink-soft leading-snug tracking-tight">
+          반복되는 PT 일정 조율, <span className="text-primary font-extrabold">픽짐피티</span>가 도와드릴게요.
         </p>
       </Link>
 
@@ -49,7 +44,7 @@ export function LeftRail() {
 
       <div className="h-1" />
 
-      {/* Ad slot — flat, friendly */}
+      {/* Ad slot */}
       <div className="rounded-2xl bg-white border border-border p-4">
         <span className="inline-flex items-center px-2 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-black tracking-widest">AD</span>
         <p className="mt-3 text-[16px] font-extrabold text-ink leading-tight">
@@ -78,7 +73,6 @@ export function LeftRail() {
               <span className={`h-5 w-5 rounded-md grid place-items-center text-[10px] font-black shrink-0 ${i === 0 ? "bg-primary text-white" : i < 3 ? "bg-ink text-white" : "bg-muted text-ink-soft"}`}>
                 {i + 1}
               </span>
-              {/* Kakao-style avatar */}
               <div
                 className="h-8 w-8 rounded-xl grid place-items-center text-[12px] font-black text-white shrink-0 ring-1 ring-black/5"
                 style={{ backgroundColor: color }}
@@ -93,7 +87,34 @@ export function LeftRail() {
           ))}
         </ol>
       </div>
+
+      {/* Footer — legal links + business info */}
+      <div className="px-2 pt-2 pb-6 text-[10.5px] text-ink-soft">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <Link to="/" className="hover:text-ink">이용약관</Link>
+          <span className="text-border">·</span>
+          <Link to="/" className="hover:text-ink">개인정보처리방침</Link>
+          <span className="text-border">·</span>
+          <Link to="/" className="hover:text-ink">광고/협업 문의</Link>
+        </div>
+        <button
+          onClick={() => setBizOpen((v) => !v)}
+          className="mt-2 mx-auto flex items-center gap-1 text-[10.5px] text-ink-soft hover:text-ink"
+        >
+          사업자 정보 보기 <ChevronDown className={`h-3 w-3 transition ${bizOpen ? "rotate-180" : ""}`} />
+        </button>
+        {bizOpen && (
+          <div className="mt-2 rounded-lg bg-white border border-border p-3 leading-relaxed text-[10.5px]">
+            <p><b className="text-ink">상호</b> 픽짐피티(주)</p>
+            <p><b className="text-ink">대표</b> 박재현</p>
+            <p><b className="text-ink">사업자등록번호</b> 123-45-67890</p>
+            <p><b className="text-ink">통신판매업</b> 2026-서울강남-01234</p>
+            <p><b className="text-ink">주소</b> 서울시 강남구 테헤란로 123, 5층</p>
+            <p><b className="text-ink">고객센터</b> support@pickgympt.com</p>
+            <p className="mt-1.5 text-ink-soft/70">© 2026 PickGymPT, Inc.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
