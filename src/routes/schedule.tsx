@@ -148,6 +148,26 @@ function Schedule() {
   // Pending-close cells for floating confirm bar
   const [pendingClose, setPendingClose] = useState<Set<string>>(new Set());
 
+  // Memo panel state
+  const [memoFor, setMemoFor] = useState<{ name: string; sessionNo: number } | null>(null);
+  const [memoGroup, setMemoGroup] = useState<string | null>(null);
+  const [memoExercises, setMemoExercises] = useState<Set<string>>(new Set());
+  const [memoText, setMemoText] = useState("");
+
+  const resetMemo = () => { setMemoFor(null); setMemoGroup(null); setMemoExercises(new Set()); setMemoText(""); };
+  const toggleExercise = (e: string) => setMemoExercises((p) => { const n = new Set(p); n.has(e) ? n.delete(e) : n.add(e); return n; });
+
+  const submitMemo = (cancelled = false) => {
+    if (!memoFor) return;
+    if (cancelled) {
+      fireToast(`${memoFor.name}님 ${memoFor.sessionNo}회차 — 회원 사정으로 당일 취소 기록 ✓`);
+    } else {
+      const parts = [memoGroup, ...memoExercises].filter(Boolean).join(" · ");
+      fireToast(`${memoFor.name}님 ${memoFor.sessionNo}회차 메모 저장 ✓ (${parts || "메모만"})`);
+    }
+    resetMemo();
+  };
+
   // Activity feed pagination
   const ACT_PAGE = 4;
   const [actPage, setActPage] = useState(0);
