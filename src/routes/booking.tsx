@@ -197,6 +197,9 @@ function Booking() {
         </div>
       </section>
 
+      {/* Gated booking area: blurred + locked until phone matches trainer's roster */}
+      <div className="relative">
+        <div className={!matchUnlocked ? "pointer-events-none select-none blur-sm opacity-60" : ""} aria-hidden={!matchUnlocked}>
       {/* Header */}
       <div className="mt-6 flex items-start justify-between gap-3 flex-wrap">
         <div>
