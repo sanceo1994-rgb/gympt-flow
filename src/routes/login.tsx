@@ -237,6 +237,48 @@ function Login() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Trainer matching overlay (student only) */}
+      <Dialog open={matchOpen} onOpenChange={setMatchOpen}>
+        <DialogContent className="max-w-md border-0 p-0 bg-transparent shadow-none">
+          <div className="rounded-3xl bg-white shadow-pop border border-border p-6">
+            {!matchedTrainer ? (
+              <>
+                <span className="chip bg-primary/10 text-primary">트레이너 매칭</span>
+                <h3 className="mt-3 text-[20px] font-black text-ink leading-tight">담당 트레이너를 찾아드릴게요</h3>
+                <p className="mt-1.5 text-[12.5px] text-ink-soft">트레이너에게 등록된 전화번호를 입력해주세요.</p>
+                <input value={matchPhone} onChange={(e) => setMatchPhone(e.target.value)} placeholder="010-0000-0000"
+                  className="mt-4 h-12 w-full px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[14px] font-semibold text-ink" />
+                <button onClick={tryMatch} disabled={matchPhone.length < 9}
+                  className="mt-4 h-12 w-full rounded-2xl bg-ink text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2">
+                  매칭하기 <ArrowRight className="h-4 w-4" />
+                </button>
+                <button onClick={confirmMatch} className="mt-3 w-full text-center text-[12px] text-ink-soft underline hover:text-ink">
+                  나중에 연결할게요
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="chip bg-primary/10 text-primary">매칭 결과</span>
+                <h3 className="mt-3 text-[18px] font-black text-ink leading-tight">이 트레이너가 맞으신가요?</h3>
+                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border p-4 bg-surface-muted">
+                  <img src={matchedTrainer.avatar} alt="" className="h-14 w-14 rounded-2xl bg-white object-cover ring-2 ring-border" />
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-black text-ink">{matchedTrainer.name} 트레이너</p>
+                    <p className="text-[12px] text-ink-soft">{matchedTrainer.gym}</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button onClick={rejectMatch} className="h-12 rounded-2xl bg-white border border-border text-ink text-[13px] font-extrabold hover:bg-muted">아니에요</button>
+                  <button onClick={confirmMatch} className="h-12 rounded-2xl bg-primary text-white text-[13px] font-extrabold shadow-pop hover:brightness-110 inline-flex items-center justify-center gap-1.5">
+                    <Check className="h-4 w-4" /> 맞습니다
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
