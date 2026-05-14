@@ -798,6 +798,64 @@ function Schedule() {
         </DialogContent>
       </Dialog>
 
+      {/* Memo panel — body-part picker + note */}
+      <Sheet open={!!memoFor} onOpenChange={(v) => !v && resetMemo()}>
+        <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
+          <SheetHeader>
+            <span className="inline-flex w-fit chip bg-primary/10 text-primary"><Pencil className="h-3 w-3" /> 수업 메모</span>
+            <SheetTitle className="text-[20px] font-black leading-tight">{memoFor?.name}님 · {memoFor?.sessionNo}회차 메모</SheetTitle>
+            <SheetDescription>저장하면 학생의 PT 기록 테이블에 부위와 메모가 반영돼요.</SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-5">
+            <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">대부위</p>
+            <div className="flex flex-wrap gap-1.5">
+              {BODY_GROUPS.map((g) => (
+                <button key={g.name} onClick={() => { setMemoGroup(g.name); setMemoExercises(new Set()); }}
+                  className={`h-10 px-4 rounded-xl text-[13px] font-extrabold transition ${memoGroup === g.name ? "bg-ink text-white" : "bg-muted text-ink hover:bg-ink/10"}`}>
+                  {g.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {memoGroup && (
+            <div className="mt-5">
+              <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">{memoGroup} 세부 운동</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {BODY_GROUPS.find((g) => g.name === memoGroup)!.items.map((ex) => {
+                  const on = memoExercises.has(ex);
+                  return (
+                    <button key={ex} onClick={() => toggleExercise(ex)}
+                      className={`h-14 px-3 rounded-2xl text-[13px] font-extrabold border-2 transition ${on ? "bg-primary text-white border-primary shadow-pop" : "bg-white border-border text-ink hover:border-ink/40"}`}>
+                      {ex}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">간단 메모</p>
+            <textarea value={memoText} onChange={(e) => setMemoText(e.target.value)}
+              placeholder="예) 스쿼트 100kg 도전 / 폼 안정 / 다음 회차 데드 예정"
+              className="w-full min-h-[120px] p-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] text-ink resize-y" />
+          </div>
+
+          <div className="mt-6 sticky bottom-0 -mx-6 px-6 py-4 bg-white border-t border-border space-y-2">
+            <button onClick={() => submitMemo(false)}
+              className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop hover:brightness-110">
+              <Check className="h-4 w-4" /> 메모 저장
+            </button>
+            <button onClick={() => submitMemo(true)}
+              className="w-full text-center text-[12px] text-destructive font-bold underline hover:opacity-80">
+              회원 사정으로 당일 취소
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Right-side panel — invite or confirm */}
       <Sheet open={!!panel} onOpenChange={(v) => !v && setPanel(null)}>
         <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
