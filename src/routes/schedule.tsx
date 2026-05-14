@@ -660,113 +660,111 @@ function Schedule() {
         </div>
       </section>
 
-      {/* Edit dialog — full timetable + manual move */}
-      <Dialog open={!!editing} onOpenChange={(v) => { if (!v) { setEditing(null); setActiveName(null); setPendingMove(null); } }}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>AI 최적 시간표 · 수동 조정</DialogTitle>
-            <DialogDescription>
+      {/* Edit panel — right-side Sheet (notion-like) */}
+      <Sheet open={!!editing} onOpenChange={(v) => { if (!v) { setEditing(null); setActiveName(null); setPendingMove(null); } }}>
+        <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
+          <SheetHeader>
+            <span className="inline-flex w-fit chip bg-primary/10 text-primary"><Pencil className="h-3 w-3" /> 일정 조정</span>
+            <SheetTitle className="text-[20px] font-black leading-tight">AI 최적 시간표 · 수동 조정</SheetTitle>
+            <SheetDescription>
               배정된 회원을 클릭한 뒤, 옮기고 싶은 칸을 누르세요. <b className="text-primary">파란색</b>은 선택된 회원이 희망한 시간이에요.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
 
-          {(() => {
-            const active = STUDENTS.find((s) => s.name === activeName);
-            const wishSet = new Set(
-              (active?.picks ?? [])
-                .map(parsePick)
-                .filter(Boolean)
-                .map((p) => `${p!.day}-${p!.hour}`)
-            );
-            const cellByKey = new Map(assignments.map((a) => [`${a.day}-${a.hour}`, a]));
-
-            return (
-              <>
-                <div className="rounded-xl border border-border overflow-hidden">
-                  <div className="grid grid-cols-[40px_repeat(7,1fr)] bg-surface-muted border-b border-border">
-                    <div className="p-1.5 text-[10px] text-muted-foreground font-bold text-center">시간</div>
-                    {DAYS.map((d) => (
-                      <div key={d} className="p-1.5 text-center text-[12px] font-extrabold text-ink">{d}</div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-[40px_repeat(7,1fr)] max-h-[360px] overflow-y-auto">
-                    {HOURS.map((h) => (
-                      <React.Fragment key={h}>
-                        <div className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums">
-                          {String(h).padStart(2, "0")}
-                        </div>
-                        {DAYS.map((d) => {
-                          const key = `${d}-${h}`;
-                          const isClosed = closed.has(key);
-                          const cell = cellByKey.get(key);
-                          const isWish = wishSet.has(key);
-                          const isMine = cell?.name === activeName;
-                          return (
-                            <button
-                              key={key}
-                              disabled={isClosed}
-                              onClick={() => {
-                                if (!activeName) return;
-                                if (cell && cell.name === activeName) return;
-                                setPendingMove({ day: d, hour: h });
-                              }}
-                              className={`relative h-10 border-b border-l border-border text-[10px] font-bold transition
-                                ${isClosed ? "bg-muted text-muted-foreground/50 cursor-not-allowed" : ""}
-                                ${!isClosed && isWish ? "bg-[oklch(0.93_0.08_240)] text-[oklch(0.30_0.16_245)]" : ""}
-                                ${!isClosed && isMine ? "bg-primary text-white" : ""}
-                                ${!isClosed && !isMine ? "hover:ring-2 hover:ring-ink/30 hover:ring-inset" : ""}
-                              `}
-                            >
-                              {isClosed ? <Lock className="absolute inset-0 m-auto h-3 w-3" /> : cell ? (
-                                <span
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={(e) => { e.stopPropagation(); setActiveName(cell.name); }}
-                                  className="absolute inset-0 grid place-items-center px-1 truncate cursor-pointer"
-                                >
-                                  {cell.name}
-                                </span>
-                              ) : null}
-                            </button>
-                          );
-                        })}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] font-bold text-ink-soft">조정 대상:</span>
-                  {assignments.map((a) => (
-                    <button
-                      key={a.name}
-                      onClick={() => setActiveName(a.name)}
-                      className={`inline-flex items-center px-2.5 h-7 rounded-full text-[11px] font-extrabold transition ${
-                        activeName === a.name ? "bg-primary text-white" : "bg-muted text-ink hover:bg-ink/10"
-                      }`}
-                    >
-                      {a.name}
-                    </button>
-                  ))}
-                </div>
-
-                {activeName && (
-                  <div className="rounded-xl bg-ink text-white px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="text-[13px] font-bold">
-                      <b className="text-primary">{activeName}</b>님을 어디로 옮길까요?
+          <div className="mt-5 space-y-4">
+            {(() => {
+              const active = STUDENTS.find((s) => s.name === activeName);
+              const wishSet = new Set(
+                (active?.picks ?? [])
+                  .map(parsePick)
+                  .filter(Boolean)
+                  .map((p) => `${p!.day}-${p!.hour}`)
+              );
+              const cellByKey = new Map(assignments.map((a) => [`${a.day}-${a.hour}`, a]));
+              return (
+                <>
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <div className="grid grid-cols-[40px_repeat(7,1fr)] bg-surface-muted border-b border-border">
+                      <div className="p-1.5 text-[10px] text-muted-foreground font-bold text-center">시간</div>
+                      {DAYS.map((d) => (
+                        <div key={d} className="p-1.5 text-center text-[12px] font-extrabold text-ink">{d}</div>
+                      ))}
                     </div>
-                    <span className="text-[11px] text-white/60">옮길 칸을 클릭</span>
+                    <div className="grid grid-cols-[40px_repeat(7,1fr)] max-h-[420px] overflow-y-auto">
+                      {HOURS.map((h) => (
+                        <React.Fragment key={h}>
+                          <div className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums">
+                            {String(h).padStart(2, "0")}
+                          </div>
+                          {DAYS.map((d) => {
+                            const key = `${d}-${h}`;
+                            const isClosed = closed.has(key);
+                            const cell = cellByKey.get(key);
+                            const isWish = wishSet.has(key);
+                            const isMine = cell?.name === activeName;
+                            return (
+                              <button
+                                key={key}
+                                disabled={isClosed}
+                                onClick={() => {
+                                  if (!activeName) return;
+                                  if (cell && cell.name === activeName) return;
+                                  setPendingMove({ day: d, hour: h });
+                                }}
+                                className={`relative h-10 border-b border-l border-border text-[10px] font-bold transition
+                                  ${isClosed ? "bg-muted text-muted-foreground/50 cursor-not-allowed" : ""}
+                                  ${!isClosed && isWish ? "bg-[oklch(0.93_0.08_240)] text-[oklch(0.30_0.16_245)]" : ""}
+                                  ${!isClosed && isMine ? "bg-primary text-white" : ""}
+                                  ${!isClosed && !isMine ? "hover:ring-2 hover:ring-ink/30 hover:ring-inset" : ""}
+                                `}
+                              >
+                                {isClosed ? <Lock className="absolute inset-0 m-auto h-3 w-3" /> : cell ? (
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => { e.stopPropagation(); setActiveName(cell.name); }}
+                                    className="absolute inset-0 grid place-items-center px-1 truncate cursor-pointer"
+                                  >
+                                    {cell.name}
+                                  </span>
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </React.Fragment>
+                      ))}
+                    </div>
                   </div>
-                )}
-              </>
-            );
-          })()}
 
-          <DialogFooter>
-            <button onClick={() => { setEditing(null); setActiveName(null); }} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">닫기</button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-ink-soft">조정 대상:</span>
+                    {assignments.map((a) => (
+                      <button
+                        key={a.name}
+                        onClick={() => setActiveName(a.name)}
+                        className={`inline-flex items-center px-2.5 h-7 rounded-full text-[11px] font-extrabold transition ${
+                          activeName === a.name ? "bg-primary text-white" : "bg-muted text-ink hover:bg-ink/10"
+                        }`}
+                      >
+                        {a.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  {activeName && (
+                    <div className="rounded-xl bg-ink text-white px-4 py-3 flex items-center justify-between gap-3">
+                      <div className="text-[13px] font-bold">
+                        <b className="text-primary">{activeName}</b>님을 어디로 옮길까요?
+                      </div>
+                      <span className="text-[11px] text-white/60">옮길 칸을 클릭</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Confirm move */}
       <Dialog open={!!pendingMove} onOpenChange={(v) => !v && setPendingMove(null)}>
