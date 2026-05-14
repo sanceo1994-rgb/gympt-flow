@@ -29,9 +29,6 @@ function Login() {
   const [profile, setProfile] = useState({ name: "", email: "", avatar: "" });
   const [emailPw, setEmailPw] = useState({ email: "", password: "" });
   const [welcome, setWelcome] = useState<string | null>(null);
-  const [matchOpen, setMatchOpen] = useState(false);
-  const [matchPhone, setMatchPhone] = useState("");
-  const [matchedTrainer, setMatchedTrainer] = useState<{ name: string; gym: string; avatar: string } | null>(null);
 
   const allOk = agree.tos && agree.priv && agree.age;
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
