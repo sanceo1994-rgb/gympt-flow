@@ -34,6 +34,14 @@ const CLOSED = new Set<string>([
   "월-12","월-13","월-14",
 ]);
 
+// Trainer's registered student phone numbers (mirrors /students mock data)
+const TRAINER_NAME = "박재현";
+const TRAINER_STUDENT_PHONES: Set<string> = new Set([
+  "01012345678", "01023456789", "01034567890", "01045678901", "01056789012",
+  "01067890123", "01078901234", "01089012345", "01090123456", "01001234567",
+]);
+const normalizePhone = (s: string) => s.replace(/\D/g, "");
+
 function heatLevel(n: number, isMine: boolean) {
   if (isMine) return 5;
   if (n <= 0) return 0;
