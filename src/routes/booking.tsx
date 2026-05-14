@@ -66,6 +66,22 @@ function Booking() {
   const [toast, setToast] = useState<{ title: string; sub?: string } | null>(null);
   const [weekPoints, setWeekPoints] = useState<number>(0);
 
+  // Trainer-student matching gate (only the schedule area is locked; profile is public)
+  const [matchUnlocked, setMatchUnlocked] = useState(false);
+  const [matchAsked, setMatchAsked] = useState(false);
+  const [matchPhone, setMatchPhone] = useState("");
+  const [matchError, setMatchError] = useState<string | null>(null);
+
+  const handleConfirmStudent = () => { setMatchAsked(true); setMatchError(null); };
+  const handleNotStudent = () => {
+    setMatchError("괜찮아요! 트레이너님께 등록 요청을 보내거나, 다른 트레이너의 페이지를 둘러볼 수 있어요.");
+  };
+  const submitMatchPhone = () => {
+    const ok = TRAINER_STUDENT_PHONES.has(normalizePhone(matchPhone));
+    if (ok) { setMatchUnlocked(true); setMatchError(null); }
+    else setMatchError("앗, 입력하신 번호는 트레이너님의 회원 명단에 없어요. 트레이너님께 등록을 먼저 요청해주세요.");
+  };
+
   useEffect(() => {
     if (user && !String(user.id).startsWith("virtual-")) {
       fetchPts().then((r) => setWeekPoints(r.total)).catch(() => {});
