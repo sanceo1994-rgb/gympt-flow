@@ -254,3 +254,15 @@ function Input({ value, onChange, placeholder, className = "" }: { value: string
     />
   );
 }
+
+function MiniKpi({ icon, label, value, suffix, accent }: { icon: React.ReactNode; label: string; value: number; suffix?: string; accent?: boolean }) {
+  return (
+    <div className={`rounded-xl border p-2.5 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}>
+      <div className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${accent ? "text-primary" : "text-ink-soft"}`}>{icon}{label}</div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className="text-[20px] font-black tabular-nums leading-none">{value}</span>
+        {suffix && <span className={`text-[10.5px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}>{suffix}</span>}
+      </div>
+    </div>
+  );
+}
