@@ -10,7 +10,7 @@ import { awardPoints, getMyWeekPoints } from "@/lib/points.functions";
 export const Route = createFileRoute("/booking")({
   head: () => ({
     meta: [
-      { title: "학생 예약 — 짐피티 GymPT" },
+      { title: "학생 예약 — 픽짐피티 PickGymPT" },
       { name: "description", content: "원하는 PT 시간을 원하는 만큼 선택하세요. 비어있는 시간/5개 이상 선택 시 포인트도 적립돼요." },
     ],
   }),
@@ -203,7 +203,7 @@ function Booking() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="text-[13px] font-extrabold text-ink">
-              <span className="text-[oklch(0.45_0.18_50)]">짐피티 포인트</span> · 이번 주 {weekPoints}/10P 적립
+              <span className="text-[oklch(0.45_0.18_50)]">픽짐피티 포인트</span> · 이번 주 {weekPoints}/10P 적립
             </p>
             {weekPoints >= 10 && <span className="text-[10px] font-bold text-[oklch(0.45_0.18_50)]">이번 주 최대치 도달</span>}
           </div>
@@ -331,7 +331,7 @@ function Booking() {
           <Info className="h-3 w-3" />
           <span>제출 시 로그인이 필요해요</span>
           <span className="mx-1">·</span>
-          <Link to="/" className="font-semibold hover:text-primary">짐피티 소개</Link>
+          <Link to="/" className="font-semibold hover:text-primary">픽짐피티 소개</Link>
         </div>
       </div>
         );

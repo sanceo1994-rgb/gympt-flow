@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 export const Route = createFileRoute("/schedule")({
   head: () => ({
     meta: [
-      { title: "트레이너 일정 조율 — 짐피티 GymPT" },
+      { title: "트레이너 일정 조율 — 픽짐피티 PickGymPT" },
       { name: "description", content: "달력으로 학생 응답을 한눈에 확인하고, 안되는 시간만 닫으면 AI가 최적 시간표를 만들어드려요." },
     ],
   }),

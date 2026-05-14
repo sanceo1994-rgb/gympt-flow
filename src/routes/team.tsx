@@ -9,7 +9,7 @@ import {
 export const Route = createFileRoute("/team")({
   head: () => ({
     meta: [
-      { title: "팀 플랜 — 짐피티 GymPT" },
+      { title: "팀 플랜 — 픽짐피티 PickGymPT" },
       { name: "description", content: "지점·트레이너·회원을 한 화면에서 관리하는 짐 운영 대시보드" },
     ],
   }),

@@ -16,10 +16,10 @@ export function LeftRail() {
       {/* Brand / slogan — directly on gray, centered-ish */}
       <Link to="/" className="block px-4 pt-2 pb-3">
         <div className="flex items-center justify-center gap-2.5">
-          <img src={logo} alt="GymPT" width={36} height={36} className="h-9 w-9 object-contain" />
+          <img src={logo} alt="PickGymPT" width={36} height={36} className="h-9 w-9 object-contain" />
           <div className="leading-none">
-            <p className="text-[20px] font-black tracking-tight text-ink">짐피티<span className="text-primary">.</span></p>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-ink-soft">GymPT</p>
+            <p className="text-[20px] font-black tracking-tight text-ink">픽짐피티<span className="text-primary">.</span></p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-ink-soft">PickGymPT</p>
           </div>
         </div>
         <p className="mt-4 text-center text-[14px] font-extrabold text-ink leading-snug tracking-tight">
@@ -53,7 +53,7 @@ export function LeftRail() {
       <div className="rounded-2xl bg-white border border-border p-4">
         <span className="inline-flex items-center px-2 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-black tracking-widest">AD</span>
         <p className="mt-3 text-[16px] font-extrabold text-ink leading-tight">
-          짐피티 Pro<br />첫 달 50% 할인
+          픽짐피티 Pro<br />첫 달 50% 할인
         </p>
         <p className="mt-2 text-[12px] text-ink-soft leading-relaxed">
           학생 40명 + 알림톡 600건 포함. 지금 가입하면 한 달 무료.

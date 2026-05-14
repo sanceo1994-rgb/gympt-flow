@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/signup-email")({
-  head: () => ({ meta: [{ title: "이메일로 가입 — 짐피티 GymPT" }] }),
+  head: () => ({ meta: [{ title: "이메일로 가입 — 픽짐피티 PickGymPT" }] }),
   component: SignupEmail,
 });
 

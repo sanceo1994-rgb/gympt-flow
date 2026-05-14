@@ -7,7 +7,7 @@ import studentImg from "@/assets/role-student.png";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "로그인 — 짐피티 GymPT" }] }),
+  head: () => ({ meta: [{ title: "로그인 — 픽짐피티 PickGymPT" }] }),
   component: Login,
 });
 
@@ -68,13 +68,13 @@ function Login() {
         <div className="relative flex flex-col h-full">
           <Link to="/" className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-xl bg-primary grid place-items-center text-white font-black">G</div>
-            <span className="font-extrabold tracking-tight">짐피티 GymPT</span>
+            <span className="font-extrabold tracking-tight">픽짐피티 PickGymPT</span>
           </Link>
 
           <div className="mt-auto">
             <img src={heroDumbbell} alt="" className="h-56 w-56 -ml-4" />
             <h1 className="mt-6 text-[40px] font-black leading-[1.05]">
-              운동은 선생님이,<br /><span className="grad-pink-text">일정은 짐피티가.</span>
+              운동은 선생님이,<br /><span className="grad-pink-text">일정은 픽짐피티가.</span>
             </h1>
             <p className="mt-4 text-white/70 max-w-md">
               매주 카톡으로 시간 묻지 마세요. 학생은 원하는 시간을 고르고, AI가 최적 시간표를 만들어드려요.
@@ -92,7 +92,7 @@ function Login() {
       <main className="bg-white flex flex-col px-6 sm:px-10 pt-8 pb-10 lg:pt-14 relative">
         <Link to="/" className="lg:hidden flex items-center gap-2 mb-4 self-start">
           <div className="h-8 w-8 rounded-xl bg-primary grid place-items-center text-white font-black text-[13px]">G</div>
-          <span className="font-extrabold text-ink text-[14px]">짐피티 GymPT</span>
+          <span className="font-extrabold text-ink text-[14px]">픽짐피티 PickGymPT</span>
         </Link>
         {step !== "method" && step !== "done" && (
           <button
@@ -227,7 +227,7 @@ function Login() {
               <Sparkles className="h-7 w-7 text-primary" />
             </div>
             <h3 className="text-[22px] font-black tracking-tight text-ink">환영합니다, {welcome}님!</h3>
-            <p className="mt-1.5 text-[13px] text-ink-soft">짐피티가 일정 조율을 도와드릴게요.</p>
+            <p className="mt-1.5 text-[13px] text-ink-soft">픽짐피티가 일정 조율을 도와드릴게요.</p>
           </div>
         </DialogContent>
       </Dialog>

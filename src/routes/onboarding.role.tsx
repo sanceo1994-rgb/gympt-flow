@@ -7,7 +7,7 @@ import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
 
 export const Route = createFileRoute("/onboarding/role")({
-  head: () => ({ meta: [{ title: "역할 선택 — 짐피티 GymPT" }] }),
+  head: () => ({ meta: [{ title: "역할 선택 — 픽짐피티 PickGymPT" }] }),
   component: RolePicker,
 });
 
@@ -38,7 +38,7 @@ function RolePicker() {
   return (
     <div className="min-h-screen bg-white text-ink flex flex-col">
       <main className="flex-1 max-w-2xl w-full mx-auto px-6 pt-12 pb-8">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">짐피티에 오신 걸 환영해요</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">픽짐피티에 오신 걸 환영해요</p>
         <h1 className="mt-3 text-[28px] sm:text-[32px] font-black leading-[1.15] tracking-tight">
           어떤 역할로 시작할까요?
         </h1>

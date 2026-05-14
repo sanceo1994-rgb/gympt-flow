@@ -12,8 +12,8 @@ import { Badge } from "@/components/Badge";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "짐피티 GymPT — PT 트레이너 일정 비서" },
-      { name: "description", content: "PT 일정 조율을 카톡으로 하나씩? 짐피티가 학생 선호 시간을 모아 AI 최적 시간표를 만들어드려요." },
+      { title: "픽짐피티 PickGymPT — PT 트레이너 일정 비서" },
+      { name: "description", content: "PT 일정 조율을 카톡으로 하나씩? 픽짐피티가 학생 선호 시간을 모아 AI 최적 시간표를 만들어드려요." },
     ],
   }),
   component: Landing,
@@ -76,7 +76,7 @@ function Hero() {
           <div className="absolute inset-0 bg-grid opacity-[0.5] rounded-3xl pointer-events-none" />
           <div className="relative grid grid-cols-2 gap-3">
             <div className="col-span-2 panel p-5 flex items-center gap-4">
-              <img src={heroDumbbell} alt="GymPT" className="h-24 w-24 -my-2" width={1024} height={1024} />
+              <img src={heroDumbbell} alt="PickGymPT" className="h-24 w-24 -my-2" width={1024} height={1024} />
               <div>
                 <p className="text-[11px] font-bold text-primary uppercase tracking-wider">이번 주 결과</p>
                 <p className="text-[22px] font-black text-ink leading-tight">학생 14명 중<br />13명 시간 확정</p>
@@ -144,7 +144,7 @@ function HowItWorks() {
   const steps = [
     { n: "01", title: "선생님이 다음 주 가능 시간을 엽니다", desc: "요일·시간·정원만 입력하면 학생용 예약 링크가 즉시 생성돼요.", img: stepOpen },
     { n: "02", title: "학생들이 원하는 시간을 선택합니다", desc: "원하는 만큼 골라요. 모바일에서 3초면 끝나요.", img: stepPick },
-    { n: "03", title: "짐피티가 최적 시간표를 추천합니다", desc: "아무도 빠지지 않게, 모두가 PT 받을 수 있는 시간표를 자동으로 만들어요.", img: stepAi },
+    { n: "03", title: "픽짐피티가 최적 시간표를 추천합니다", desc: "아무도 빠지지 않게, 모두가 PT 받을 수 있는 시간표를 자동으로 만들어요.", img: stepAi },
   ];
   return (
     <section className="mt-14">
@@ -219,7 +219,7 @@ function AISection() {
         <span className="grad-pink-text">모두를 위한</span> 시간표
       </h3>
       <p className="mt-3 text-[14px] text-ink-soft leading-relaxed max-w-2xl">
-        짐피티는 누가 더 빨랐는지를 보지 않아요. 모든 학생의 가능 시간을 한꺼번에 맞춰서,
+        픽짐피티는 누가 더 빨랐는지를 보지 않아요. 모든 학생의 가능 시간을 한꺼번에 맞춰서,
         <b className="text-ink"> 한 명이라도 더 PT를 받을 수 있는</b> 조합을 찾아드려요.
         붐비는 시간은 정원만큼만, 비어있던 시간은 자연스럽게 채우면서요.
       </p>
@@ -243,7 +243,7 @@ function AISection() {
 function MockPreview() {
   return (
     <section className="mt-14">
-      <SectionHead eyebrow="실제 화면" title="이렇게 생긴 짐피티" />
+      <SectionHead eyebrow="실제 화면" title="이렇게 생긴 픽짐피티" />
       <div className="mt-6 grid md:grid-cols-2 gap-3">
         <div className="panel p-5">
           <p className="text-[11px] font-bold text-primary uppercase">트레이너 화면</p>
@@ -358,7 +358,7 @@ function FinalCTA() {
     <section className="mt-14 text-center py-10 border-t border-border">
       <h3 className="text-[28px] sm:text-[34px] font-black text-ink leading-tight">
         운동은 선생님이,<br />
-        <span className="grad-pink-text">일정은 짐피티가.</span>
+        <span className="grad-pink-text">일정은 픽짐피티가.</span>
       </h3>
       <div className="mt-5 flex justify-center gap-3 flex-wrap">
         <Link to="/schedule" className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white font-bold shadow-pink">
