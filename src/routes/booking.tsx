@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Check, Ban, Info, X, Lock, Instagram, Megaphone, Award, Coffee, Sparkles } from "lucide-react";
+import { Check, Ban, Info, X, Lock, Instagram, Megaphone, Award, Coffee, Sparkles, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useServerFn } from "@tanstack/react-start";
