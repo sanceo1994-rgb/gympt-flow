@@ -328,6 +328,8 @@ function Booking() {
           <Link to="/" className="font-semibold hover:text-primary">짐피티 소개</Link>
         </div>
       </div>
+        );
+      })()}
 
       {/* Login redirect modal */}
       <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
