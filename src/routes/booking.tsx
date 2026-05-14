@@ -315,9 +315,50 @@ function Booking() {
         </div>
         <p className="mt-2 text-center text-[11px] text-ink-soft sm:hidden">셀을 탭해서 가능한 시간을 골라주세요. 가로로 한 화면에 보여요.</p>
       </div>
+        </div>
+
+        {/* Match gate overlay */}
+        {!matchUnlocked && (
+          <div className="absolute inset-0 z-20 flex items-start justify-center pt-12">
+            <div className="rounded-3xl bg-white shadow-pop border border-border p-6 sm:p-8 max-w-md w-[min(92%,420px)] text-center">
+              <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 grid place-items-center mb-4">
+                <Lock className="h-6 w-6 text-primary" />
+              </div>
+              {!matchAsked ? (
+                <>
+                  <h3 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">
+                    {TRAINER_NAME} 트레이너님의<br />학생이신가요?
+                  </h3>
+                  <p className="mt-2 text-[12.5px] text-ink-soft">맞다면 시간 선택을, 아니라면 등록을 먼저 진행해주세요.</p>
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    <button onClick={handleNotStudent} className="h-12 rounded-2xl bg-white border border-border text-ink text-[13px] font-extrabold hover:bg-muted">엇 아니에요...</button>
+                    <button onClick={handleConfirmStudent} className="h-12 rounded-2xl bg-primary text-white text-[13px] font-extrabold shadow-pop hover:brightness-110 inline-flex items-center justify-center gap-1.5">
+                      <Check className="h-4 w-4" /> 맞습니다!
+                    </button>
+                  </div>
+                  {matchError && <p className="mt-4 text-[12px] text-ink-soft leading-relaxed">{matchError}</p>}
+                </>
+              ) : (
+                <>
+                  <h3 className="text-[18px] font-black text-ink leading-tight">트레이너에게 등록하신<br />전화번호를 입력해주세요</h3>
+                  <p className="mt-2 text-[12px] text-ink-soft">트레이너님의 회원 명단과 일치하면 바로 시간을 고를 수 있어요.</p>
+                  <input value={matchPhone} onChange={(e) => setMatchPhone(e.target.value)} placeholder="010-0000-0000" autoFocus
+                    className="mt-4 h-12 w-full px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[14px] font-semibold text-ink text-center tabular-nums" />
+                  <button onClick={submitMatchPhone} disabled={normalizePhone(matchPhone).length < 10}
+                    className="mt-3 h-12 w-full rounded-2xl bg-ink text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2">
+                    확인하기 <ArrowRight className="h-4 w-4" />
+                  </button>
+                  {matchError && <p className="mt-3 text-[12px] text-destructive font-bold leading-relaxed">{matchError}</p>}
+                  <button onClick={() => { setMatchAsked(false); setMatchError(null); setMatchPhone(""); }} className="mt-3 text-[11px] text-ink-soft underline hover:text-ink">이전으로</button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Floating banner */}
-      {(() => {
+      {matchUnlocked && (() => {
         const willEarn = !unavailable && !submitted && weekPoints < 10 && (hasEmpty || fivePlus);
         const earnMsg = hasEmpty
           ? "🎉 축하해요! 아무도 선택 안 한 시간을 골라주셔서 10포인트를 선물받습니다!"
