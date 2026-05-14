@@ -292,13 +292,16 @@ function Booking() {
       {/* Floating banner */}
       {(() => {
         const willEarn = !unavailable && !submitted && weekPoints < 10 && (hasEmpty || fivePlus);
+        const earnMsg = hasEmpty
+          ? "🎉 축하해요! 아무도 선택 안 한 시간을 골라주셔서 10포인트를 선물받습니다!"
+          : "🎉 축하해요! 5개 이상 시간을 선택하셔서 10포인트를 선물받습니다!";
         return (
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
         {willEarn && (
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-            <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full bg-primary text-white text-[11px] font-extrabold shadow-pink whitespace-nowrap">
-              <Sparkles className="h-3 w-3" /> +10P 적립 예정
-            </span>
+          <div className="absolute -top-9 left-1/2 -translate-x-1/2 z-10 w-[min(680px,calc(100vw-32px))]">
+            <div className="rounded-full bg-primary text-white text-[12px] font-extrabold px-4 h-8 inline-flex items-center justify-center w-full shadow-pink whitespace-nowrap overflow-hidden">
+              <span className="truncate">{earnMsg}</span>
+            </div>
           </div>
         )}
         <div className={`rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5 transition ${willEarn ? "ring-2 ring-primary" : ""}`}>
