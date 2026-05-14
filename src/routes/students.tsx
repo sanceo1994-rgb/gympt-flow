@@ -1,12 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useMemo, useState } from "react";
-import { Plus, Search, ArrowUpDown, Check, X } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Check, X, Calendar, Award, TrendingUp } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/students")({
   head: () => ({ meta: [{ title: "학생 관리 — 픽짐피티" }] }),
   component: StudentsPage,
 });
+
+const TRAINER_NAME = "박재현";
+const TRAINER_GYM = "하이엔드 강남점";
+
+type HistoryRow = { date: string; time: string; trainer: string; gym: string; status: "완료" | "취소" | "예정"; note: string; part?: string };
+const HISTORY_BY_STUDENT: Record<string, HistoryRow[]> = {
+  김지원: [
+    { date: "2026.05.12 (화)", time: "19:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "스쿼트 3x8, 폼 안정", part: "하체 · 스쿼트" },
+    { date: "2026.05.07 (목)", time: "07:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "벤치 60kg 도전", part: "가슴 · 벤치프레스" },
+    { date: "2026.05.05 (화)", time: "19:00", trainer: "박재현", gym: TRAINER_GYM, status: "취소", note: "회원 사정으로 당일 취소" },
+    { date: "2026.04.20 (월)", time: "20:00", trainer: "이서연", gym: "성수점", status: "완료", note: "(다른 트레이너 기록)" },
+  ],
+  박서윤: [
+    { date: "2026.05.10 (일)", time: "11:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "데드 80kg", part: "등 · 데드리프트" },
+    { date: "2026.05.03 (일)", time: "11:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "랫풀다운 / 시티드로우", part: "등 · 랫풀다운" },
+  ],
+  최유나: [
+    { date: "2026.05.11 (월)", time: "09:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "오버헤드프레스 폼 교정", part: "어깨 · 오버헤드프레스" },
+  ],
+};
 
 type Status = "가입" | "미가입";
 type Student = {
