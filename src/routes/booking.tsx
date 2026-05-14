@@ -59,7 +59,9 @@ function Booking() {
   const [weekPoints, setWeekPoints] = useState<number>(0);
 
   useEffect(() => {
-    if (user) fetchPts().then((r) => setWeekPoints(r.total)).catch(() => {});
+    if (user && !String(user.id).startsWith("virtual-")) {
+      fetchPts().then((r) => setWeekPoints(r.total)).catch(() => {});
+    }
   }, [user, fetchPts]);
 
   const requireAuth = (fn: () => void) => {
@@ -102,7 +104,7 @@ function Booking() {
     setToast({ title: unavailable ? "‘이번 주 PT 불가’로 전달했어요" : `${selectedList.length}개 시간이 트레이너에게 전달됐어요` });
     setTimeout(() => setToast(null), 2400);
 
-    if (!unavailable) {
+    if (!unavailable && user && !String(user.id).startsWith("virtual-")) {
       try {
         if (hasEmpty) {
           const r = await award({ data: { reason: "empty_slot" } });
@@ -113,6 +115,10 @@ function Booking() {
           if (r.awarded > 0) setTimeout(() => showPointToast(r.awarded, "5개 이상 골라줬어요 ☕"), 1800);
         }
       } catch {}
+    } else if (!unavailable && (hasEmpty || fivePlus)) {
+      // virtual user: simulate point gain locally
+      const gain = Math.min(10, (hasEmpty ? 10 : 0));
+      if (gain > 0) setTimeout(() => showPointToast(gain, hasEmpty ? "비어있던 시간을 골라줬어요 ☕" : "5개 이상 골라줬어요 ☕"), 1200);
     }
   });
 
