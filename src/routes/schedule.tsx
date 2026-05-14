@@ -599,12 +599,12 @@ function Schedule() {
             <thead className="bg-surface-muted">
               <tr className="text-[11px] font-bold uppercase text-ink-soft">
                 <th className="px-4 py-3 text-left">학생 <span className="text-muted-foreground/70 normal-case font-bold">(등록일)</span></th>
-                <th className="px-3 py-3 text-center">상태</th>
-                <th className="px-3 py-3 text-center">최근 PT</th>
-                <th className="px-3 py-3 text-center">남은 횟수</th>
-                <th className="px-3 py-3 text-center">선택한 시간</th>
-                <th className="px-3 py-3 text-center">조치</th>
-                <th className="px-3 py-3 text-center">개별 통지</th>
+                <th className="px-2 py-3 text-center">상태</th>
+                <th className="px-2 py-3 text-center">최근 PT</th>
+                <th className="px-2 py-3 text-center">남은 횟수</th>
+                <th className="px-2 py-3 text-center">선택한 시간</th>
+                <th className="px-2 py-3 text-center whitespace-nowrap">수동 일정 조정</th>
+                <th className="px-2 py-3 text-center">개별 통지</th>
               </tr>
             </thead>
             <tbody>
