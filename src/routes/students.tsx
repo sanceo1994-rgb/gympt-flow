@@ -62,6 +62,7 @@ function StudentsPage() {
   const [q, setQ] = useState("");
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Student>({ name: "", phone: "", joinedAt: new Date().toISOString().slice(2, 10).replace(/-/g, "."), remaining: 10, total: 10, status: "미가입", memo: "" });
+  const [openStudent, setOpenStudent] = useState<Student | null>(null);
 
   const sorted = useMemo(() => {
     const list = students.filter((s) => s.name.includes(q) || s.phone.includes(q));
@@ -85,6 +86,10 @@ function StudentsPage() {
     setDraft({ name: "", phone: "", joinedAt: new Date().toISOString().slice(2, 10).replace(/-/g, "."), remaining: 10, total: 10, status: "미가입", memo: "" });
     setAdding(false);
   };
+
+  // Filter to only this trainer's records
+  const studentHistory = openStudent ? (HISTORY_BY_STUDENT[openStudent.name] ?? []).filter((h) => h.trainer === TRAINER_NAME) : [];
+  const completed = studentHistory.filter((h) => h.status === "완료").length;
 
   return (
     <AppShell>
