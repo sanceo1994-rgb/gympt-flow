@@ -1,12 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useMemo, useState } from "react";
-import { Plus, Search, ArrowUpDown, Check, X } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Check, X, Calendar, Award, TrendingUp } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/students")({
   head: () => ({ meta: [{ title: "학생 관리 — 픽짐피티" }] }),
   component: StudentsPage,
 });
+
+const TRAINER_NAME = "박재현";
+const TRAINER_GYM = "하이엔드 강남점";
+
+type HistoryRow = { date: string; time: string; trainer: string; gym: string; status: "완료" | "취소" | "예정"; note: string; part?: string };
+const HISTORY_BY_STUDENT: Record<string, HistoryRow[]> = {
+  김지원: [
+    { date: "2026.05.12 (화)", time: "19:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "스쿼트 3x8, 폼 안정", part: "하체 · 스쿼트" },
+    { date: "2026.05.07 (목)", time: "07:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "벤치 60kg 도전", part: "가슴 · 벤치프레스" },
+    { date: "2026.05.05 (화)", time: "19:00", trainer: "박재현", gym: TRAINER_GYM, status: "취소", note: "회원 사정으로 당일 취소" },
+    { date: "2026.04.20 (월)", time: "20:00", trainer: "이서연", gym: "성수점", status: "완료", note: "(다른 트레이너 기록)" },
+  ],
+  박서윤: [
+    { date: "2026.05.10 (일)", time: "11:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "데드 80kg", part: "등 · 데드리프트" },
+    { date: "2026.05.03 (일)", time: "11:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "랫풀다운 / 시티드로우", part: "등 · 랫풀다운" },
+  ],
+  최유나: [
+    { date: "2026.05.11 (월)", time: "09:00", trainer: "박재현", gym: TRAINER_GYM, status: "완료", note: "오버헤드프레스 폼 교정", part: "어깨 · 오버헤드프레스" },
+  ],
+};
 
 type Status = "가입" | "미가입";
 type Student = {
@@ -41,6 +62,7 @@ function StudentsPage() {
   const [q, setQ] = useState("");
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Student>({ name: "", phone: "", joinedAt: new Date().toISOString().slice(2, 10).replace(/-/g, "."), remaining: 10, total: 10, status: "미가입", memo: "" });
+  const [openStudent, setOpenStudent] = useState<Student | null>(null);
 
   const sorted = useMemo(() => {
     const list = students.filter((s) => s.name.includes(q) || s.phone.includes(q));
@@ -65,6 +87,10 @@ function StudentsPage() {
     setAdding(false);
   };
 
+  // Filter to only this trainer's records
+  const studentHistory = openStudent ? (HISTORY_BY_STUDENT[openStudent.name] ?? []).filter((h) => h.trainer === TRAINER_NAME) : [];
+  const completed = studentHistory.filter((h) => h.status === "완료").length;
+
   return (
     <AppShell>
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -81,16 +107,18 @@ function StudentsPage() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-border bg-white overflow-hidden">
+      <div className="mt-4 flex justify-center">
+        <button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 h-10 px-5 rounded-full bg-primary text-white text-[13px] font-extrabold hover:brightness-110 shadow-pop">
+          <Plus className="h-4 w-4" /> 학생 추가하기
+        </button>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-border bg-white overflow-hidden">
         <table className="w-full text-[13px]">
           <thead className="bg-surface-muted">
             <tr className="text-[11px] font-bold uppercase text-ink-soft">
               <Th label="학생 (등록일)" k="name" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-              <th className="px-4 py-3 text-left">
-                <button onClick={() => setAdding(true)} className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-primary text-white text-[10.5px] font-extrabold hover:brightness-110">
-                  <Plus className="h-3 w-3" /> 학생 추가하기
-                </button>
-              </th>
+              <th className="px-4 py-3 text-left">전화번호</th>
               <Th label="잔여 / 총" k="remaining" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
               <Th label="상태" k="status" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
               <th className="px-4 py-3 text-left">메모</th>
@@ -126,12 +154,12 @@ function StudentsPage() {
               </tr>
             )}
             {sorted.map((s) => (
-              <tr key={s.name + s.phone} className="border-t border-border align-top hover:bg-surface-muted/40">
+              <tr key={s.name + s.phone} className="border-t border-border align-top hover:bg-surface-muted/40 cursor-pointer" onClick={() => setOpenStudent(s)}>
                 <td className="px-4 py-3">
                   <div className="flex items-start gap-2.5">
                     <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
                     <div className="leading-tight">
-                      <p className="font-bold text-ink text-[13px]">{s.name}</p>
+                      <p className="font-bold text-ink text-[13px] hover:text-primary transition">{s.name}</p>
                       <p className="text-[10.5px] text-muted-foreground mt-0.5 tabular-nums">{s.joinedAt}</p>
                     </div>
                   </div>
@@ -150,6 +178,56 @@ function StudentsPage() {
           </tbody>
         </table>
       </div>
+
+      <Sheet open={!!openStudent} onOpenChange={(v) => !v && setOpenStudent(null)}>
+        <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
+          <SheetHeader>
+            <span className="inline-flex w-fit chip bg-primary/10 text-primary">PT 기록</span>
+            <SheetTitle className="text-[20px] font-black leading-tight">{openStudent?.name} 회원의 PT 내역</SheetTitle>
+            <SheetDescription>
+              {TRAINER_NAME} 트레이너 · {TRAINER_GYM} 기준의 기록만 표시됩니다.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            <MiniKpi icon={<Calendar className="h-3.5 w-3.5" />} label="총 수업" value={studentHistory.length} suffix="회" />
+            <MiniKpi icon={<Award className="h-3.5 w-3.5" />} label="완료" value={completed} suffix="회" accent />
+            <MiniKpi icon={<TrendingUp className="h-3.5 w-3.5" />} label="잔여" value={openStudent?.remaining ?? 0} suffix={`/${openStudent?.total ?? 0}회`} />
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-border overflow-hidden">
+            <table className="w-full text-[12.5px]">
+              <thead className="bg-surface-muted">
+                <tr className="text-[10.5px] font-bold uppercase text-ink-soft">
+                  <th className="px-3 py-2.5 text-left">일시</th>
+                  <th className="px-3 py-2.5 text-left">부위 / 메모</th>
+                  <th className="px-3 py-2.5 text-center">상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studentHistory.map((h, i) => (
+                  <tr key={i} className="border-t border-border align-top">
+                    <td className="px-3 py-3">
+                      <p className="font-bold text-ink tabular-nums">{h.date}</p>
+                      <p className="text-[10.5px] text-ink-soft tabular-nums">{h.time}</p>
+                    </td>
+                    <td className="px-3 py-3">
+                      {h.part && <p className="text-[11px] font-extrabold text-primary">{h.part}</p>}
+                      <p className="text-ink-soft mt-0.5">{h.note}</p>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className={`inline-flex items-center px-2 h-5 rounded-full text-[10.5px] font-extrabold ${h.status === "완료" ? "bg-primary/10 text-primary" : h.status === "취소" ? "bg-destructive/10 text-destructive" : "bg-muted text-ink-soft"}`}>{h.status}</span>
+                    </td>
+                  </tr>
+                ))}
+                {studentHistory.length === 0 && (
+                  <tr><td colSpan={3} className="px-4 py-10 text-center text-ink-soft">아직 기록이 없어요.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </SheetContent>
+      </Sheet>
     </AppShell>
   );
 }
@@ -174,5 +252,17 @@ function Input({ value, onChange, placeholder, className = "" }: { value: string
       placeholder={placeholder}
       className={`h-8 px-2.5 rounded-lg bg-white border border-border focus:border-ink outline-none text-[12.5px] font-semibold text-ink w-full ${className}`}
     />
+  );
+}
+
+function MiniKpi({ icon, label, value, suffix, accent }: { icon: React.ReactNode; label: string; value: number; suffix?: string; accent?: boolean }) {
+  return (
+    <div className={`rounded-xl border p-2.5 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}>
+      <div className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${accent ? "text-primary" : "text-ink-soft"}`}>{icon}{label}</div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className="text-[20px] font-black tabular-nums leading-none">{value}</span>
+        {suffix && <span className={`text-[10.5px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}>{suffix}</span>}
+      </div>
+    </div>
   );
 }
