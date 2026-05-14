@@ -369,9 +369,22 @@ function Schedule() {
           </div>
           <ul className="divide-y divide-border flex-1">
             {activitySlice.map((a, i) => (
-              <li key={`${actPage}-${i}`} className="px-5 py-3">
-                <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님이 {a.what}</p>
-                <p className="mt-0.5 text-[11px] text-ink-soft">{a.when}</p>
+              <li key={`${actPage}-${i}`} className="px-5 py-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  {a.kind === "edit" ? (
+                    <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님이 {a.what}</p>
+                  ) : (
+                    <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님의 <b className="text-primary">{a.sessionNo}번째</b> PT 수업이 종료되었습니다 <span className="text-ink-soft">(남은 횟수: {a.remaining}회)</span></p>
+                  )}
+                  <p className="mt-0.5 text-[11px] text-ink-soft">{a.when}</p>
+                </div>
+                {a.kind === "completed" && (
+                  <button
+                    onClick={() => setMemoFor({ name: a.who, sessionNo: a.sessionNo })}
+                    className="shrink-0 h-8 px-3 rounded-full bg-ink text-white text-[11px] font-extrabold hover:brightness-110">
+                    메모 남기기
+                  </button>
+                )}
               </li>
             ))}
           </ul>
