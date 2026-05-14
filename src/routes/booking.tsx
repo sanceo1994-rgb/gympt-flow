@@ -122,21 +122,21 @@ function Booking() {
       <section className="rounded-2xl border border-border overflow-hidden bg-white">
         <div className="h-16 bg-gradient-to-br from-primary to-[#FF6FB1]" />
         <div className="px-5 sm:px-6 -mt-10 pb-5">
-          <div className="flex items-end gap-4">
+          <div className="flex items-end gap-4 flex-wrap">
             <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm shrink-0">박</div>
-            <div className="flex-1 min-w-0 pb-1.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft truncate">하이엔드 피트니스 · 강남점</p>
-              <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight truncate">박재현 트레이너</h1>
+            <div className="flex-1 min-w-0 pb-1.5 flex items-baseline gap-3 flex-wrap">
+              <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">박재현 트레이너</h1>
+              <p className="text-[12px] font-bold text-ink-soft truncate">하이엔드 피트니스 · 강남점</p>
             </div>
+            <a
+              href="https://instagram.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="ml-auto pb-1 h-9 px-3.5 rounded-full bg-ink text-white text-[12px] font-bold inline-flex items-center gap-1.5 hover:brightness-110 self-end"
+            >
+              <Instagram className="h-3.5 w-3.5" /> 인스타그램
+            </a>
           </div>
-          <a
-            href="https://instagram.com/"
-            target="_blank"
-            rel="noreferrer"
-            className="mt-4 h-10 px-4 rounded-full bg-ink text-white text-[12px] font-bold inline-flex items-center gap-1.5 hover:brightness-110"
-          >
-            <Instagram className="h-3.5 w-3.5" /> 인스타그램
-          </a>
           <p className="mt-4 text-[13.5px] text-ink-soft leading-relaxed">
             안녕하세요, 8년차 퍼스널 트레이너 박재현입니다. 단기간의 결과보다는 <b className="text-ink">평생 가져갈 운동 습관</b>을 만드는 데 집중합니다.
             체형 분석 → 약점 보완 → 점진적 과부하의 3단계 프로세스로, 부상 없이 꾸준히 변화하는 몸을 만들어드려요.
