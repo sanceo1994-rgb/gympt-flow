@@ -50,17 +50,9 @@ function Login() {
     setWelcome(profile.name || "회원");
     setTimeout(() => {
       setWelcome(null);
-      if (role === "student") setMatchOpen(true);
-      else navigate({ to: "/schedule" });
+      navigate({ to: role === "student" ? "/booking" : "/schedule" });
     }, 1600);
   };
-
-  const tryMatch = () => {
-    // Mock: any phone "matches" 박재현 트레이너
-    setMatchedTrainer({ name: "박재현", gym: "하이엔드 강남점", avatar: KAKAO_MOCK.avatar });
-  };
-  const confirmMatch = () => { setMatchOpen(false); navigate({ to: "/booking" }); };
-  const rejectMatch = () => { setMatchedTrainer(null); setMatchPhone(""); };
 
   return (
     <div className="min-h-screen bg-surface grid lg:grid-cols-2">
