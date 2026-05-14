@@ -286,7 +286,7 @@ function Schedule() {
       </div>
 
       {/* DASHBOARD */}
-      <div className="mt-6 grid grid-cols-3 gap-3">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <KpiCard icon={<Users className="h-4 w-4" />} label="관리 회원" value={stats.total} suffix="명" />
         <KpiCard icon={<MailCheck className="h-4 w-4" />} label="응답 완료" value={stats.responded} suffix={`/${stats.total}명`} accent />
         <KpiCard icon={<CalendarCheck className="h-4 w-4" />} label="배정 가능" value={stats.assignable} suffix="명 (겹침 없음)" />
