@@ -34,11 +34,15 @@ const CLOSED = new Set<string>([
   "월-12","월-13","월-14",
 ]);
 
-// Trainer's registered student phone numbers (mirrors /students mock data)
+// Trainer's registered student phone numbers / emails (mirrors /students mock data)
 const TRAINER_NAME = "박재현";
 const TRAINER_STUDENT_PHONES: Set<string> = new Set([
   "01012345678", "01023456789", "01034567890", "01045678901", "01056789012",
   "01067890123", "01078901234", "01089012345", "01090123456", "01001234567",
+]);
+// Mock: emails of users who are registered as this trainer's students
+const TRAINER_STUDENT_EMAILS: Set<string> = new Set([
+  "kim.jiwon@kakao.com", "park.seoyun@kakao.com", "choi.yuna@kakao.com",
 ]);
 const normalizePhone = (s: string) => s.replace(/\D/g, "");
 
@@ -71,6 +75,14 @@ function Booking() {
   const [matchAsked, setMatchAsked] = useState(false);
   const [matchPhone, setMatchPhone] = useState("");
   const [matchError, setMatchError] = useState<string | null>(null);
+
+  // Determine gate state based on auth + roster
+  const isRegisteredStudent = !!user && (
+    TRAINER_STUDENT_EMAILS.has(user.email ?? "") ||
+    TRAINER_STUDENT_PHONES.has(normalizePhone((user.user_metadata as { phone?: string } | undefined)?.phone ?? ""))
+  );
+  const gateState: "loggedOut" | "registered" | "notRegistered" = !user ? "loggedOut" : isRegisteredStudent ? "registered" : "notRegistered";
+  const effectiveUnlocked = matchUnlocked || gateState === "registered";
 
   const handleConfirmStudent = () => { setMatchAsked(true); setMatchError(null); };
   const handleNotStudent = () => {
@@ -199,7 +211,7 @@ function Booking() {
 
       {/* Gated booking area: blurred + locked until phone matches trainer's roster */}
       <div className="relative">
-        <div className={!matchUnlocked ? "pointer-events-none select-none blur-sm opacity-60" : ""} aria-hidden={!matchUnlocked}>
+        <div className={!effectiveUnlocked ? "pointer-events-none select-none blur-sm opacity-60" : ""} aria-hidden={!effectiveUnlocked}>
       {/* Header */}
       <div className="mt-6 flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -318,22 +330,37 @@ function Booking() {
         </div>
 
         {/* Match gate overlay */}
-        {!matchUnlocked && (
+        {!effectiveUnlocked && (
           <div className="absolute inset-0 z-20 flex items-start justify-center pt-12">
             <div className="rounded-3xl bg-white shadow-pop border border-border p-6 sm:p-8 max-w-md w-[min(92%,420px)] text-center">
               <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 grid place-items-center mb-4">
                 <Lock className="h-6 w-6 text-primary" />
               </div>
-              {!matchAsked ? (
+              {gateState === "notRegistered" ? (
+                <>
+                  <h3 className="text-[18px] sm:text-[20px] font-black text-ink leading-tight">
+                    회원님은 {TRAINER_NAME} 트레이너님의<br />등록 학생이 아니세요 ㅠㅠ
+                  </h3>
+                  <p className="mt-3 text-[12.5px] text-ink-soft leading-relaxed">
+                    {TRAINER_NAME} 트레이너님께 PT를 받고 싶으시다면<br />아래 인스타그램으로 편하게 연락해보세요!
+                  </p>
+                  <a href="https://instagram.com/" target="_blank" rel="noreferrer" className="mt-4 h-11 w-full inline-flex items-center justify-center gap-1.5 rounded-2xl bg-primary text-white text-[13px] font-extrabold shadow-pop hover:brightness-110">
+                    <Instagram className="h-4 w-4" /> 트레이너님께 문의하기
+                  </a>
+                  <a href="mailto:support@pickgympt.com" className="mt-6 block text-[10.5px] text-ink-soft underline hover:text-ink">
+                    저는 {TRAINER_NAME} 트레이너님의 학생이 맞는데 시간 선택이 안돼요
+                  </a>
+                </>
+              ) : gateState === "loggedOut" && !matchAsked ? (
                 <>
                   <h3 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">
                     {TRAINER_NAME} 트레이너님의<br />학생이신가요?
                   </h3>
-                  <p className="mt-2 text-[12.5px] text-ink-soft">맞다면 시간 선택을, 아니라면 등록을 먼저 진행해주세요.</p>
+                  <p className="mt-2 text-[12.5px] text-ink-soft">맞다면 로그인하고 시간을 선택해주세요.</p>
                   <div className="mt-5 grid grid-cols-2 gap-2">
                     <button onClick={handleNotStudent} className="h-12 rounded-2xl bg-white border border-border text-ink text-[13px] font-extrabold hover:bg-muted">엇 아니에요...</button>
-                    <button onClick={handleConfirmStudent} className="h-12 rounded-2xl bg-primary text-white text-[13px] font-extrabold shadow-pop hover:brightness-110 inline-flex items-center justify-center gap-1.5">
-                      <Check className="h-4 w-4" /> 맞습니다!
+                    <button onClick={() => navigate({ to: "/login" })} className="h-12 rounded-2xl bg-primary text-white text-[13px] font-extrabold shadow-pop hover:brightness-110 inline-flex items-center justify-center gap-1.5">
+                      <Check className="h-4 w-4" /> 맞아요!
                     </button>
                   </div>
                   {matchError && <p className="mt-4 text-[12px] text-ink-soft leading-relaxed">{matchError}</p>}
@@ -358,7 +385,7 @@ function Booking() {
       </div>
 
       {/* Floating banner */}
-      {matchUnlocked && (() => {
+      {effectiveUnlocked && (() => {
         const willEarn = !unavailable && !submitted && weekPoints < 10 && (hasEmpty || fivePlus);
         const earnMsg = hasEmpty
           ? "🎉 축하해요! 아무도 선택 안 한 시간을 골라주셔서 10포인트를 선물받습니다!"

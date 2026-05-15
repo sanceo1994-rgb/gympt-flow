@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Trophy, Megaphone, ChevronRight, LogOut, Calendar, Users, Settings } from "lucide-react";
+import { MapPin, Trophy, Megaphone, ChevronRight, LogOut, Calendar, Users, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export function RightRail() {
@@ -46,7 +46,7 @@ export function RightRail() {
               </Link>
             )}
             <Link to="/profile" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
-              <Settings className="h-3.5 w-3.5 text-ink-soft" /> 내 정보 수정
+              <User className="h-3.5 w-3.5 text-ink-soft" /> 내 정보
             </Link>
           </div>
         </div>

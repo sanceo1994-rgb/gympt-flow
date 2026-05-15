@@ -139,6 +139,7 @@ function Schedule() {
   );
   const [pendingMove, setPendingMove] = useState<{ day: string; hour: number } | null>(null);
   const [sendToast, setSendToast] = useState<string | null>(null);
+  const [notifyConfirm, setNotifyConfirm] = useState<{ name: string; scope: "individual" | "remind" } | null>(null);
 
   // Right-side panel for "요청 보내기" / "확정 알림"
   const [panel, setPanel] = useState<null | "invite" | "confirm">(null);
@@ -352,7 +353,7 @@ function Schedule() {
                   </div>
                 </div>
                 <button
-                  onClick={() => fireToast(`${s.name}님에게 카톡 재알림을 발송했어요 ✓`)}
+                  onClick={() => setNotifyConfirm({ name: s.name, scope: "remind" })}
                   className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0">
                   <MessageCircle className="h-3 w-3 fill-[#191600]" /> 재알림
                 </button>
@@ -424,7 +425,6 @@ function Schedule() {
             </h3>
           </div>
           <div className="flex gap-2">
-            <button className="h-9 px-3.5 rounded-full bg-white/10 text-white text-[12px] font-bold">다시 계산</button>
             <button
               onClick={() => { setPanel("confirm"); setPanelWeek(weekOffset); setPanelSelected(new Set(STUDENTS.map((s) => s.name))); }}
               className="h-9 px-3.5 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1">
@@ -647,7 +647,7 @@ function Schedule() {
                   </td>
                   <td className="px-2 py-3 text-center">
                     <button
-                      onClick={() => fireToast(`${s.name}님에게 카카오톡 알림을 발송했어요 ✓`)}
+                      onClick={() => setNotifyConfirm({ name: s.name, scope: "individual" })}
                       className="h-8 w-8 rounded-full bg-[#FEE500] text-[#191600] inline-flex items-center justify-center hover:brightness-95"
                       title="카카오톡 개별 알림"
                     >
@@ -962,6 +962,37 @@ function Schedule() {
           </div>
         </div>
       )}
+
+      {/* Notify confirmation */}
+      <Dialog open={!!notifyConfirm} onOpenChange={(v) => !v && setNotifyConfirm(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="h-10 w-10 rounded-full bg-[#FEE500] grid place-items-center mb-2">
+              <MessageCircle className="h-5 w-5 fill-[#191600] text-[#191600]" />
+            </div>
+            <DialogTitle className="text-[18px] font-black">
+              {notifyConfirm?.name}님께 카카오톡을 보낼까요?
+            </DialogTitle>
+            <DialogDescription>
+              {notifyConfirm?.scope === "remind"
+                ? "이번 주 가능 시간 응답을 다시 한 번 요청합니다."
+                : "확정된 일정 / 안내 메시지를 개별로 한 번 더 발송합니다."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button onClick={() => setNotifyConfirm(null)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
+            <button
+              onClick={() => {
+                const n = notifyConfirm!;
+                fireToast(`${n.name}님에게 카카오톡을 보냈어요 ✓`);
+                setNotifyConfirm(null);
+              }}
+              className="h-10 px-4 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5">
+              <Check className="h-4 w-4" /> 보내기
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Send toast (top floating) */}
       {sendToast && (

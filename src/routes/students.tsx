@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useMemo, useState } from "react";
-import { Plus, Search, ArrowUpDown, Check, X, Calendar, Award, TrendingUp } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Calendar, Award, TrendingUp, Trash2, Check } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/students")({
@@ -55,14 +55,19 @@ const INITIAL: Student[] = [
 
 type SortKey = keyof Student;
 
+type DraftRow = { name: string; phone: string; remaining: string; total: string; memo: string };
+const emptyRow = (): DraftRow => ({ name: "", phone: "", remaining: "10", total: "10", memo: "" });
+
 function StudentsPage() {
+  const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>(INITIAL);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [q, setQ] = useState("");
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState<Student>({ name: "", phone: "", joinedAt: new Date().toISOString().slice(2, 10).replace(/-/g, "."), remaining: 10, total: 10, status: "미가입", memo: "" });
+  const [rows, setRows] = useState<DraftRow[]>(() => Array.from({ length: 8 }, emptyRow));
   const [openStudent, setOpenStudent] = useState<Student | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
     const list = students.filter((s) => s.name.includes(q) || s.phone.includes(q));
@@ -80,16 +85,45 @@ function StudentsPage() {
     else { setSortKey(k); setSortDir("asc"); }
   };
 
-  const saveNew = () => {
-    if (!draft.name || !draft.phone) return;
-    setStudents((prev) => [{ ...draft }, ...prev]);
-    setDraft({ name: "", phone: "", joinedAt: new Date().toISOString().slice(2, 10).replace(/-/g, "."), remaining: 10, total: 10, status: "미가입", memo: "" });
+  const validRows = rows.filter((r) => r.name.trim() && r.phone.trim());
+  const validCount = validRows.length;
+
+  const updateRow = (i: number, patch: Partial<DraftRow>) => {
+    setRows((prev) => {
+      const next = prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
+      // auto-extend: if user types in last row, add another
+      if (i === next.length - 1 && (patch.name || patch.phone)) next.push(emptyRow());
+      return next;
+    });
+  };
+  const removeRow = (i: number) => setRows((prev) => prev.filter((_, idx) => idx !== i));
+
+  const submitBulk = () => {
+    if (validCount === 0) return;
+    const today = new Date().toISOString().slice(2, 10).replace(/-/g, ".");
+    const newOnes: Student[] = validRows.map((r) => ({
+      name: r.name.trim(),
+      phone: r.phone.trim(),
+      joinedAt: today,
+      remaining: Number(r.remaining) || 0,
+      total: Number(r.total) || 0,
+      status: "미가입",
+      memo: r.memo,
+    }));
+    setStudents((prev) => [...newOnes, ...prev]);
+    setRows(Array.from({ length: 8 }, emptyRow));
     setAdding(false);
+    setToast(`${validCount}명의 학생이 등록되었어요 ✓`);
+    setTimeout(() => setToast(null), 2400);
   };
 
-  // Filter to only this trainer's records
   const studentHistory = openStudent ? (HISTORY_BY_STUDENT[openStudent.name] ?? []).filter((h) => h.trainer === TRAINER_NAME) : [];
   const completed = studentHistory.filter((h) => h.status === "완료").length;
+
+  const onStudentNameClick = (s: Student) => {
+    // All students in this list are this trainer's. (Demo: always navigate to pt-history.)
+    navigate({ to: "/pt-history" });
+  };
 
   return (
     <AppShell>
@@ -107,12 +141,6 @@ function StudentsPage() {
         </div>
       </div>
 
-      <div className="mt-4 flex justify-center">
-        <button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 h-10 px-5 rounded-full bg-primary text-white text-[13px] font-extrabold hover:brightness-110 shadow-pop">
-          <Plus className="h-4 w-4" /> 학생 추가하기
-        </button>
-      </div>
-
       <div className="mt-4 rounded-2xl border border-border bg-white overflow-hidden">
         <table className="w-full text-[13px]">
           <thead className="bg-surface-muted">
@@ -125,41 +153,13 @@ function StudentsPage() {
             </tr>
           </thead>
           <tbody>
-            {adding && (
-              <tr className="border-t border-border bg-primary/[0.04]">
-                <td className="px-4 py-2.5">
-                  <Input value={draft.name} onChange={(v) => setDraft((d) => ({ ...d, name: v }))} placeholder="이름" />
-                  <Input className="mt-1" value={draft.joinedAt} onChange={(v) => setDraft((d) => ({ ...d, joinedAt: v }))} placeholder="25.05.14" />
-                </td>
-                <td className="px-4 py-2.5">
-                  <Input value={draft.phone} onChange={(v) => setDraft((d) => ({ ...d, phone: v }))} placeholder="010-0000-0000" />
-                </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center gap-1">
-                    <Input className="w-12" value={String(draft.remaining)} onChange={(v) => setDraft((d) => ({ ...d, remaining: Number(v) || 0 }))} />
-                    <span className="text-ink-soft">/</span>
-                    <Input className="w-12" value={String(draft.total)} onChange={(v) => setDraft((d) => ({ ...d, total: Number(v) || 0 }))} />
-                  </div>
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className="inline-flex items-center px-2.5 h-6 rounded-full bg-muted text-ink-soft text-[11px] font-extrabold">미가입</span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center gap-1">
-                    <Input value={draft.memo} onChange={(v) => setDraft((d) => ({ ...d, memo: v }))} placeholder="메모" />
-                    <button onClick={saveNew} className="h-8 w-8 grid place-items-center rounded-lg bg-primary text-white"><Check className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => setAdding(false)} className="h-8 w-8 grid place-items-center rounded-lg bg-white border border-border text-ink-soft"><X className="h-3.5 w-3.5" /></button>
-                  </div>
-                </td>
-              </tr>
-            )}
             {sorted.map((s) => (
-              <tr key={s.name + s.phone} className="border-t border-border align-top hover:bg-surface-muted/40 cursor-pointer" onClick={() => setOpenStudent(s)}>
+              <tr key={s.name + s.phone} className="border-t border-border align-top hover:bg-surface-muted/40">
                 <td className="px-4 py-3">
                   <div className="flex items-start gap-2.5">
                     <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
                     <div className="leading-tight">
-                      <p className="font-bold text-ink text-[13px] hover:text-primary transition">{s.name}</p>
+                      <button onClick={() => onStudentNameClick(s)} className="font-bold text-ink text-[13px] hover:text-primary transition text-left">{s.name}</button>
                       <p className="text-[10.5px] text-muted-foreground mt-0.5 tabular-nums">{s.joinedAt}</p>
                     </div>
                   </div>
@@ -172,12 +172,85 @@ function StudentsPage() {
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center px-2.5 h-6 rounded-full text-[11px] font-extrabold ${s.status === "가입" ? "bg-primary/10 text-primary" : "bg-muted text-ink-soft"}`}>{s.status}</span>
                 </td>
-                <td className="px-4 py-3 text-ink-soft text-[12.5px] max-w-xs">{s.memo || <span className="text-muted-foreground">—</span>}</td>
+                <td className="px-4 py-3 text-ink-soft text-[12.5px] max-w-xs cursor-pointer" onClick={() => setOpenStudent(s)}>{s.memo || <span className="text-muted-foreground">—</span>}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Floating add button */}
+      <button
+        onClick={() => setAdding(true)}
+        className="fixed bottom-6 right-6 z-30 h-14 px-6 rounded-full bg-primary text-white text-[14px] font-extrabold shadow-pink inline-flex items-center gap-2 hover:brightness-110">
+        <Plus className="h-5 w-5" /> 학생 추가하기
+      </button>
+
+      {/* Bulk add sheet (excel-like) */}
+      <Sheet open={adding} onOpenChange={(v) => !v && setAdding(false)}>
+        <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
+          <SheetHeader>
+            <span className="inline-flex w-fit chip bg-primary/10 text-primary"><Plus className="h-3 w-3" /> 일괄 등록</span>
+            <SheetTitle className="text-[20px] font-black leading-tight">학생을 한번에 등록해요</SheetTitle>
+            <SheetDescription>이름과 전화번호만 입력해도 등록할 수 있어요. 행을 채우면 자동으로 한 줄이 더 생겨요.</SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-5 rounded-2xl border border-border overflow-hidden">
+            <table className="w-full text-[12.5px]">
+              <thead className="bg-surface-muted">
+                <tr className="text-[10.5px] font-bold uppercase text-ink-soft">
+                  <th className="px-2 py-2.5 text-center w-8">#</th>
+                  <th className="px-2 py-2.5 text-left">이름</th>
+                  <th className="px-2 py-2.5 text-left">전화번호</th>
+                  <th className="px-2 py-2.5 text-center w-20">잔여</th>
+                  <th className="px-2 py-2.5 text-center w-20">총</th>
+                  <th className="px-2 py-2.5 text-left">메모</th>
+                  <th className="px-2 py-2.5 w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => {
+                  const filled = !!(r.name.trim() || r.phone.trim());
+                  return (
+                    <tr key={i} className={`border-t border-border ${filled ? "bg-primary/[0.03]" : ""}`}>
+                      <td className="px-2 py-1.5 text-center text-[10px] text-muted-foreground tabular-nums">{i + 1}</td>
+                      <td className="px-1 py-1"><Cell value={r.name} onChange={(v) => updateRow(i, { name: v })} placeholder="홍길동" /></td>
+                      <td className="px-1 py-1"><Cell value={r.phone} onChange={(v) => updateRow(i, { phone: v })} placeholder="010-0000-0000" /></td>
+                      <td className="px-1 py-1"><Cell value={r.remaining} onChange={(v) => updateRow(i, { remaining: v })} center /></td>
+                      <td className="px-1 py-1"><Cell value={r.total} onChange={(v) => updateRow(i, { total: v })} center /></td>
+                      <td className="px-1 py-1"><Cell value={r.memo} onChange={(v) => updateRow(i, { memo: v })} placeholder="목표 / 특이사항" /></td>
+                      <td className="px-1 py-1 text-center">
+                        {filled && (
+                          <button onClick={() => removeRow(i)} className="h-7 w-7 grid place-items-center rounded-md text-ink-soft hover:bg-destructive/10 hover:text-destructive">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between">
+            <button onClick={() => setRows((p) => [...p, emptyRow(), emptyRow(), emptyRow()])} className="h-9 px-3 rounded-full bg-white border border-border text-ink text-[12px] font-bold inline-flex items-center gap-1 hover:bg-muted">
+              <Plus className="h-3.5 w-3.5" /> 빈 줄 더하기
+            </button>
+            <p className="text-[11px] text-ink-soft">이름·전화번호가 모두 채워진 줄만 등록돼요</p>
+          </div>
+
+          <div className="mt-6 sticky bottom-0 -mx-6 px-6 py-4 bg-white border-t border-border">
+            <button
+              onClick={submitBulk}
+              disabled={validCount === 0}
+              className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop hover:brightness-110 disabled:opacity-40">
+              <Check className="h-4 w-4" />
+              {validCount === 0 ? "이름과 전화번호를 입력해주세요" : `${validCount}명 학생 등록하기`}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={!!openStudent} onOpenChange={(v) => !v && setOpenStudent(null)}>
         <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
@@ -228,6 +301,15 @@ function StudentsPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {toast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
+          <div className="rounded-2xl bg-ink text-white px-4 py-3 shadow-pop flex items-center gap-2.5 min-w-[280px]">
+            <span className="h-8 w-8 rounded-full bg-primary grid place-items-center"><Check className="h-4 w-4" /></span>
+            <p className="text-[13px] font-extrabold">{toast}</p>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
@@ -244,13 +326,13 @@ function Th({ label, k, sortKey, sortDir, onSort }: { label: string; k: SortKey;
   );
 }
 
-function Input({ value, onChange, placeholder, className = "" }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
+function Cell({ value, onChange, placeholder, center }: { value: string; onChange: (v: string) => void; placeholder?: string; center?: boolean }) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`h-8 px-2.5 rounded-lg bg-white border border-border focus:border-ink outline-none text-[12.5px] font-semibold text-ink w-full ${className}`}
+      className={`h-9 w-full px-2 rounded-md bg-transparent border border-transparent hover:border-border focus:bg-white focus:border-ink outline-none text-[12.5px] font-semibold text-ink ${center ? "text-center tabular-nums" : ""}`}
     />
   );
 }
