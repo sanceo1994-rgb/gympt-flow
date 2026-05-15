@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Trophy, Megaphone, ChevronRight, LogOut, Calendar, Users, Settings } from "lucide-react";
+import { MapPin, Trophy, Megaphone, ChevronRight, LogOut, Calendar, Users, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export function RightRail() {
