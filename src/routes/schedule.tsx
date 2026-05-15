@@ -963,6 +963,37 @@ function Schedule() {
         </div>
       )}
 
+      {/* Notify confirmation */}
+      <Dialog open={!!notifyConfirm} onOpenChange={(v) => !v && setNotifyConfirm(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="h-10 w-10 rounded-full bg-[#FEE500] grid place-items-center mb-2">
+              <MessageCircle className="h-5 w-5 fill-[#191600] text-[#191600]" />
+            </div>
+            <DialogTitle className="text-[18px] font-black">
+              {notifyConfirm?.name}님께 카카오톡을 보낼까요?
+            </DialogTitle>
+            <DialogDescription>
+              {notifyConfirm?.scope === "remind"
+                ? "이번 주 가능 시간 응답을 다시 한 번 요청합니다."
+                : "확정된 일정 / 안내 메시지를 개별로 한 번 더 발송합니다."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button onClick={() => setNotifyConfirm(null)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
+            <button
+              onClick={() => {
+                const n = notifyConfirm!;
+                fireToast(`${n.name}님에게 카카오톡을 보냈어요 ✓`);
+                setNotifyConfirm(null);
+              }}
+              className="h-10 px-4 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5">
+              <Check className="h-4 w-4" /> 보내기
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Send toast (top floating) */}
       {sendToast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
