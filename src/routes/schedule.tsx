@@ -647,7 +647,7 @@ function Schedule() {
                   </td>
                   <td className="px-2 py-3 text-center">
                     <button
-                      onClick={() => fireToast(`${s.name}님에게 카카오톡 알림을 발송했어요 ✓`)}
+                      onClick={() => setNotifyConfirm({ name: s.name, scope: "individual" })}
                       className="h-8 w-8 rounded-full bg-[#FEE500] text-[#191600] inline-flex items-center justify-center hover:brightness-95"
                       title="카카오톡 개별 알림"
                     >
