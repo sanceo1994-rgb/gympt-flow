@@ -76,6 +76,14 @@ function Booking() {
   const [matchPhone, setMatchPhone] = useState("");
   const [matchError, setMatchError] = useState<string | null>(null);
 
+  // Determine gate state based on auth + roster
+  const isRegisteredStudent = !!user && (
+    TRAINER_STUDENT_EMAILS.has(user.email ?? "") ||
+    TRAINER_STUDENT_PHONES.has(normalizePhone((user.user_metadata as { phone?: string } | undefined)?.phone ?? ""))
+  );
+  const gateState: "loggedOut" | "registered" | "notRegistered" = !user ? "loggedOut" : isRegisteredStudent ? "registered" : "notRegistered";
+  const effectiveUnlocked = matchUnlocked || gateState === "registered";
+
   const handleConfirmStudent = () => { setMatchAsked(true); setMatchError(null); };
   const handleNotStudent = () => {
     setMatchError("괜찮아요! 트레이너님께 등록 요청을 보내거나, 다른 트레이너의 페이지를 둘러볼 수 있어요.");
