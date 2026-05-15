@@ -424,7 +424,6 @@ function Schedule() {
             </h3>
           </div>
           <div className="flex gap-2">
-            <button className="h-9 px-3.5 rounded-full bg-white/10 text-white text-[12px] font-bold">다시 계산</button>
             <button
               onClick={() => { setPanel("confirm"); setPanelWeek(weekOffset); setPanelSelected(new Set(STUDENTS.map((s) => s.name))); }}
               className="h-9 px-3.5 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1">
