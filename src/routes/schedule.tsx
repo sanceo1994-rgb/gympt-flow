@@ -353,7 +353,7 @@ function Schedule() {
                   </div>
                 </div>
                 <button
-                  onClick={() => fireToast(`${s.name}님에게 카톡 재알림을 발송했어요 ✓`)}
+                  onClick={() => setNotifyConfirm({ name: s.name, scope: "remind" })}
                   className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0">
                   <MessageCircle className="h-3 w-3 fill-[#191600]" /> 재알림
                 </button>
