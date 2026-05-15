@@ -34,11 +34,15 @@ const CLOSED = new Set<string>([
   "월-12","월-13","월-14",
 ]);
 
-// Trainer's registered student phone numbers (mirrors /students mock data)
+// Trainer's registered student phone numbers / emails (mirrors /students mock data)
 const TRAINER_NAME = "박재현";
 const TRAINER_STUDENT_PHONES: Set<string> = new Set([
   "01012345678", "01023456789", "01034567890", "01045678901", "01056789012",
   "01067890123", "01078901234", "01089012345", "01090123456", "01001234567",
+]);
+// Mock: emails of users who are registered as this trainer's students
+const TRAINER_STUDENT_EMAILS: Set<string> = new Set([
+  "kim.jiwon@kakao.com", "park.seoyun@kakao.com", "choi.yuna@kakao.com",
 ]);
 const normalizePhone = (s: string) => s.replace(/\D/g, "");
 
