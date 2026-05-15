@@ -69,20 +69,22 @@ export function LeftRail() {
         </div>
         <ol className="mt-3 space-y-2.5 text-[13px]">
           {TRAINERS.map(({ name, sub, color }, i) => (
-            <li key={i} className="flex items-center gap-2.5">
-              <span className={`h-5 w-5 rounded-md grid place-items-center text-[10px] font-black shrink-0 ${i === 0 ? "bg-primary text-white" : i < 3 ? "bg-ink text-white" : "bg-muted text-ink-soft"}`}>
-                {i + 1}
-              </span>
-              <div
-                className="h-8 w-8 rounded-xl grid place-items-center text-[12px] font-black text-white shrink-0 ring-1 ring-black/5"
-                style={{ backgroundColor: color }}
-              >
-                <span className="text-ink/80">{name[0]}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-ink leading-tight truncate">{name}</p>
-                <p className="text-[11px] text-muted-foreground truncate">{sub}</p>
-              </div>
+            <li key={i}>
+              <Link to="/booking" className="flex items-center gap-2.5 hover:bg-surface-muted rounded-lg p-1 -m-1 transition">
+                <span className={`h-5 w-5 rounded-md grid place-items-center text-[10px] font-black shrink-0 ${i === 0 ? "bg-primary text-white" : i < 3 ? "bg-ink text-white" : "bg-muted text-ink-soft"}`}>
+                  {i + 1}
+                </span>
+                <div
+                  className="h-8 w-8 rounded-xl grid place-items-center text-[12px] font-black text-white shrink-0 ring-1 ring-black/5"
+                  style={{ backgroundColor: color }}
+                >
+                  <span className="text-ink/80">{name[0]}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-ink leading-tight truncate hover:text-primary transition">{name}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{sub}</p>
+                </div>
+              </Link>
             </li>
           ))}
         </ol>
