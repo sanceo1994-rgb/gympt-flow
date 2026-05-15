@@ -211,7 +211,7 @@ function Booking() {
 
       {/* Gated booking area: blurred + locked until phone matches trainer's roster */}
       <div className="relative">
-        <div className={!matchUnlocked ? "pointer-events-none select-none blur-sm opacity-60" : ""} aria-hidden={!matchUnlocked}>
+        <div className={!effectiveUnlocked ? "pointer-events-none select-none blur-sm opacity-60" : ""} aria-hidden={!effectiveUnlocked}>
       {/* Header */}
       <div className="mt-6 flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -330,7 +330,7 @@ function Booking() {
         </div>
 
         {/* Match gate overlay */}
-        {!matchUnlocked && (
+        {!effectiveUnlocked && (
           <div className="absolute inset-0 z-20 flex items-start justify-center pt-12">
             <div className="rounded-3xl bg-white shadow-pop border border-border p-6 sm:p-8 max-w-md w-[min(92%,420px)] text-center">
               <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 grid place-items-center mb-4">
@@ -370,7 +370,7 @@ function Booking() {
       </div>
 
       {/* Floating banner */}
-      {matchUnlocked && (() => {
+      {effectiveUnlocked && (() => {
         const willEarn = !unavailable && !submitted && weekPoints < 10 && (hasEmpty || fivePlus);
         const earnMsg = hasEmpty
           ? "🎉 축하해요! 아무도 선택 안 한 시간을 골라주셔서 10포인트를 선물받습니다!"
