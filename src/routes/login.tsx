@@ -27,7 +27,8 @@ function Login() {
   const [agree, setAgree] = useState({ tos: false, priv: false, age: false });
   const [role, setRole] = useState<Role | null>(null);
   const [profile, setProfile] = useState({ name: "", email: "", avatar: "" });
-  const [emailPw, setEmailPw] = useState({ email: "", password: "" });
+  const [emailPw, setEmailPw] = useState({ email: "", password: "", confirm: "" });
+  const [inviteCode, setInviteCode] = useState("");
   const [welcome, setWelcome] = useState<string | null>(null);
 
   const allOk = agree.tos && agree.priv && agree.age;
