@@ -141,7 +141,8 @@ function StudentsPage() {
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-border bg-white overflow-hidden">
+      {/* Desktop / tablet table */}
+      <div className="mt-4 rounded-2xl border border-border bg-white overflow-hidden hidden md:block">
         <table className="w-full text-[13px]">
           <thead className="bg-surface-muted">
             <tr className="text-[11px] font-bold uppercase text-ink-soft">
@@ -177,6 +178,32 @@ function StudentsPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile card list */}
+      <div className="mt-4 grid gap-2 md:hidden">
+        {sorted.map((s) => (
+          <div key={s.name + s.phone} className="rounded-xl border border-border bg-white p-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-surface-muted grid place-items-center font-black text-[13px] text-ink shrink-0">{s.name[0]}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <button onClick={() => onStudentNameClick(s)} className="font-bold text-ink text-[14px] hover:text-primary text-left truncate">{s.name}</button>
+                  <span className={`inline-flex items-center px-2 h-5 rounded-full text-[10.5px] font-extrabold shrink-0 ${s.status === "가입" ? "bg-primary/10 text-primary" : "bg-muted text-ink-soft"}`}>{s.status}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground tabular-nums mt-0.5">등록 {s.joinedAt} · {s.phone}</p>
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  <p className="text-[12px] tabular-nums">
+                    <span className={`font-extrabold ${s.remaining <= 5 ? "text-destructive" : "text-ink"}`}>{s.remaining}</span>
+                    <span className="text-muted-foreground"> / {s.total}회</span>
+                  </p>
+                  <button onClick={() => setOpenStudent(s)} className="text-[11px] font-bold text-primary">PT 내역 ›</button>
+                </div>
+                {s.memo && <p className="mt-1.5 text-[12px] text-ink-soft line-clamp-2">{s.memo}</p>}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Floating add button */}
