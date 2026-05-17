@@ -69,11 +69,14 @@ function ProfilePage() {
       <div className="mt-6 grid lg:grid-cols-[280px_1fr] gap-4">
         {/* Avatar card */}
         <div className="rounded-2xl border border-border bg-white p-5 text-center">
-          {meta.avatar_url ? (
-            <img src={meta.avatar_url} alt="" className="h-24 w-24 rounded-2xl object-cover mx-auto ring-2 ring-border" />
-          ) : (
-            <div className="h-24 w-24 rounded-2xl bg-primary/15 grid place-items-center text-[32px] font-black text-primary mx-auto">{(name || "?")[0]}</div>
-          )}
+          <div className="relative inline-block">
+            {meta.avatar_url ? (
+              <img src={meta.avatar_url} alt="" className="h-24 w-24 rounded-2xl object-cover mx-auto ring-2 ring-border" />
+            ) : (
+              <div className="h-24 w-24 rounded-2xl bg-primary/15 grid place-items-center text-[32px] font-black text-primary mx-auto">{(name || "?")[0]}</div>
+            )}
+            {role === "trainer" && <VerifiedBadge size={24} className="-bottom-1 -right-1" />}
+          </div>
           <p className="mt-3 text-[15px] font-extrabold text-ink">{name || "이름 없음"}</p>
           <span className="mt-1 inline-flex items-center px-2.5 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-extrabold">{role === "trainer" ? "트레이너" : "학생/회원"}</span>
           {editMode && <button className="mt-4 w-full h-10 rounded-xl bg-white border border-border-strong text-[12px] font-bold text-ink hover:bg-muted">사진 변경</button>}
