@@ -182,7 +182,7 @@ function StudentsPage() {
       {/* Floating add button */}
       <button
         onClick={() => setAdding(true)}
-        className="fixed bottom-6 right-6 z-30 h-14 px-6 rounded-full bg-primary text-white text-[14px] font-extrabold shadow-pink inline-flex items-center gap-2 hover:brightness-110">
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 h-14 px-6 rounded-full bg-primary text-white text-[14px] font-extrabold shadow-pink inline-flex items-center gap-2 hover:brightness-110">
         <Plus className="h-5 w-5" /> 학생 추가하기
       </button>
 
