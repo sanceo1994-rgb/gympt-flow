@@ -551,7 +551,7 @@ function Schedule() {
                       key={key}
                       onClick={() => toggleCellPending(key)}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
-                      className={`relative min-h-[68px] border-b border-l border-border transition group text-left p-1.5
+                      className={`relative min-h-[52px] sm:min-h-[68px] border-b border-l border-border transition group text-left p-1 sm:p-1.5
                         ${willBeClosed && !isPending ? "bg-muted text-muted-foreground/50" : ""}
                         ${!willBeClosed ? `heat-${lvl}` : ""}
                         ${isPending ? "ring-2 ring-primary ring-inset bg-primary/10" : ""}
@@ -594,7 +594,8 @@ function Schedule() {
       <section className="mt-10">
         <SectionHeader index="02" title="학생 응답" subtitle={`${stats.responded} / ${stats.total}명 응답 완료`} />
 
-        <div className="mt-4 rounded-2xl border border-border overflow-x-auto">
+        {/* Desktop table */}
+        <div className="mt-4 rounded-2xl border border-border overflow-x-auto hidden md:block">
           <table className="w-full min-w-[760px] text-[13px]">
             <thead className="bg-surface-muted">
               <tr className="text-[11px] font-bold uppercase text-ink-soft">
@@ -658,6 +659,43 @@ function Schedule() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile card list */}
+        <div className="mt-4 grid gap-2 md:hidden">
+          {STUDENTS.map((s) => (
+            <div key={s.name} className="rounded-xl border border-border bg-white p-3">
+              <div className="flex items-start gap-2.5">
+                <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-ink text-[13.5px] truncate">{s.name}</p>
+                    <StatusBadge s={s.status} />
+                  </div>
+                  <p className="text-[10.5px] text-muted-foreground/80 tabular-nums mt-0.5">등록 {s.joinedAt} · 최근 PT {s.lastPT}</p>
+                  <p className="text-[12px] tabular-nums mt-1">
+                    <span className={`font-extrabold ${s.remaining <= 5 ? "text-destructive" : "text-ink"}`}>{s.remaining}</span>
+                    <span className="text-muted-foreground"> / {s.total}회</span>
+                  </p>
+                  {s.picks.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {s.picks.map((p) => (
+                        <span key={p} className="inline-flex items-center px-1.5 h-5 rounded-full text-[10.5px] font-bold bg-muted text-ink whitespace-nowrap">{p}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <button onClick={() => openEdit(s)} className="flex-1 h-8 rounded-full bg-ink text-white text-[11px] font-extrabold inline-flex items-center justify-center gap-1">
+                      <Pencil className="h-3 w-3" /> 일정 조정
+                    </button>
+                    <button onClick={() => setNotifyConfirm({ name: s.name, scope: "individual" })} className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1">
+                      <MessageCircle className="h-3 w-3 fill-[#191600]" /> 카톡
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

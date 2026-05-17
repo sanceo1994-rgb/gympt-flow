@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Check, Ban, Info, X, Lock, Instagram, Megaphone, Award, Coffee, Sparkles, ArrowRight } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useServerFn } from "@tanstack/react-start";
@@ -165,7 +166,10 @@ function Booking() {
         <div className="h-16 bg-gradient-to-br from-primary to-[#FF6FB1]" />
         <div className="px-5 sm:px-6 -mt-10 pb-5">
           <div className="flex items-end gap-4 flex-wrap">
-            <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm shrink-0">박</div>
+            <div className="relative shrink-0">
+              <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">박</div>
+              <VerifiedBadge size={22} className="-bottom-1 -right-1" />
+            </div>
             <div className="flex-1 min-w-0 pb-1.5 flex items-baseline gap-3 flex-wrap">
               <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">박재현 트레이너</h1>
               <p className="text-[12px] font-bold text-ink-soft truncate">하이엔드 피트니스 · 강남점</p>

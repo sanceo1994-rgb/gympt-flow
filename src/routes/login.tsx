@@ -20,6 +20,14 @@ const KAKAO_MOCK = {
   avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jaehyun&backgroundColor=ffd5dc",
 };
 
+const PALETTES: { id: string; label: string; from: string; to: string }[] = [
+  { id: "pink", label: "픽짐 핑크", from: "#FF4E97", to: "#FF6FB1" },
+  { id: "navy", label: "딥 네이비", from: "#0F172A", to: "#3B82F6" },
+  { id: "forest", label: "포레스트", from: "#064E3B", to: "#10B981" },
+  { id: "sunset", label: "선셋", from: "#F97316", to: "#E11D48" },
+  { id: "violet", label: "바이올렛", from: "#6D28D9", to: "#C084FC" },
+];
+
 function Login() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("method");
@@ -29,6 +37,11 @@ function Login() {
   const [profile, setProfile] = useState({ name: "", email: "", avatar: "" });
   const [emailPw, setEmailPw] = useState({ email: "", password: "", confirm: "" });
   const [inviteCode, setInviteCode] = useState("");
+  // Trainer mini-hompy customization
+  const [palette, setPalette] = useState<string>("pink");
+  const [trainerGym, setTrainerGym] = useState("");
+  const [trainerSpecialty, setTrainerSpecialty] = useState("");
+  const [trainerIntro, setTrainerIntro] = useState("");
   const [welcome, setWelcome] = useState<string | null>(null);
 
   const allOk = agree.tos && agree.priv && agree.age;
@@ -207,12 +220,53 @@ function Login() {
                     </>
                   )}
                   {role === "trainer" && (
-                    <div className="rounded-xl bg-primary/[0.04] border border-primary/20 p-3.5">
-                      <p className="text-[11px] font-extrabold text-primary uppercase tracking-wider">초대 코드 (선택)</p>
-                      <p className="mt-1 text-[11.5px] text-ink-soft leading-relaxed">동료 트레이너의 초대 코드를 입력하면 <b className="text-ink">두 분 모두 1주일 무료 구독</b>이 적립돼요.</p>
-                      <input value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} placeholder="PGPT-XXXX-XXX"
-                        className="mt-2.5 h-10 w-full px-3 rounded-lg bg-white border border-border focus:border-ink outline-none text-[13px] font-bold text-ink tabular-nums" />
-                    </div>
+                    <>
+                      <Field label="소속 헬스장 (지점)" value={trainerGym} onChange={setTrainerGym} placeholder="하이엔드 피트니스 강남점" />
+                      <Field label="전문 분야 / 스펙" value={trainerSpecialty} onChange={setTrainerSpecialty} placeholder="예: 다이어트 · 체형교정 · NSCA-CPT 8년차" />
+                      <label className="block">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">트레이너 한 줄 소개</span>
+                        <textarea
+                          value={trainerIntro}
+                          onChange={(e) => setTrainerIntro(e.target.value)}
+                          rows={3}
+                          placeholder="평생 가져갈 운동 습관을 만들어드려요. 부상 없는 점진적 과부하 전문."
+                          className="mt-1.5 w-full px-3.5 py-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink resize-none"
+                        />
+                      </label>
+
+                      <div className="rounded-xl bg-white border border-border p-3.5">
+                        <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink">미니홈피 컬러 팔레트</p>
+                        <p className="mt-1 text-[11.5px] text-ink-soft leading-relaxed">내 예약 페이지의 헤더·강조 컬러로 사용돼요.</p>
+                        <div className="mt-3 grid grid-cols-5 gap-2">
+                          {PALETTES.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => setPalette(p.id)}
+                              className={`group rounded-xl p-1.5 border-2 transition ${palette === p.id ? "border-ink shadow-pop" : "border-transparent hover:border-border"}`}
+                              title={p.label}
+                            >
+                              <div className="h-10 rounded-lg" style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})` }} />
+                              <p className="mt-1 text-[10px] font-bold text-ink-soft text-center truncate">{p.label}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl bg-primary/[0.04] border border-primary/20 p-3.5">
+                        <p className="text-[11px] font-extrabold text-primary uppercase tracking-wider">초대 코드 (선택)</p>
+                        <p className="mt-1 text-[11.5px] text-ink-soft leading-relaxed">동료 트레이너의 초대 코드를 입력하면 <b className="text-ink">두 분 모두 1주일 무료 구독</b>이 적립돼요.</p>
+                        <input value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} placeholder="PGPT-XXXX-XXX"
+                          className="mt-2.5 h-10 w-full px-3 rounded-lg bg-white border border-border focus:border-ink outline-none text-[13px] font-bold text-ink tabular-nums" />
+                      </div>
+
+                      <div className="rounded-xl bg-primary/5 border border-primary/30 p-3 flex items-center gap-2">
+                        <span className="h-8 w-8 rounded-full bg-primary text-white grid place-items-center shrink-0">
+                          <Check className="h-4 w-4" strokeWidth={4} />
+                        </span>
+                        <p className="text-[12px] text-ink leading-snug"><b className="text-primary">첫 100명 트레이너</b> 한정! 가입과 동시에 <b>인증 배지</b>가 프로필에 표시돼요.</p>
+                      </div>
+                    </>
                   )}
                 </div>
 
