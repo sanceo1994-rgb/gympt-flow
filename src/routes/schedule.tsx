@@ -551,7 +551,7 @@ function Schedule() {
                       key={key}
                       onClick={() => toggleCellPending(key)}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
-                      className={`relative min-h-[68px] border-b border-l border-border transition group text-left p-1.5
+                      className={`relative min-h-[52px] sm:min-h-[68px] border-b border-l border-border transition group text-left p-1 sm:p-1.5
                         ${willBeClosed && !isPending ? "bg-muted text-muted-foreground/50" : ""}
                         ${!willBeClosed ? `heat-${lvl}` : ""}
                         ${isPending ? "ring-2 ring-primary ring-inset bg-primary/10" : ""}
