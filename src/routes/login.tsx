@@ -20,6 +20,14 @@ const KAKAO_MOCK = {
   avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jaehyun&backgroundColor=ffd5dc",
 };
 
+const PALETTES: { id: string; label: string; from: string; to: string }[] = [
+  { id: "pink", label: "픽짐 핑크", from: "#FF4E97", to: "#FF6FB1" },
+  { id: "navy", label: "딥 네이비", from: "#0F172A", to: "#3B82F6" },
+  { id: "forest", label: "포레스트", from: "#064E3B", to: "#10B981" },
+  { id: "sunset", label: "선셋", from: "#F97316", to: "#E11D48" },
+  { id: "violet", label: "바이올렛", from: "#6D28D9", to: "#C084FC" },
+];
+
 function Login() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("method");
