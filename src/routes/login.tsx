@@ -29,6 +29,11 @@ function Login() {
   const [profile, setProfile] = useState({ name: "", email: "", avatar: "" });
   const [emailPw, setEmailPw] = useState({ email: "", password: "", confirm: "" });
   const [inviteCode, setInviteCode] = useState("");
+  // Trainer mini-hompy customization
+  const [palette, setPalette] = useState<string>("pink");
+  const [trainerGym, setTrainerGym] = useState("");
+  const [trainerSpecialty, setTrainerSpecialty] = useState("");
+  const [trainerIntro, setTrainerIntro] = useState("");
   const [welcome, setWelcome] = useState<string | null>(null);
 
   const allOk = agree.tos && agree.priv && agree.age;
