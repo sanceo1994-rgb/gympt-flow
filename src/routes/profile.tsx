@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Check, Pencil, CreditCard, Gift, Copy, Sparkles, CalendarClock } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "내 정보 — 픽짐피티" }] }),
