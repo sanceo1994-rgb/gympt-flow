@@ -51,12 +51,12 @@ function PTHistory() {
                   <p className="text-[11px] text-ink-soft tabular-nums">{h.time}</p>
                 </td>
                 <td className="px-4 py-3">
-                  <p className="font-bold text-ink">{h.trainer} 트레이너</p>
+                  <p className="font-bold text-ink">{h.trainer}</p>
                   <p className="text-[11px] text-ink-soft">{h.gym}</p>
                 </td>
                 <td className="px-4 py-3 text-ink-soft">{h.note}</td>
                 <td className="px-4 py-3 text-center">
-                  <span className={`inline-flex items-center px-2.5 h-6 rounded-full text-[11px] font-extrabold ${h.status === "완료" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{h.status}</span>
+                  <span className={`inline-flex items-center whitespace-nowrap px-2.5 h-6 rounded-full text-[11px] font-extrabold ${h.status === "완료" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{h.status}</span>
                 </td>
               </tr>
             ))}
