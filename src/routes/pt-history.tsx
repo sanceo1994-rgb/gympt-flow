@@ -8,13 +8,13 @@ export const Route = createFileRoute("/pt-history")({
 });
 
 const HISTORY = [
-  { date: "2026.05.12 (화)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "하체 + 코어" },
-  { date: "2026.05.09 (토)", time: "11:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "상체 (어깨/팔)" },
-  { date: "2026.05.07 (목)", time: "07:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "유산소 + 복근" },
-  { date: "2026.05.05 (화)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "취소", note: "회원 사정" },
-  { date: "2026.05.02 (토)", time: "10:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "데드리프트 폼 교정" },
-  { date: "2026.04.30 (목)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "하체 + 코어" },
-  { date: "2026.04.27 (월)", time: "20:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "상체 (가슴/등)" },
+  { date: "26.05.12 (화)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "하체 + 코어" },
+  { date: "26.05.09 (토)", time: "11:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "상체 (어깨/팔)" },
+  { date: "26.05.07 (목)", time: "07:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "유산소 + 복근" },
+  { date: "26.05.05 (화)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "취소", note: "회원 사정" },
+  { date: "26.05.02 (토)", time: "10:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "데드리프트 폼 교정" },
+  { date: "26.04.30 (목)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "하체 + 코어" },
+  { date: "26.04.27 (월)", time: "20:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "상체 (가슴/등)" },
 ];
 
 function PTHistory() {
@@ -51,12 +51,12 @@ function PTHistory() {
                   <p className="text-[11px] text-ink-soft tabular-nums">{h.time}</p>
                 </td>
                 <td className="px-4 py-3">
-                  <p className="font-bold text-ink">{h.trainer} 트레이너</p>
+                  <p className="font-bold text-ink">{h.trainer}</p>
                   <p className="text-[11px] text-ink-soft">{h.gym}</p>
                 </td>
                 <td className="px-4 py-3 text-ink-soft">{h.note}</td>
                 <td className="px-4 py-3 text-center">
-                  <span className={`inline-flex items-center px-2.5 h-6 rounded-full text-[11px] font-extrabold ${h.status === "완료" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{h.status}</span>
+                  <span className={`inline-flex items-center whitespace-nowrap px-2.5 h-6 rounded-full text-[11px] font-extrabold ${h.status === "완료" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{h.status}</span>
                 </td>
               </tr>
             ))}

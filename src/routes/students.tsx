@@ -222,7 +222,8 @@ function StudentsPage() {
             <SheetDescription>이름과 전화번호만 입력해도 등록할 수 있어요. 행을 채우면 자동으로 한 줄이 더 생겨요.</SheetDescription>
           </SheetHeader>
 
-          <div className="mt-5 rounded-2xl border border-border overflow-hidden">
+          {/* Desktop: spreadsheet-like table */}
+          <div className="mt-5 rounded-2xl border border-border overflow-hidden hidden md:block">
             <table className="w-full text-[12.5px]">
               <thead className="bg-surface-muted">
                 <tr className="text-[10.5px] font-bold uppercase text-ink-soft">
@@ -258,6 +259,39 @@ function StudentsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile: stacked cards, one student per card */}
+          <div className="mt-5 grid gap-3 md:hidden">
+            {rows.map((r, i) => {
+              const filled = !!(r.name.trim() || r.phone.trim());
+              return (
+                <div key={i} className={`rounded-2xl border border-border p-3 ${filled ? "bg-primary/[0.03]" : "bg-white"}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-ink-soft">학생 #{i + 1}</span>
+                    {filled && (
+                      <button onClick={() => removeRow(i)} className="h-7 w-7 grid place-items-center rounded-md text-ink-soft hover:bg-destructive/10 hover:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid gap-2">
+                    <Field label="이름"><Cell value={r.name} onChange={(v) => updateRow(i, { name: v })} placeholder="홍길동" /></Field>
+                    <Field label="전화번호"><Cell value={r.phone} onChange={(v) => updateRow(i, { phone: v })} placeholder="010-0000-0000" /></Field>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="잔여"><Cell value={r.remaining} onChange={(v) => updateRow(i, { remaining: v })} center /></Field>
+                      <Field label="총"><Cell value={r.total} onChange={(v) => updateRow(i, { total: v })} center /></Field>
+                    </div>
+                    <Field label="메모"><Cell value={r.memo} onChange={(v) => updateRow(i, { memo: v })} placeholder="목표 / 특이사항" /></Field>
+                  </div>
+                </div>
+              );
+            })}
+            <button
+              onClick={() => setRows((p) => [...p, emptyRow()])}
+              className="h-11 rounded-2xl border border-dashed border-border text-ink-soft text-[13px] font-bold inline-flex items-center justify-center gap-1.5 hover:bg-muted">
+              <Plus className="h-4 w-4" /> 학생 추가하기
+            </button>
           </div>
 
           <div className="mt-4 flex items-center justify-between">
@@ -361,6 +395,15 @@ function Cell({ value, onChange, placeholder, center }: { value: string; onChang
       placeholder={placeholder}
       className={`h-9 w-full px-2 rounded-md bg-transparent border border-transparent hover:border-border focus:bg-white focus:border-ink outline-none text-[12.5px] font-semibold text-ink ${center ? "text-center tabular-nums" : ""}`}
     />
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-[10.5px] font-bold uppercase tracking-wider text-ink-soft mb-0.5">{label}</span>
+      <div className="rounded-md border border-border bg-white px-1">{children}</div>
+    </label>
   );
 }
 
