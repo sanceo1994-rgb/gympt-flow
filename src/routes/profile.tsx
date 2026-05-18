@@ -12,8 +12,9 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { user } = useAuth();
-  const meta = (user?.user_metadata ?? {}) as { name?: string; avatar_url?: string; role?: string };
+  const meta = (user?.user_metadata ?? {}) as { name?: string; avatar_url?: string; role?: string; verified?: boolean };
   const role = (meta.role as "trainer" | "student" | undefined) ?? "student";
+  const isVerified = meta.verified !== false; // default true (first 100 trainers)
 
   const [editMode, setEditMode] = useState(false);
   const [name, setName] = useState("");
