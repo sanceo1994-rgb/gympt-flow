@@ -12,8 +12,9 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { user } = useAuth();
-  const meta = (user?.user_metadata ?? {}) as { name?: string; avatar_url?: string; role?: string };
+  const meta = (user?.user_metadata ?? {}) as { name?: string; avatar_url?: string; role?: string; verified?: boolean };
   const role = (meta.role as "trainer" | "student" | undefined) ?? "student";
+  const isVerified = meta.verified !== false; // default true (first 100 trainers)
 
   const [editMode, setEditMode] = useState(false);
   const [name, setName] = useState("");
@@ -75,7 +76,7 @@ function ProfilePage() {
             ) : (
               <div className="h-24 w-24 rounded-2xl bg-primary/15 grid place-items-center text-[32px] font-black text-primary mx-auto">{(name || "?")[0]}</div>
             )}
-            {role === "trainer" && <VerifiedBadge size={24} className="-bottom-1 -right-1" />}
+            {role === "trainer" && isVerified && <VerifiedBadge size={24} className="-bottom-1 -right-1" />}
           </div>
           <p className="mt-3 text-[15px] font-extrabold text-ink">{name || "이름 없음"}</p>
           <span className="mt-1 inline-flex items-center px-2.5 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-extrabold">{role === "trainer" ? "트레이너" : "학생/회원"}</span>
