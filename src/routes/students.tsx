@@ -398,6 +398,15 @@ function Cell({ value, onChange, placeholder, center }: { value: string; onChang
   );
 }
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-[10.5px] font-bold uppercase tracking-wider text-ink-soft mb-0.5">{label}</span>
+      <div className="rounded-md border border-border bg-white px-1">{children}</div>
+    </label>
+  );
+}
+
 function MiniKpi({ icon, label, value, suffix, accent }: { icon: React.ReactNode; label: string; value: number; suffix?: string; accent?: boolean }) {
   return (
     <div className={`rounded-xl border p-2.5 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}>
