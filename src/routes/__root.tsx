@@ -7,8 +7,24 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 import appCss from "../styles.css?url";
+
+const SupportFab = lazy(() => import("@/components/SupportFab").then((m) => ({ default: m.SupportFab })));
+const PersonaSwitcher = lazy(() => import("@/components/PersonaSwitcher").then((m) => ({ default: m.PersonaSwitcher })));
+
+function FloatingTools() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return (
+    <Suspense fallback={null}>
+      <PersonaSwitcher />
+      <SupportFab />
+    </Suspense>
+  );
+}
 
 function NotFoundComponent() {
   return (
