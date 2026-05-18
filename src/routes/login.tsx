@@ -40,7 +40,8 @@ function Login() {
   // Trainer mini-hompy customization
   const [palette, setPalette] = useState<string>("pink");
   const [trainerGym, setTrainerGym] = useState("");
-  const [trainerSpecialty, setTrainerSpecialty] = useState("");
+  const [trainerSpecs, setTrainerSpecs] = useState<string[]>([]);
+  const [specDraft, setSpecDraft] = useState("");
   const [trainerIntro, setTrainerIntro] = useState("");
   const [welcome, setWelcome] = useState<string | null>(null);
 
