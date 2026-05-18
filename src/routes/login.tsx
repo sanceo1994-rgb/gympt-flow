@@ -223,7 +223,55 @@ function Login() {
                   {role === "trainer" && (
                     <>
                       <Field label="소속 헬스장 (지점)" value={trainerGym} onChange={setTrainerGym} placeholder="하이엔드 피트니스 강남점" />
-                      <Field label="전문 분야 / 스펙" value={trainerSpecialty} onChange={setTrainerSpecialty} placeholder="예: 다이어트 · 체형교정 · NSCA-CPT 8년차" />
+                      <div className="block">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">전문 분야 · 자격 · 수상</span>
+                        <p className="mt-1 text-[11px] text-ink-soft">하나씩 추가해주세요. 예) NSCA-CPT · 2024 머슬마니아 그랑프리 · 다이어트 8년</p>
+                        <div className="mt-2 flex gap-2">
+                          <input
+                            value={specDraft}
+                            onChange={(e) => setSpecDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const v = specDraft.trim();
+                                if (v && !trainerSpecs.includes(v)) setTrainerSpecs([...trainerSpecs, v]);
+                                setSpecDraft("");
+                              }
+                            }}
+                            placeholder="예: 2024 머슬마니아 그랑프리"
+                            className="flex-1 h-11 px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] text-ink"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const v = specDraft.trim();
+                              if (v && !trainerSpecs.includes(v)) setTrainerSpecs([...trainerSpecs, v]);
+                              setSpecDraft("");
+                            }}
+                            disabled={!specDraft.trim()}
+                            className="h-11 px-3.5 rounded-xl bg-ink text-white text-[12px] font-extrabold inline-flex items-center gap-1 disabled:opacity-40"
+                          >
+                            <Plus className="h-3.5 w-3.5" /> 추가
+                          </button>
+                        </div>
+                        {trainerSpecs.length > 0 && (
+                          <div className="mt-2.5 flex flex-wrap gap-1.5">
+                            {trainerSpecs.map((s, i) => (
+                              <span key={i} className="inline-flex items-center gap-1 px-2.5 h-7 rounded-full bg-primary/10 text-primary text-[12px] font-bold">
+                                {s}
+                                <button
+                                  type="button"
+                                  onClick={() => setTrainerSpecs(trainerSpecs.filter((_, idx) => idx !== i))}
+                                  className="hover:text-ink"
+                                  aria-label="삭제"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <label className="block">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">트레이너 한 줄 소개</span>
                         <textarea
