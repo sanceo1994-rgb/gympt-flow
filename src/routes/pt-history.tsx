@@ -88,7 +88,7 @@ function PTHistory() {
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex items-center whitespace-nowrap px-2.5 h-6 rounded-full text-[11px] font-extrabold ${
                       h.status === "완료" ? "bg-primary/10 text-primary" :
-                      h.status === "예정" ? "bg-primary text-white shadow-pink" :
+                      h.status === "예정" ? "bg-primary text-white shadow-pop" :
                       "bg-destructive/10 text-destructive"
                     }`}>{h.status}</span>
                   </td>
@@ -129,7 +129,7 @@ function PTHistory() {
             ) : (
               <button
                 onClick={() => setReschedOpen(true)}
-                className="shrink-0 h-10 px-4 rounded-xl bg-primary text-white text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-110 shadow-pink"
+                className="shrink-0 h-10 px-4 rounded-xl bg-primary text-white text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-110 shadow-pop"
               >
                 <CalendarClock className="h-3.5 w-3.5" /> 일정 변경
               </button>
