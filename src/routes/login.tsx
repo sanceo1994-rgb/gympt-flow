@@ -368,7 +368,7 @@ function Login() {
 }
 
 function Stepper({ step }: { step: Step }) {
-  const order: Step[] = ["consent", "role", "confirm"];
+  const order: Step[] = ["consent", "role", "confirm", "preview"];
   const idx = order.indexOf(step);
   if (idx < 0) return null;
   return (
@@ -377,6 +377,86 @@ function Stepper({ step }: { step: Step }) {
         <div key={s} className={`h-1.5 rounded-full transition-all ${i <= idx ? "bg-primary" : "bg-muted"} ${i === idx ? "w-8" : "w-5"}`} />
       ))}
       <span className="ml-2 text-[11px] font-bold text-ink-soft tabular-nums">{idx + 1} / {order.length}</span>
+    </div>
+  );
+}
+
+function TrainerPreview({
+  name, avatar, gym, specs, intro, paletteId, onBack, onConfirm,
+}: {
+  name: string; avatar: string; gym: string; specs: string[]; intro: string;
+  paletteId: string; onBack: () => void; onConfirm: () => void;
+}) {
+  const p = PALETTES.find((x) => x.id === paletteId) ?? PALETTES[0];
+  const initial = name?.[0] || "?";
+  return (
+    <div className="mt-6">
+      <h2 className="text-[22px] font-black leading-tight">내 프로필 미리보기</h2>
+      <p className="mt-2 text-[13px] text-ink-soft">학생이 보게 될 예약 페이지예요. 마음에 들면 회원가입을 완료해주세요.</p>
+
+      {/* Mock booking header */}
+      <div className="mt-5 rounded-2xl overflow-hidden border border-border bg-white shadow-pop">
+        <div className="relative h-28 px-5" style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})` }}>
+          <div className="absolute inset-0 bg-grid opacity-[0.12]" />
+          <span className="absolute top-3 right-3 chip bg-white/20 text-white backdrop-blur">미니홈피 · {p.label}</span>
+        </div>
+        <div className="px-5 pb-5 -mt-10 relative">
+          <div className="flex items-end gap-3">
+            {avatar ? (
+              <img src={avatar} alt="" className="h-20 w-20 rounded-2xl object-cover ring-4 ring-white bg-muted" />
+            ) : (
+              <div className="h-20 w-20 rounded-2xl bg-white ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow">
+                {initial}
+              </div>
+            )}
+            <div className="pb-1">
+              <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: p.from }}>PickGymPT 트레이너</p>
+              <h3 className="text-[20px] font-black tracking-tight text-ink leading-tight">{name || "이름"} 트레이너</h3>
+              <p className="text-[12px] text-ink-soft">{gym || "소속 헬스장"}</p>
+            </div>
+          </div>
+
+          {specs.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {specs.map((s, i) => (
+                <span key={i} className="inline-flex items-center px-2.5 h-7 rounded-full bg-primary/10 text-primary text-[11.5px] font-bold">{s}</span>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 rounded-xl bg-surface-muted border border-border p-3.5">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">트레이너 소개</p>
+            <p className="mt-1.5 text-[13px] text-ink leading-relaxed whitespace-pre-wrap">
+              {intro || "(아직 소개글이 비어있어요)"}
+            </p>
+          </div>
+
+          {/* Mock schedule preview */}
+          <div className="mt-4 rounded-xl border border-border p-3">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">예약 가능 시간 (예시)</p>
+            <div className="mt-2 grid grid-cols-4 gap-1.5">
+              {["월 19시", "화 07시", "수 19시", "수 20시", "목 07시", "금 19시", "토 09시", "토 11시"].map((t, i) => (
+                <span key={i} className="text-center text-[11px] font-bold py-1.5 rounded-md text-white" style={{ background: i % 3 === 0 ? p.from : "rgba(0,0,0,0.7)" }}>{t}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 flex gap-2">
+        <button
+          onClick={onBack}
+          className="h-12 flex-1 rounded-2xl bg-white border border-border-strong text-ink text-[13px] font-extrabold hover:bg-muted"
+        >
+          수정하기
+        </button>
+        <button
+          onClick={onConfirm}
+          className="h-12 flex-[1.6] rounded-2xl bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-2 shadow-pop hover:brightness-110"
+        >
+          <Check className="h-4 w-4" /> 마음에 들어요, 회원가입 완료
+        </button>
+      </div>
     </div>
   );
 }
