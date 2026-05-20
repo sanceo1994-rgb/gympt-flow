@@ -11,7 +11,7 @@ export const Route = createFileRoute("/login")({
   component: Login,
 });
 
-type Step = "method" | "consent" | "role" | "confirm" | "done";
+type Step = "method" | "consent" | "role" | "confirm" | "preview" | "done";
 type Role = "trainer" | "student";
 
 const KAKAO_MOCK = {
@@ -106,7 +106,12 @@ function Login() {
         </Link>
         {step !== "method" && step !== "done" && (
           <button
-            onClick={() => setStep(step === "consent" ? "method" : step === "role" ? "consent" : "role")}
+            onClick={() => setStep(
+              step === "consent" ? "method" :
+              step === "role" ? "consent" :
+              step === "confirm" ? "role" :
+              step === "preview" ? "confirm" : "role"
+            )}
             className="self-start h-9 px-2.5 rounded-full inline-flex items-center gap-1 text-[12px] font-bold text-ink-soft hover:bg-muted"
           >
             <ChevronLeft className="h-4 w-4" /> 이전
@@ -277,9 +282,9 @@ function Login() {
                         <textarea
                           value={trainerIntro}
                           onChange={(e) => setTrainerIntro(e.target.value)}
-                          rows={3}
-                          placeholder="평생 가져갈 운동 습관을 만들어드려요. 부상 없는 점진적 과부하 전문."
-                          className="mt-1.5 w-full px-3.5 py-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink resize-none"
+                          rows={9}
+                          placeholder={"평생 가져갈 운동 습관을 만들어드려요.\n부상 없는 점진적 과부하 전문.\n\n- 운동 철학 / 지도 스타일\n- 함께하면 좋은 회원상\n- 주요 성과·후기 한 줄"}
+                          className="mt-1.5 w-full min-h-[200px] px-3.5 py-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink resize-y leading-relaxed"
                         />
                       </label>
 
@@ -320,14 +325,27 @@ function Login() {
                 </div>
 
                 <button
-                  onClick={completeSignup}
+                  onClick={() => role === "trainer" ? setStep("preview") : completeSignup()}
                   disabled={!profile.name || !profile.email || (method === "email" && (!emailPw.password || emailPw.password !== emailPw.confirm))}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
-                  <Check className="h-4 w-4" /> 회원가입 완료
+                  {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
                 </button>
                 <p className="mt-3 text-center text-[11px] text-ink-soft">DB 연결은 추후 적용됩니다 — 지금은 가상 회원가입으로 진행돼요.</p>
               </div>
+            )}
+
+            {step === "preview" && (
+              <TrainerPreview
+                name={profile.name}
+                avatar={profile.avatar}
+                gym={trainerGym}
+                specs={trainerSpecs}
+                intro={trainerIntro}
+                paletteId={palette}
+                onBack={() => setStep("confirm")}
+                onConfirm={completeSignup}
+              />
             )}
           </div>
       </main>
@@ -350,7 +368,7 @@ function Login() {
 }
 
 function Stepper({ step }: { step: Step }) {
-  const order: Step[] = ["consent", "role", "confirm"];
+  const order: Step[] = ["consent", "role", "confirm", "preview"];
   const idx = order.indexOf(step);
   if (idx < 0) return null;
   return (
@@ -359,6 +377,86 @@ function Stepper({ step }: { step: Step }) {
         <div key={s} className={`h-1.5 rounded-full transition-all ${i <= idx ? "bg-primary" : "bg-muted"} ${i === idx ? "w-8" : "w-5"}`} />
       ))}
       <span className="ml-2 text-[11px] font-bold text-ink-soft tabular-nums">{idx + 1} / {order.length}</span>
+    </div>
+  );
+}
+
+function TrainerPreview({
+  name, avatar, gym, specs, intro, paletteId, onBack, onConfirm,
+}: {
+  name: string; avatar: string; gym: string; specs: string[]; intro: string;
+  paletteId: string; onBack: () => void; onConfirm: () => void;
+}) {
+  const p = PALETTES.find((x) => x.id === paletteId) ?? PALETTES[0];
+  const initial = name?.[0] || "?";
+  return (
+    <div className="mt-6">
+      <h2 className="text-[22px] font-black leading-tight">내 프로필 미리보기</h2>
+      <p className="mt-2 text-[13px] text-ink-soft">학생이 보게 될 예약 페이지예요. 마음에 들면 회원가입을 완료해주세요.</p>
+
+      {/* Mock booking header */}
+      <div className="mt-5 rounded-2xl overflow-hidden border border-border bg-white shadow-pop">
+        <div className="relative h-28 px-5" style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})` }}>
+          <div className="absolute inset-0 bg-grid opacity-[0.12]" />
+          <span className="absolute top-3 right-3 chip bg-white/20 text-white backdrop-blur">미니홈피 · {p.label}</span>
+        </div>
+        <div className="px-5 pb-5 -mt-10 relative">
+          <div className="flex items-end gap-3">
+            {avatar ? (
+              <img src={avatar} alt="" className="h-20 w-20 rounded-2xl object-cover ring-4 ring-white bg-muted" />
+            ) : (
+              <div className="h-20 w-20 rounded-2xl bg-white ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow">
+                {initial}
+              </div>
+            )}
+            <div className="pb-1">
+              <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: p.from }}>PickGymPT 트레이너</p>
+              <h3 className="text-[20px] font-black tracking-tight text-ink leading-tight">{name || "이름"} 트레이너</h3>
+              <p className="text-[12px] text-ink-soft">{gym || "소속 헬스장"}</p>
+            </div>
+          </div>
+
+          {specs.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {specs.map((s, i) => (
+                <span key={i} className="inline-flex items-center px-2.5 h-7 rounded-full bg-primary/10 text-primary text-[11.5px] font-bold">{s}</span>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 rounded-xl bg-surface-muted border border-border p-3.5">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">트레이너 소개</p>
+            <p className="mt-1.5 text-[13px] text-ink leading-relaxed whitespace-pre-wrap">
+              {intro || "(아직 소개글이 비어있어요)"}
+            </p>
+          </div>
+
+          {/* Mock schedule preview */}
+          <div className="mt-4 rounded-xl border border-border p-3">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">예약 가능 시간 (예시)</p>
+            <div className="mt-2 grid grid-cols-4 gap-1.5">
+              {["월 19시", "화 07시", "수 19시", "수 20시", "목 07시", "금 19시", "토 09시", "토 11시"].map((t, i) => (
+                <span key={i} className="text-center text-[11px] font-bold py-1.5 rounded-md text-white" style={{ background: i % 3 === 0 ? p.from : "rgba(0,0,0,0.7)" }}>{t}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 flex gap-2">
+        <button
+          onClick={onBack}
+          className="h-12 flex-1 rounded-2xl bg-white border border-border-strong text-ink text-[13px] font-extrabold hover:bg-muted"
+        >
+          수정하기
+        </button>
+        <button
+          onClick={onConfirm}
+          className="h-12 flex-[1.6] rounded-2xl bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-2 shadow-pop hover:brightness-110"
+        >
+          <Check className="h-4 w-4" /> 마음에 들어요, 회원가입 완료
+        </button>
+      </div>
     </div>
   );
 }

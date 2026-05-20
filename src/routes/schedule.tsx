@@ -93,10 +93,14 @@ const AI_UNASSIGNED: { name: string; reason: string }[] = [
 
 type ActivityItem =
   | { kind: "edit"; who: string; what: string; when: string }
-  | { kind: "completed"; who: string; sessionNo: number; remaining: number; when: string };
+  | { kind: "completed"; who: string; sessionNo: number; remaining: number; when: string }
+  | { kind: "cancelled"; who: string; sessionNo: number; when: string }
+  | { kind: "reschedule"; who: string; from: string; when: string };
 
 const ACTIVITY_LOG: ActivityItem[] = [
   { kind: "completed", who: "김지원", sessionNo: 16, remaining: 14, when: "방금 전" },
+  { kind: "cancelled", who: "윤서아", sessionNo: 7, when: "3분 전" },
+  { kind: "reschedule", who: "오지훈", from: "수 19시 → 다른 시간 요청", when: "4분 전" },
   { kind: "edit", who: "김지원", what: "월 19시·금 19시 선택 추가", when: "5분 전" },
   { kind: "edit", who: "박서윤", what: "화 07시 선택 취소", when: "8분 전" },
   { kind: "completed", who: "박서윤", sessionNo: 13, remaining: 7, when: "20분 전" },
@@ -392,10 +396,17 @@ function Schedule() {
             {activitySlice.map((a, i) => (
               <li key={`${actPage}-${i}`} className="px-5 py-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  {a.kind === "edit" ? (
+                  {a.kind === "edit" && (
                     <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님이 {a.what}</p>
-                  ) : (
+                  )}
+                  {a.kind === "completed" && (
                     <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님의 <b className="text-primary">{a.sessionNo}번째</b> PT 수업이 종료되었습니다 <span className="text-ink-soft">(남은 횟수: {a.remaining}회)</span></p>
+                  )}
+                  {a.kind === "cancelled" && (
+                    <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님이 <b className="text-destructive">{a.sessionNo}회차 PT를 당일 취소</b>했습니다</p>
+                  )}
+                  {a.kind === "reschedule" && (
+                    <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님이 <b className="text-primary">확정된 PT 일자 변경</b>을 신청했습니다 <span className="text-ink-soft">({a.from})</span></p>
                   )}
                   <p className="mt-0.5 text-[11px] text-ink-soft">{a.when}</p>
                 </div>
