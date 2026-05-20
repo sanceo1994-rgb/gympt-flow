@@ -106,7 +106,12 @@ function Login() {
         </Link>
         {step !== "method" && step !== "done" && (
           <button
-            onClick={() => setStep(step === "consent" ? "method" : step === "role" ? "consent" : "role")}
+            onClick={() => setStep(
+              step === "consent" ? "method" :
+              step === "role" ? "consent" :
+              step === "confirm" ? "role" :
+              step === "preview" ? "confirm" : "role"
+            )}
             className="self-start h-9 px-2.5 rounded-full inline-flex items-center gap-1 text-[12px] font-bold text-ink-soft hover:bg-muted"
           >
             <ChevronLeft className="h-4 w-4" /> 이전
