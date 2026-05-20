@@ -11,7 +11,7 @@ export const Route = createFileRoute("/login")({
   component: Login,
 });
 
-type Step = "method" | "consent" | "role" | "confirm" | "done";
+type Step = "method" | "consent" | "role" | "confirm" | "preview" | "done";
 type Role = "trainer" | "student";
 
 const KAKAO_MOCK = {
