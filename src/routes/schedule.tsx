@@ -93,10 +93,14 @@ const AI_UNASSIGNED: { name: string; reason: string }[] = [
 
 type ActivityItem =
   | { kind: "edit"; who: string; what: string; when: string }
-  | { kind: "completed"; who: string; sessionNo: number; remaining: number; when: string };
+  | { kind: "completed"; who: string; sessionNo: number; remaining: number; when: string }
+  | { kind: "cancelled"; who: string; sessionNo: number; when: string }
+  | { kind: "reschedule"; who: string; from: string; when: string };
 
 const ACTIVITY_LOG: ActivityItem[] = [
   { kind: "completed", who: "김지원", sessionNo: 16, remaining: 14, when: "방금 전" },
+  { kind: "cancelled", who: "윤서아", sessionNo: 7, when: "3분 전" },
+  { kind: "reschedule", who: "오지훈", from: "수 19시 → 다른 시간 요청", when: "4분 전" },
   { kind: "edit", who: "김지원", what: "월 19시·금 19시 선택 추가", when: "5분 전" },
   { kind: "edit", who: "박서윤", what: "화 07시 선택 취소", when: "8분 전" },
   { kind: "completed", who: "박서윤", sessionNo: 13, remaining: 7, when: "20분 전" },
