@@ -24,13 +24,13 @@ export function VerifiedBadge({ className, size = 22 }: { className?: string; si
   return (
     <span
       title="픽짐피티 첫 100 트레이너 인증"
-      className={cn("absolute -bottom-1 -right-1 grid place-items-center drop-shadow", className)}
+      className={cn("absolute -bottom-1 -right-1 grid place-items-center drop-shadow text-primary", className)}
       style={{ height: size, width: size }}
     >
       <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
         <polygon
           points={points}
-          fill="hsl(var(--primary, 340 82% 55%))"
+          fill="currentColor"
           stroke="white"
           strokeWidth={5}
           strokeLinejoin="round"
