@@ -277,9 +277,9 @@ function Login() {
                         <textarea
                           value={trainerIntro}
                           onChange={(e) => setTrainerIntro(e.target.value)}
-                          rows={3}
-                          placeholder="평생 가져갈 운동 습관을 만들어드려요. 부상 없는 점진적 과부하 전문."
-                          className="mt-1.5 w-full px-3.5 py-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink resize-none"
+                          rows={9}
+                          placeholder={"평생 가져갈 운동 습관을 만들어드려요.\n부상 없는 점진적 과부하 전문.\n\n- 운동 철학 / 지도 스타일\n- 함께하면 좋은 회원상\n- 주요 성과·후기 한 줄"}
+                          className="mt-1.5 w-full min-h-[200px] px-3.5 py-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink resize-y leading-relaxed"
                         />
                       </label>
 
