@@ -351,18 +351,26 @@ function Login() {
           </div>
       </main>
 
-      {/* Welcome floating toast */}
-      <Dialog open={!!welcome} onOpenChange={(v) => !v && setWelcome(null)}>
-        <DialogContent className="max-w-sm border-0 p-0 bg-transparent shadow-none">
-          <div className="rounded-3xl bg-white shadow-pop border border-border p-6 text-center">
-            <div className="mx-auto h-16 w-16 rounded-full bg-primary/15 grid place-items-center mb-3">
-              <Sparkles className="h-7 w-7 text-primary" />
+      {/* Welcome top floating toast */}
+      {welcome && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[80] w-[min(560px,calc(100vw-24px))] animate-in fade-in slide-in-from-top-2">
+          <div className="rounded-2xl bg-ink text-white shadow-pop border border-ink px-4 py-3 flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary grid place-items-center shrink-0">
+              <Sparkles className="h-5 w-5 text-white" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-black leading-tight">🎉 {welcome}님, 회원가입을 축하해요!</p>
+              <p className="mt-0.5 text-[11.5px] text-white/70 leading-snug">
+                {role === "trainer"
+                  ? "내 미니홈피 링크를 학생들에게 공유하고 이번 주 일정부터 빠르게 조율해봐요."
+                  : "내 PT쌤에게 가능한 시간을 보내고 한 주를 깔끔하게 시작해봐요."}
+              </p>
             </div>
-            <h3 className="text-[22px] font-black tracking-tight text-ink">환영합니다, {welcome}님!</h3>
-            <p className="mt-1.5 text-[13px] text-ink-soft">픽짐피티가 일정 조율을 도와드릴게요.</p>
+            <span className="hidden sm:inline-flex chip bg-white/15 text-white text-[10px]">/profile 이동중…</span>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+
 
     </div>
   );
