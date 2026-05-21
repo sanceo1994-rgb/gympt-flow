@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Trophy, Megaphone, ChevronRight, LogOut, Calendar, Users, User } from "lucide-react";
+import { useState } from "react";
+import { MapPin, Trophy, Megaphone, ChevronRight, LogOut, Calendar, Users, User, CalendarHeart, Copy, Check, Share2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export function RightRail() {
@@ -7,6 +8,12 @@ export function RightRail() {
   const role = (user?.user_metadata as { role?: string } | undefined)?.role as "trainer" | "student" | undefined;
   const name = (user?.user_metadata as { name?: string } | undefined)?.name ?? user?.email?.split("@")[0] ?? "회원";
   const avatar = (user?.user_metadata as { avatar_url?: string } | undefined)?.avatar_url;
+
+  const [toast, setToast] = useState<string | null>(null);
+  const fireToast = (t: string) => {
+    setToast(t);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleLogout = () => {
     try {
@@ -16,8 +23,33 @@ export function RightRail() {
     window.location.href = "/";
   };
 
+  const copyInvite = async () => {
+    const code = (name || "PGPT").slice(0, 4).toUpperCase().padEnd(4, "X");
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://pickgympt.app";
+    const link = `${origin}/login?invite=${code}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      fireToast("초대 링크 복사 완료! 카톡으로 동료에게 공유해보세요 💌");
+    } catch {
+      fireToast("복사에 실패했어요. 다시 시도해주세요");
+    }
+  };
+
   return (
     <div className="space-y-3">
+      {/* Top floating toast */}
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[80] w-[min(520px,calc(100vw-24px))] animate-in fade-in slide-in-from-top-2">
+          <div className="rounded-2xl bg-ink text-white shadow-pop px-4 py-3 flex items-center gap-3">
+            <span className="h-9 w-9 rounded-xl bg-primary grid place-items-center shrink-0">
+              <Share2 className="h-4 w-4 text-white" />
+            </span>
+            <p className="text-[13px] font-extrabold leading-snug flex-1">{toast}</p>
+            <Check className="h-4 w-4 text-primary shrink-0" />
+          </div>
+        </div>
+      )}
+
       {/* User card */}
       {user ? (
         <div className="rounded-2xl bg-white border border-border p-4">
@@ -37,9 +69,14 @@ export function RightRail() {
           </div>
           <div className="mt-3 grid grid-cols-2 gap-1.5">
             {role === "trainer" ? (
-              <Link to="/students" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
-                <Users className="h-3.5 w-3.5 text-primary" /> 학생 관리
-              </Link>
+              <>
+                <Link to="/students" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
+                  <Users className="h-3.5 w-3.5 text-primary" /> 학생 관리
+                </Link>
+                <Link to="/booking" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
+                  <CalendarHeart className="h-3.5 w-3.5 text-primary" /> 내 예약화면
+                </Link>
+              </>
             ) : (
               <Link to="/pt-history" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
                 <Calendar className="h-3.5 w-3.5 text-primary" /> PT 내역
@@ -92,7 +129,7 @@ export function RightRail() {
         </ol>
       </div>
 
-      {/* Promo ad */}
+      {/* Promo / invite */}
       <div className="rounded-2xl bg-white border border-border p-4">
         <span className="inline-flex items-center px-2 h-5 rounded-full bg-ink text-white text-[10px] font-black tracking-widest">EVENT</span>
         <p className="mt-3 text-[15px] font-extrabold text-ink leading-tight">
@@ -101,9 +138,12 @@ export function RightRail() {
         <p className="mt-2 text-[12px] text-ink-soft leading-relaxed">
           초대한 쌤이 첫 일정을 만들면 두 분 모두 14일 무료.
         </p>
-        <Link to="/pricing" className="mt-4 inline-flex h-9 items-center px-4 rounded-full bg-primary text-white text-[12px] font-bold w-full justify-center">
-          지금 초대하기
-        </Link>
+        <button
+          onClick={copyInvite}
+          className="mt-4 inline-flex h-9 items-center gap-1.5 px-4 rounded-full bg-primary text-white text-[12px] font-bold w-full justify-center hover:brightness-110"
+        >
+          <Copy className="h-3.5 w-3.5" /> 트레이너 초대 링크 복사
+        </button>
       </div>
 
       {/* Notice */}

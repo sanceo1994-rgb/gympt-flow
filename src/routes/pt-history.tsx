@@ -36,8 +36,10 @@ function PTHistory() {
 
   const [reschedOpen, setReschedOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [pickedSlot, setPickedSlot] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
 
   const fireToast = (t: string) => {
     setToast(t);
@@ -139,7 +141,7 @@ function PTHistory() {
       )}
 
       {/* Day-of cancel dialog */}
-      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+      <Dialog open={cancelOpen} onOpenChange={(v) => { setCancelOpen(v); if (!v) setCancelReason(""); }}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-ink">
@@ -150,10 +152,27 @@ function PTHistory() {
               그래도 취소를 요청할까요?
             </DialogDescription>
           </DialogHeader>
+          <div className="mt-1">
+            <label className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">
+              취소 사유 <span className="text-ink-soft/70 normal-case font-bold">(선택)</span>
+            </label>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={3}
+              placeholder="예) 갑작스러운 야근 / 컨디션 난조 — 트레이너님께 한 줄 사정 전달돼요"
+              className="mt-1.5 w-full px-3 py-2 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] text-ink resize-none"
+            />
+          </div>
           <DialogFooter>
             <button onClick={() => setCancelOpen(false)} className="h-10 px-4 rounded-xl bg-white border border-border-strong text-ink text-[12.5px] font-bold">유지</button>
             <button
-              onClick={() => { setCancelOpen(false); fireToast("당일 취소 요청을 트레이너님께 전송했어요 (잔여 -1)"); }}
+              onClick={() => {
+                setCancelOpen(false);
+                const tail = cancelReason.trim() ? ` · 사유: ${cancelReason.trim().slice(0, 24)}` : "";
+                fireToast(`당일 취소 요청을 트레이너님께 전송했어요 (잔여 -1)${tail}`);
+                setCancelReason("");
+              }}
               className="h-10 px-4 rounded-xl bg-destructive text-white text-[12.5px] font-extrabold"
             >
               취소 요청
@@ -161,6 +180,7 @@ function PTHistory() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* Right-side reschedule sheet (Notion-like) */}
       <Sheet open={reschedOpen} onOpenChange={setReschedOpen}>

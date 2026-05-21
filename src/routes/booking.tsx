@@ -62,6 +62,10 @@ function Booking() {
   const award = useServerFn(awardPoints);
   const fetchPts = useServerFn(getMyWeekPoints);
 
+  const userRole = (user?.user_metadata as { role?: string } | undefined)?.role;
+  // Trainer viewing their own booking page (preview/owner mode)
+  const isOwnerTrainer = userRole === "trainer";
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [unavailable, setUnavailable] = useState(false);
   
@@ -71,19 +75,28 @@ function Booking() {
   const [toast, setToast] = useState<{ title: string; sub?: string } | null>(null);
   const [weekPoints, setWeekPoints] = useState<number>(0);
 
+  // Trainer announcement (owner-editable)
+  const [announcement, setAnnouncement] = useState<string>(
+    "5월 25일(월)은 세미나로 휴무입니다. 해당 주는 화·수·금에 더 많은 시간대를 열어두었으니 미리 선택 부탁드려요!"
+  );
+  const [annOpen, setAnnOpen] = useState(false);
+  const [annDraft, setAnnDraft] = useState("");
+
   // Trainer-student matching gate (only the schedule area is locked; profile is public)
   const [matchUnlocked, setMatchUnlocked] = useState(false);
   const [matchAsked, setMatchAsked] = useState(false);
   const [matchPhone, setMatchPhone] = useState("");
   const [matchError, setMatchError] = useState<string | null>(null);
 
+
   // Determine gate state based on auth + roster
   const isRegisteredStudent = !!user && (
     TRAINER_STUDENT_EMAILS.has(user.email ?? "") ||
     TRAINER_STUDENT_PHONES.has(normalizePhone((user.user_metadata as { phone?: string } | undefined)?.phone ?? ""))
   );
-  const gateState: "loggedOut" | "registered" | "notRegistered" = !user ? "loggedOut" : isRegisteredStudent ? "registered" : "notRegistered";
-  const effectiveUnlocked = matchUnlocked || gateState === "registered";
+  const gateState: "loggedOut" | "registered" | "notRegistered" | "owner" = isOwnerTrainer ? "owner" : !user ? "loggedOut" : isRegisteredStudent ? "registered" : "notRegistered";
+  const effectiveUnlocked = matchUnlocked || gateState === "registered" || gateState === "owner";
+
 
   const handleConfirmStudent = () => { setMatchAsked(true); setMatchError(null); };
   const handleNotStudent = () => {
@@ -205,13 +218,24 @@ function Booking() {
         <div className="h-8 w-8 rounded-full bg-primary text-white grid place-items-center shrink-0">
           <Megaphone className="h-4 w-4" />
         </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-primary">트레이너 공지</p>
-          <p className="mt-0.5 text-[13.5px] text-ink leading-relaxed">
-            5월 25일(월)은 세미나로 휴무입니다. 해당 주는 화·수·금에 더 많은 시간대를 열어두었으니 미리 선택 부탁드려요!
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-primary">트레이너 공지</p>
+            {isOwnerTrainer && (
+              <button
+                onClick={() => { setAnnDraft(announcement); setAnnOpen(true); }}
+                className="h-7 px-3 rounded-full bg-ink text-white text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-110"
+              >
+                <Megaphone className="h-3 w-3" /> 공지 등록 / 수정
+              </button>
+            )}
+          </div>
+          <p className="mt-0.5 text-[13.5px] text-ink leading-relaxed whitespace-pre-wrap">
+            {announcement || "(아직 등록된 공지가 없어요)"}
           </p>
         </div>
       </section>
+
 
       {/* Gated booking area: blurred + locked until phone matches trainer's roster */}
       <div className="relative">
@@ -388,8 +412,28 @@ function Booking() {
         )}
       </div>
 
-      {/* Floating banner */}
-      {effectiveUnlocked && (() => {
+      {/* Owner (trainer) preview bar — disables submission */}
+      {isOwnerTrainer && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
+          <div className="rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
+              <Lock className="h-5 w-5" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-extrabold leading-tight">👀 내 예약 페이지 미리보기</p>
+              <p className="mt-0.5 text-[11.5px] text-white/70 leading-snug">
+                트레이너 본인은 시간을 제출할 수 없어요. 학생이 보는 화면을 그대로 확인 중이에요.
+              </p>
+            </div>
+            <button disabled className="h-11 px-4 rounded-xl bg-white/10 text-white/40 text-[13px] font-bold inline-flex items-center gap-1 shrink-0 cursor-not-allowed">
+              제출 불가 <Lock className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating banner (student) */}
+      {effectiveUnlocked && !isOwnerTrainer && (() => {
         const willEarn = !unavailable && !submitted && weekPoints < 10 && (hasEmpty || fivePlus);
         const earnMsg = hasEmpty
           ? "🎉 축하해요! 아무도 선택 안 한 시간을 골라주셔서 10포인트를 선물받습니다!"
@@ -438,6 +482,38 @@ function Booking() {
       </div>
         );
       })()}
+
+      {/* Trainer announcement editor */}
+      <Dialog open={annOpen} onOpenChange={setAnnOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[18px] font-black flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-primary" /> 트레이너 공지 등록
+            </DialogTitle>
+            <DialogDescription className="text-[12.5px] text-ink-soft leading-relaxed">
+              공지는 <b className="text-ink">한 개만 고정</b>돼요. 새 공지를 등록하면 <b className="text-destructive">기존 공지는 사라지고 새 공지로 대체</b>됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={annDraft}
+            onChange={(e) => setAnnDraft(e.target.value)}
+            rows={5}
+            placeholder="예) 이번 주 토요일은 휴무입니다. 평일 저녁 시간대를 추가로 열어두었어요."
+            className="w-full px-3 py-2.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink leading-relaxed resize-none"
+          />
+          <DialogFooter>
+            <button onClick={() => setAnnOpen(false)} className="h-10 px-4 rounded-xl bg-white border border-border-strong text-ink text-[12.5px] font-bold">취소</button>
+            <button
+              onClick={() => { setAnnouncement(annDraft.trim()); setAnnOpen(false); setToast({ title: "공지가 등록됐어요", sub: "학생들에게 즉시 노출됩니다" }); setTimeout(() => setToast(null), 2400); }}
+              disabled={!annDraft.trim()}
+              className="h-10 px-4 rounded-xl bg-primary text-white text-[12.5px] font-extrabold disabled:opacity-40 shadow-pop"
+            >
+              새 공지 등록 (기존 공지 대체)
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Login redirect modal */}
       <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
