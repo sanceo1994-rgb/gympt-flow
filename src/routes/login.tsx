@@ -65,9 +65,10 @@ function Login() {
     setWelcome(profile.name || "회원");
     setTimeout(() => {
       setWelcome(null);
-      navigate({ to: role === "student" ? "/booking" : "/schedule" });
-    }, 1600);
+      navigate({ to: "/profile" });
+    }, 1800);
   };
+
 
   return (
     <div className="min-h-screen bg-surface grid lg:grid-cols-2">
