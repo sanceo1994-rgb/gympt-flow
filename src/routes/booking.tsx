@@ -94,8 +94,9 @@ function Booking() {
     TRAINER_STUDENT_EMAILS.has(user.email ?? "") ||
     TRAINER_STUDENT_PHONES.has(normalizePhone((user.user_metadata as { phone?: string } | undefined)?.phone ?? ""))
   );
-  const gateState: "loggedOut" | "registered" | "notRegistered" = !user ? "loggedOut" : isRegisteredStudent ? "registered" : "notRegistered";
-  const effectiveUnlocked = matchUnlocked || gateState === "registered";
+  const gateState: "loggedOut" | "registered" | "notRegistered" | "owner" = isOwnerTrainer ? "owner" : !user ? "loggedOut" : isRegisteredStudent ? "registered" : "notRegistered";
+  const effectiveUnlocked = matchUnlocked || gateState === "registered" || gateState === "owner";
+
 
   const handleConfirmStudent = () => { setMatchAsked(true); setMatchError(null); };
   const handleNotStudent = () => {
