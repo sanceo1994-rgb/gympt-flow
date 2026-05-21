@@ -412,8 +412,28 @@ function Booking() {
         )}
       </div>
 
-      {/* Floating banner */}
-      {effectiveUnlocked && (() => {
+      {/* Owner (trainer) preview bar — disables submission */}
+      {isOwnerTrainer && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
+          <div className="rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
+              <Lock className="h-5 w-5" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-extrabold leading-tight">👀 내 예약 페이지 미리보기</p>
+              <p className="mt-0.5 text-[11.5px] text-white/70 leading-snug">
+                트레이너 본인은 시간을 제출할 수 없어요. 학생이 보는 화면을 그대로 확인 중이에요.
+              </p>
+            </div>
+            <button disabled className="h-11 px-4 rounded-xl bg-white/10 text-white/40 text-[13px] font-bold inline-flex items-center gap-1 shrink-0 cursor-not-allowed">
+              제출 불가 <Lock className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating banner (student) */}
+      {effectiveUnlocked && !isOwnerTrainer && (() => {
         const willEarn = !unavailable && !submitted && weekPoints < 10 && (hasEmpty || fivePlus);
         const earnMsg = hasEmpty
           ? "🎉 축하해요! 아무도 선택 안 한 시간을 골라주셔서 10포인트를 선물받습니다!"
@@ -462,6 +482,38 @@ function Booking() {
       </div>
         );
       })()}
+
+      {/* Trainer announcement editor */}
+      <Dialog open={annOpen} onOpenChange={setAnnOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[18px] font-black flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-primary" /> 트레이너 공지 등록
+            </DialogTitle>
+            <DialogDescription className="text-[12.5px] text-ink-soft leading-relaxed">
+              공지는 <b className="text-ink">한 개만 고정</b>돼요. 새 공지를 등록하면 <b className="text-destructive">기존 공지는 사라지고 새 공지로 대체</b>됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={annDraft}
+            onChange={(e) => setAnnDraft(e.target.value)}
+            rows={5}
+            placeholder="예) 이번 주 토요일은 휴무입니다. 평일 저녁 시간대를 추가로 열어두었어요."
+            className="w-full px-3 py-2.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink leading-relaxed resize-none"
+          />
+          <DialogFooter>
+            <button onClick={() => setAnnOpen(false)} className="h-10 px-4 rounded-xl bg-white border border-border-strong text-ink text-[12.5px] font-bold">취소</button>
+            <button
+              onClick={() => { setAnnouncement(annDraft.trim()); setAnnOpen(false); setToast({ title: "공지가 등록됐어요", sub: "학생들에게 즉시 노출됩니다" }); setTimeout(() => setToast(null), 2400); }}
+              disabled={!annDraft.trim()}
+              className="h-10 px-4 rounded-xl bg-primary text-white text-[12.5px] font-extrabold disabled:opacity-40 shadow-pop"
+            >
+              새 공지 등록 (기존 공지 대체)
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Login redirect modal */}
       <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
