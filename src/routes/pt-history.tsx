@@ -36,8 +36,10 @@ function PTHistory() {
 
   const [reschedOpen, setReschedOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [pickedSlot, setPickedSlot] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
 
   const fireToast = (t: string) => {
     setToast(t);
