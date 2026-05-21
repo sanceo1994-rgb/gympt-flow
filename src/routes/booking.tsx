@@ -218,13 +218,24 @@ function Booking() {
         <div className="h-8 w-8 rounded-full bg-primary text-white grid place-items-center shrink-0">
           <Megaphone className="h-4 w-4" />
         </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-primary">트레이너 공지</p>
-          <p className="mt-0.5 text-[13.5px] text-ink leading-relaxed">
-            5월 25일(월)은 세미나로 휴무입니다. 해당 주는 화·수·금에 더 많은 시간대를 열어두었으니 미리 선택 부탁드려요!
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-primary">트레이너 공지</p>
+            {isOwnerTrainer && (
+              <button
+                onClick={() => { setAnnDraft(announcement); setAnnOpen(true); }}
+                className="h-7 px-3 rounded-full bg-ink text-white text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-110"
+              >
+                <Megaphone className="h-3 w-3" /> 공지 등록 / 수정
+              </button>
+            )}
+          </div>
+          <p className="mt-0.5 text-[13.5px] text-ink leading-relaxed whitespace-pre-wrap">
+            {announcement || "(아직 등록된 공지가 없어요)"}
           </p>
         </div>
       </section>
+
 
       {/* Gated booking area: blurred + locked until phone matches trainer's roster */}
       <div className="relative">
