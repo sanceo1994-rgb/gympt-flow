@@ -62,6 +62,10 @@ function Booking() {
   const award = useServerFn(awardPoints);
   const fetchPts = useServerFn(getMyWeekPoints);
 
+  const userRole = (user?.user_metadata as { role?: string } | undefined)?.role;
+  // Trainer viewing their own booking page (preview/owner mode)
+  const isOwnerTrainer = userRole === "trainer";
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [unavailable, setUnavailable] = useState(false);
   
@@ -71,11 +75,19 @@ function Booking() {
   const [toast, setToast] = useState<{ title: string; sub?: string } | null>(null);
   const [weekPoints, setWeekPoints] = useState<number>(0);
 
+  // Trainer announcement (owner-editable)
+  const [announcement, setAnnouncement] = useState<string>(
+    "5월 25일(월)은 세미나로 휴무입니다. 해당 주는 화·수·금에 더 많은 시간대를 열어두었으니 미리 선택 부탁드려요!"
+  );
+  const [annOpen, setAnnOpen] = useState(false);
+  const [annDraft, setAnnDraft] = useState("");
+
   // Trainer-student matching gate (only the schedule area is locked; profile is public)
   const [matchUnlocked, setMatchUnlocked] = useState(false);
   const [matchAsked, setMatchAsked] = useState(false);
   const [matchPhone, setMatchPhone] = useState("");
   const [matchError, setMatchError] = useState<string | null>(null);
+
 
   // Determine gate state based on auth + roster
   const isRegisteredStudent = !!user && (
