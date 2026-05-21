@@ -4,7 +4,7 @@ import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X 
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "로그인 — 픽짐피티 PickGymPT" }] }),
