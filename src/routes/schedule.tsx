@@ -278,16 +278,6 @@ function Schedule() {
             박재현 트레이너님!<br />저희가 시간을 조율해드릴게요
           </h1>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => { setPanel("invite"); setPanelWeek(weekOffset); setPanelSelected(new Set(STUDENTS.map((s) => s.name))); }}
-            className="h-10 pl-1.5 pr-4 rounded-full bg-primary text-white text-[13px] font-bold inline-flex items-center gap-2 shadow-pop hover:brightness-110">
-            <span className="h-7 w-7 rounded-full bg-[#FEE500] grid place-items-center">
-              <MessageCircle className="h-3.5 w-3.5 fill-[#191600] text-[#191600]" />
-            </span>
-            학생에게 요청 보내기
-          </button>
-        </div>
       </div>
 
       {/* DASHBOARD */}
