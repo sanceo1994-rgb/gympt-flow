@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { TrendingUp, LayoutGrid, Calendar, Users, ChevronDown } from "lucide-react";
+import { TrendingUp, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/pickgympt-logo.png";
 
