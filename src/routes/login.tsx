@@ -405,12 +405,12 @@ function TrainerPreview({
 
       {/* Mock booking header */}
       <div className="mt-5 rounded-2xl overflow-hidden border border-border bg-white shadow-pop">
-        <div className="relative h-28 px-5" style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})` }}>
+        <div className="relative h-20 sm:h-24 px-5" style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})` }}>
           <div className="absolute inset-0 bg-grid opacity-[0.12]" />
           <span className="absolute top-3 right-3 chip bg-white/20 text-white backdrop-blur">미니홈피 · {p.label}</span>
         </div>
-        <div className="px-5 pb-5 -mt-10 relative">
-          <div className="flex items-end gap-3">
+        <div className="px-5 pb-5">
+          <div className="-mt-10">
             {avatar ? (
               <img src={avatar} alt="" className="h-20 w-20 rounded-2xl object-cover ring-4 ring-white bg-muted" />
             ) : (
@@ -418,11 +418,11 @@ function TrainerPreview({
                 {initial}
               </div>
             )}
-            <div className="pb-1">
-              <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: p.from }}>PickGymPT 트레이너</p>
-              <h3 className="text-[20px] font-black tracking-tight text-ink leading-tight">{name || "이름"} 트레이너</h3>
-              <p className="text-[12px] text-ink-soft">{gym || "소속 헬스장"}</p>
-            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: p.from }}>PickGymPT 트레이너</p>
+            <h3 className="mt-1 text-[20px] font-black tracking-tight text-ink leading-tight">{name || "이름"} 트레이너</h3>
+            <p className="mt-0.5 text-[12px] text-ink-soft">{gym || "소속 헬스장"}</p>
           </div>
 
           {specs.length > 0 && (
