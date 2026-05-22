@@ -144,6 +144,7 @@ function Schedule() {
   const [pendingMove, setPendingMove] = useState<{ day: string; hour: number } | null>(null);
   const [sendToast, setSendToast] = useState<string | null>(null);
   const [notifyConfirm, setNotifyConfirm] = useState<{ name: string; scope: "individual" | "remind" } | null>(null);
+  const [inviteIntent, setInviteIntent] = useState(false);
 
   // Right-side panel for "요청 보내기" / "확정 알림"
   const [panel, setPanel] = useState<null | "invite" | "confirm">(null);
@@ -277,16 +278,6 @@ function Schedule() {
           <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-[1.15] tracking-tight">
             박재현 트레이너님!<br />저희가 시간을 조율해드릴게요
           </h1>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => { setPanel("invite"); setPanelWeek(weekOffset); setPanelSelected(new Set(STUDENTS.map((s) => s.name))); }}
-            className="h-10 pl-1.5 pr-4 rounded-full bg-primary text-white text-[13px] font-bold inline-flex items-center gap-2 shadow-pop hover:brightness-110">
-            <span className="h-7 w-7 rounded-full bg-[#FEE500] grid place-items-center">
-              <MessageCircle className="h-3.5 w-3.5 fill-[#191600] text-[#191600]" />
-            </span>
-            학생에게 요청 보내기
-          </button>
         </div>
       </div>
 
@@ -990,6 +981,55 @@ function Schedule() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Floating invite bar — primary CTA, hidden when pendingClose bar overlays it */}
+      {pendingClose.size === 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[min(720px,calc(100vw-24px))]">
+          <div className="rounded-2xl bg-primary text-white shadow-pop p-3 flex items-center gap-2.5">
+            <span className="h-11 w-11 rounded-xl bg-[#FEE500] grid place-items-center shrink-0">
+              <MessageCircle className="h-5 w-5 fill-[#191600] text-[#191600]" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-extrabold leading-tight">가장 먼저 할 일 · {WEEK_LABELS[weekOffset]} 가능 시간을 학생에게 물어보세요</p>
+              <p className="text-[11px] text-white/80 mt-0.5 leading-snug">응답이 모여야 AI가 최적 시간표를 짤 수 있어요. 지금 바로 카톡으로 한 번에 요청 보내기!</p>
+            </div>
+            <button
+              onClick={() => setInviteIntent(true)}
+              className="h-11 px-4 rounded-xl bg-ink text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-125">
+              <Send className="h-3.5 w-3.5" /> 요청 보내기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pre-send check: did the trainer close unavailable times first? */}
+      <Dialog open={inviteIntent} onOpenChange={(v) => !v && setInviteIntent(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="h-10 w-10 rounded-full bg-primary/15 grid place-items-center mb-2">
+              <Lock className="h-5 w-5 text-primary" />
+            </div>
+            <DialogTitle className="text-[18px] font-black leading-tight">잠깐! 안되는 시간을 먼저 닫으셨나요?</DialogTitle>
+            <DialogDescription>
+              트레이너님이 어려운 시간을 먼저 막아두면 학생도 빈틈없이 가능 시간만 골라줘서 조율이 훨씬 빨라져요.
+              지금 바로 {WEEK_LABELS[weekOffset]} 요청을 보낼까요?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button onClick={() => setInviteIntent(false)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">시간 먼저 닫을게요</button>
+            <button
+              onClick={() => {
+                setInviteIntent(false);
+                setPanel("invite");
+                setPanelWeek(weekOffset);
+                setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
+              }}
+              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-extrabold inline-flex items-center gap-1.5">
+              <Check className="h-4 w-4" /> 네, 요청 보낼게요
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Floating bar for pending close changes */}
       {pendingClose.size > 0 && (

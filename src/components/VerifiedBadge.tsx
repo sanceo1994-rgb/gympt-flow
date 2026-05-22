@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
  * 픽짐피티 첫 100 트레이너 인증 배지.
  * 단조로운 원 대신 12갈래 꽃/별 모양의 외곽선 안에 근육(덤벨) 아이콘이 들어가요.
  */
-export function VerifiedBadge({ className, size = 22 }: { className?: string; size?: number }) {
+export function VerifiedBadge({ className, size = 44 }: { className?: string; size?: number }) {
   // 12-point flower-ish star polygon (alternating outer/inner radii) on a viewBox of 100x100
   const points = (() => {
     const cx = 50, cy = 50;

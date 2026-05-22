@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { TrendingUp, LayoutGrid, Calendar, Users, ChevronDown } from "lucide-react";
+import { TrendingUp, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/pickgympt-logo.png";
 
@@ -25,22 +25,6 @@ export function LeftRail() {
           반복되는 PT 일정 조율, <span className="text-primary font-extrabold">픽짐피티</span>가 도와드릴게요.
         </p>
       </Link>
-
-      {/* Quick nav */}
-      <nav className="grid grid-cols-3 gap-1.5 px-1">
-        <Link to="/schedule" className="rounded-xl bg-white border border-border px-2 py-2.5 text-center hover:border-ink/40 transition flex flex-col items-center gap-1">
-          <Calendar className="h-3.5 w-3.5 text-ink-soft" />
-          <span className="text-[11px] font-bold text-ink">조율</span>
-        </Link>
-        <Link to="/booking" className="rounded-xl bg-white border border-border px-2 py-2.5 text-center hover:border-ink/40 transition flex flex-col items-center gap-1">
-          <LayoutGrid className="h-3.5 w-3.5 text-ink-soft" />
-          <span className="text-[11px] font-bold text-ink">예약</span>
-        </Link>
-        <Link to="/team" className="rounded-xl bg-white border border-border px-2 py-2.5 text-center hover:border-ink/40 transition flex flex-col items-center gap-1">
-          <Users className="h-3.5 w-3.5 text-ink-soft" />
-          <span className="text-[11px] font-bold text-ink">팀플랜</span>
-        </Link>
-      </nav>
 
       <div className="h-1" />
 
