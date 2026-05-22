@@ -57,7 +57,7 @@ export function SupportFab() {
         onClick={() => setOpen((v) => !v)}
         title="고객센터"
         aria-label="고객센터"
-        className="fixed bottom-5 right-5 z-[60] h-14 w-14 rounded-full bg-ink text-white shadow-pop grid place-items-center hover:brightness-125 active:scale-95 transition"
+        className="fixed top-4 right-4 sm:top-auto sm:bottom-5 sm:right-5 z-[60] h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-ink text-white shadow-pop grid place-items-center hover:brightness-125 active:scale-95 transition"
       >
         {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
       </button>
