@@ -21,8 +21,8 @@ export function LeftRail() {
         <div className="flex items-center justify-center">
           <img src={logo} alt="픽짐피티" className="h-12 w-auto object-contain" />
         </div>
-        <p className="mt-3 text-center text-[13px] font-bold text-ink-soft leading-snug tracking-tight">
-          반복되는 PT 일정 조율, <span className="text-primary font-extrabold">픽짐피티</span>가 도와드릴게요.
+        <p className="mt-3 text-center text-[14px] font-black text-ink leading-snug tracking-tight">
+          PT 일정 조율, <span className="text-primary">50배</span> 빠르게.
         </p>
       </Link>
 
