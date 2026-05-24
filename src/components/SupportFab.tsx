@@ -11,7 +11,7 @@ export function SupportFab() {
   return (
     <>
       {open && (
-        <div className="fixed right-3 top-1/2 -translate-y-1/2 sm:translate-y-0 sm:top-auto sm:bottom-24 sm:right-5 z-[60] w-72 max-w-[calc(100vw-24px)] rounded-2xl bg-white border border-border shadow-pop p-4 animate-in fade-in slide-in-from-right-2 sm:slide-in-from-bottom-2">
+        <div className="fixed right-3 bottom-24 sm:bottom-24 sm:right-5 z-[60] w-72 max-w-[calc(100vw-24px)] rounded-2xl bg-white border border-border shadow-pop p-4 animate-in fade-in slide-in-from-bottom-2">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[13px] font-extrabold text-ink">고객센터</p>
             <button onClick={() => setOpen(false)} className="h-6 w-6 grid place-items-center rounded-full hover:bg-muted text-ink-soft">
