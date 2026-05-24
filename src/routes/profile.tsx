@@ -38,6 +38,8 @@ function ProfilePage() {
   const [alimUsed] = useState(387);
   const [alimTotal, setAlimTotal] = useState(600);
   const [historyToast, setHistoryToast] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
 
   const PLANS = [
     { id: "basic" as const, name: "Basic", price: 19000, students: 20, alim: 300, perks: ["기본 일정 조율", "학생 20명까지"] },
@@ -148,105 +150,88 @@ function ProfilePage() {
       {/* Trainer-only sections */}
       {role === "trainer" && (
         <div className="mt-4 grid lg:grid-cols-2 gap-4">
-          {/* Billing */}
-          <div className="rounded-2xl border border-border bg-white p-5 sm:p-6">
-            <div className="flex items-center gap-2">
-              <span className="h-9 w-9 rounded-xl bg-ink text-white grid place-items-center"><CreditCard className="h-4 w-4" /></span>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">결제 정보</p>
-                <h3 className="text-[16px] font-black text-ink leading-tight">픽짐피티 Pro · 월 39,000원</h3>
-              </div>
-            </div>
-            <ul className="mt-4 space-y-2.5">
-              <BillingRow label="결제 방법" value="신한카드 **** 7821" />
-              <BillingRow label="요금제" value="Pro (학생 40명 + 알림톡 600건)" />
-              <BillingRow label="다음 결제 예정일" value="2026.06.10" />
-              <BillingRow label="누적 결제 금액" value="195,000원" />
-            </ul>
-            <div className="mt-4 flex gap-2">
-              <button className="h-10 px-4 rounded-full bg-white border border-border-strong text-[12px] font-bold text-ink hover:bg-muted">결제 수단 변경</button>
-              <button className="h-10 px-4 rounded-full bg-white border border-border-strong text-[12px] font-bold text-ink hover:bg-muted">요금제 변경</button>
-            </div>
-          </div>
-
-          {/* Subscription / Plan */}
-          <div className="rounded-2xl border border-border bg-white p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-2">
+          {/* Unified Subscription card (현재구독 + 알림톡 + 결제내역) */}
+          <div className="rounded-2xl border border-border bg-white p-5 sm:p-6 lg:col-span-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="h-9 w-9 rounded-xl bg-ink text-white grid place-items-center shrink-0"><CreditCard className="h-4 w-4" /></span>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">현재 구독</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">구독</p>
                   <h3 className="text-[16px] font-black text-ink leading-tight truncate">픽짐피티 {plan.name} · 월 {plan.price.toLocaleString()}원</h3>
                 </div>
               </div>
-              <span className="shrink-0 inline-flex items-center px-2 h-6 rounded-full bg-primary/10 text-primary text-[10.5px] font-extrabold">자동결제</span>
+              <span className="shrink-0 inline-flex items-center px-2 h-6 rounded-full bg-primary/10 text-primary text-[10.5px] font-extrabold">자동결제 · 신한 ****7821</span>
             </div>
-            <ul className="mt-4 space-y-2.5">
-              <BillingRow label="결제 수단" value="신한카드 **** 7821" />
-              <BillingRow label="포함 한도" value={`학생 ${plan.students}명 · 알림톡 ${plan.alim.toLocaleString()}건`} />
-              <BillingRow label="다음 결제일" value="2026.06.10" />
-              <BillingRow label="누적 결제" value={`${PAYMENTS.reduce((s, p) => s + p.amount, 0).toLocaleString()}원`} />
-            </ul>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button onClick={() => setPlanOpen(true)} className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-extrabold hover:brightness-110">요금제 변경</button>
-              <button className="h-10 px-4 rounded-full bg-white border border-border-strong text-[12px] font-bold text-ink hover:bg-muted">결제 수단 변경</button>
-              <button className="h-10 px-4 rounded-full bg-white border border-border-strong text-[12px] font-bold text-ink-soft hover:text-ink hover:bg-muted">구독 해지</button>
-            </div>
-          </div>
 
-          {/* 알림톡 잔여량 */}
-          <div className="rounded-2xl border border-border bg-white p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="h-9 w-9 rounded-xl bg-[#FEE500] text-[#191600] grid place-items-center"><MessageSquare className="h-4 w-4" /></span>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">알림톡 잔여량</p>
-                  <h3 className="text-[16px] font-black text-ink leading-tight">{(alimTotal - alimUsed).toLocaleString()}건 남음</h3>
+            <div className="mt-5 grid sm:grid-cols-2 gap-4">
+              <div className="rounded-xl bg-surface-muted border border-border p-4">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft mb-3">현재 구독</p>
+                <ul className="space-y-2.5">
+                  <BillingRow label="포함 한도" value={`학생 ${plan.students}명 · 알림톡 ${plan.alim.toLocaleString()}건`} />
+                  <BillingRow label="다음 결제일" value="2026.06.10" />
+                  <BillingRow label="누적 결제" value={`${PAYMENTS.reduce((s, p) => s + p.amount, 0).toLocaleString()}원`} />
+                </ul>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={() => setPlanOpen(true)} className="h-9 px-3 rounded-full bg-primary text-white text-[11.5px] font-extrabold hover:brightness-110">요금제 변경</button>
+                  <button className="h-9 px-3 rounded-full bg-white border border-border-strong text-[11.5px] font-bold text-ink hover:bg-muted">결제 수단</button>
+                  <button className="h-9 px-3 rounded-full bg-white border border-border text-[11.5px] font-bold text-ink-soft hover:text-ink hover:bg-muted">해지</button>
                 </div>
               </div>
-              <button onClick={() => setAlimOpen(true)} className="h-9 px-3 rounded-full bg-ink text-white text-[11.5px] font-extrabold inline-flex items-center gap-1">
-                <Zap className="h-3.5 w-3.5" /> 충전
+
+              <div className="rounded-xl bg-surface-muted border border-border p-4">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-6 w-6 rounded-md bg-[#FEE500] text-[#191600] grid place-items-center"><MessageSquare className="h-3 w-3" /></span>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">알림톡 잔여량</p>
+                  </div>
+                  <button onClick={() => setAlimOpen(true)} className="h-7 px-2.5 rounded-full bg-ink text-white text-[10.5px] font-extrabold inline-flex items-center gap-1">
+                    <Zap className="h-3 w-3" /> 충전
+                  </button>
+                </div>
+                <p className="text-[20px] font-black text-ink leading-tight">{(alimTotal - alimUsed).toLocaleString()}<span className="text-[12px] text-ink-soft font-bold">건 남음</span></p>
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-ink-soft mb-1.5">
+                    <span>이번 달 사용</span>
+                    <span className="tabular-nums text-ink">{alimUsed.toLocaleString()} / {alimTotal.toLocaleString()}</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white border border-border overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(100, (alimUsed / alimTotal) * 100)}%` }} />
+                  </div>
+                  <p className="mt-2 text-[11px] text-ink-soft leading-relaxed">매월 1일 {plan.alim.toLocaleString()}건 자동 충전.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-border pt-4">
+              <button
+                onClick={() => setHistoryOpen((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 h-10 px-3 rounded-xl bg-white border border-border hover:bg-muted transition"
+              >
+                <span className="inline-flex items-center gap-2 text-[12.5px] font-extrabold text-ink">
+                  <Receipt className="h-4 w-4" /> 결제 내역 보기
+                  <span className="text-[11px] font-bold text-ink-soft">({PAYMENTS.length}건)</span>
+                </span>
+                <span className={`text-ink-soft text-[11px] font-bold transition-transform ${historyOpen ? "rotate-180" : ""}`}>▾</span>
               </button>
-            </div>
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-[11.5px] font-bold text-ink-soft mb-1.5">
-                <span>이번 달 사용량</span>
-                <span className="tabular-nums text-ink">{alimUsed.toLocaleString()} / {alimTotal.toLocaleString()}건</span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(100, (alimUsed / alimTotal) * 100)}%` }} />
-              </div>
-              <p className="mt-2 text-[11.5px] text-ink-soft leading-relaxed">매월 1일에 {plan.alim.toLocaleString()}건이 자동 충전돼요. 부족하면 언제든 추가 구매 가능.</p>
+              {historyOpen && (
+                <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-white animate-in fade-in slide-in-from-top-1">
+                  {PAYMENTS.map((p, i) => (
+                    <li key={i} className="py-3 px-4 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-extrabold text-ink truncate">{p.item}</p>
+                        <p className="text-[11.5px] text-ink-soft truncate">{p.date} · {p.method}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[14px] font-black text-ink tabular-nums">{p.amount.toLocaleString()}원</p>
+                        <button className="text-[10.5px] text-ink-soft hover:text-ink underline underline-offset-2">영수증</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
-          {/* 결제 내역 */}
-          <div className="rounded-2xl border border-border bg-white p-5 sm:p-6 lg:col-span-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="h-9 w-9 rounded-xl bg-ink/90 text-white grid place-items-center"><Receipt className="h-4 w-4" /></span>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">결제 내역</p>
-                  <h3 className="text-[16px] font-black text-ink leading-tight">최근 거래</h3>
-                </div>
-              </div>
-              <button className="text-[11.5px] font-bold text-ink-soft hover:text-ink">전체 내역</button>
-            </div>
-            <ul className="mt-4 divide-y divide-border">
-              {PAYMENTS.map((p, i) => (
-                <li key={i} className="py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-extrabold text-ink truncate">{p.item}</p>
-                    <p className="text-[11.5px] text-ink-soft truncate">{p.date} · {p.method}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[14px] font-black text-ink tabular-nums">{p.amount.toLocaleString()}원</p>
-                    <button className="text-[10.5px] text-ink-soft hover:text-ink underline underline-offset-2">영수증</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
 
           {/* Invite */}
           <div className="rounded-2xl border border-primary/30 bg-primary/[0.04] p-5 sm:p-6 lg:col-span-2">
