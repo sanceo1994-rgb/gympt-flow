@@ -181,7 +181,7 @@ function Booking() {
           <div className="flex items-start sm:items-end gap-4 flex-wrap">
             <div className="relative shrink-0">
               <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">박</div>
-              <VerifiedBadge size={44} className="!-bottom-[22px] !-right-[22px]" />
+              <VerifiedBadge size={44} className="!-bottom-[11px] !-right-[11px]" />
             </div>
             <a
               href="https://instagram.com/"
