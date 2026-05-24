@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Check, Pencil, CreditCard, Gift, Copy, Sparkles, CalendarClock } from "lucide-react";
+import { Check, Pencil, CreditCard, Gift, Copy, Sparkles, CalendarClock, MessageSquare, Receipt, Zap, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 export const Route = createFileRoute("/profile")({
