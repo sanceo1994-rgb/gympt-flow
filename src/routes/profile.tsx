@@ -38,6 +38,8 @@ function ProfilePage() {
   const [alimUsed] = useState(387);
   const [alimTotal, setAlimTotal] = useState(600);
   const [historyToast, setHistoryToast] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
 
   const PLANS = [
     { id: "basic" as const, name: "Basic", price: 19000, students: 20, alim: 300, perks: ["기본 일정 조율", "학생 20명까지"] },
