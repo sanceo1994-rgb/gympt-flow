@@ -76,7 +76,7 @@ function ProfilePage() {
             ) : (
               <div className="h-24 w-24 rounded-2xl bg-primary/15 grid place-items-center text-[32px] font-black text-primary mx-auto">{(name || "?")[0]}</div>
             )}
-            {role === "trainer" && isVerified && <VerifiedBadge size={48} className="!-bottom-[24px] !-right-[24px]" />}
+            {role === "trainer" && isVerified && <VerifiedBadge size={48} className="!-bottom-[12px] !-right-[12px]" />}
           </div>
           <p className="mt-3 text-[15px] font-extrabold text-ink">{name || "이름 없음"}</p>
           <span className="mt-1 inline-flex items-center px-2.5 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-extrabold">{role === "trainer" ? "트레이너" : "학생/회원"}</span>
