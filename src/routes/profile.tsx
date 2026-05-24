@@ -31,6 +31,33 @@ function ProfilePage() {
   const invitedCount = 3;
   const bonusWeeks = invitedCount; // 1주 per invite
 
+  // Subscription / 알림톡
+  const [planOpen, setPlanOpen] = useState(false);
+  const [alimOpen, setAlimOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<"basic" | "pro" | "premium">("pro");
+  const [alimUsed] = useState(387);
+  const [alimTotal, setAlimTotal] = useState(600);
+  const [historyToast, setHistoryToast] = useState<string | null>(null);
+
+  const PLANS = [
+    { id: "basic" as const, name: "Basic", price: 19000, students: 20, alim: 300, perks: ["기본 일정 조율", "학생 20명까지"] },
+    { id: "pro" as const, name: "Pro", price: 39000, students: 40, alim: 600, perks: ["인기 트레이너 노출", "학생 40명까지", "알림톡 600건"] },
+    { id: "premium" as const, name: "Premium", price: 79000, students: 100, alim: 1500, perks: ["전담 매니저", "학생 100명까지", "알림톡 1,500건"] },
+  ];
+  const ALIM_PACKS = [
+    { qty: 100, price: 5000 },
+    { qty: 500, price: 19000, badge: "인기" },
+    { qty: 1000, price: 35000, badge: "최대 할인" },
+  ];
+  const PAYMENTS = [
+    { date: "2026.05.10", method: "신한카드 ****7821", item: "Pro 월 구독", amount: 39000 },
+    { date: "2026.04.10", method: "신한카드 ****7821", item: "Pro 월 구독", amount: 39000 },
+    { date: "2026.03.28", method: "신한카드 ****7821", item: "알림톡 500건 추가", amount: 19000 },
+    { date: "2026.03.10", method: "신한카드 ****7821", item: "Pro 월 구독", amount: 39000 },
+    { date: "2026.02.10", method: "신한카드 ****7821", item: "Basic 월 구독", amount: 19000 },
+  ];
+  const plan = PLANS.find((p) => p.id === currentPlan)!;
+
   useEffect(() => {
     setName(meta.name ?? "");
     setEmail(user?.email ?? "");
