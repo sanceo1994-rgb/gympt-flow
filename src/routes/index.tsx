@@ -339,21 +339,23 @@ function PricingPreview() {
   ];
   return (
     <section className="mt-14">
-      <SectionHead eyebrow="요금제" title="딱 필요한 만큼만" actionLabel="전체 요금제" actionTo="/pricing" />
+      <Reveal variant="fade-up"><SectionHead eyebrow="요금제" title="딱 필요한 만큼만" actionLabel="전체 요금제" actionTo="/pricing" /></Reveal>
       <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {plans.map((p) => (
-          <div key={p.name} className={`relative rounded-2xl p-5 ${p.hot ? "bg-ink text-white" : "bg-card border border-border"}`}>
-            {p.hot && <span className="absolute -top-2 right-4 chip bg-primary text-white">인기</span>}
-            <p className={`text-[12px] font-bold ${p.hot ? "text-white/70" : "text-ink-soft"}`}>{p.name}</p>
-            <p className="mt-2 text-[24px] font-black">
-              {p.price === "0" ? "무료" : <>₩{p.price}<span className={`text-[12px] font-semibold ${p.hot ? "text-white/60" : "text-muted-foreground"}`}>/월</span></>}
-            </p>
-            <ul className={`mt-3 space-y-1.5 text-[13px] ${p.hot ? "text-white/85" : "text-ink-soft"}`}>
-              <li>학생 {p.students}명</li>
-              <li>알림 {p.msgs}건/월</li>
-              <li>AI 최적 시간표</li>
-            </ul>
-          </div>
+        {plans.map((p, i) => (
+          <Reveal key={p.name} variant="fade-up" delay={i * 110}>
+            <div className={`relative rounded-2xl p-5 h-full transition-transform hover:-translate-y-1 ${p.hot ? "bg-ink text-white" : "bg-card border border-border"}`}>
+              {p.hot && <span className="absolute -top-2 right-4 chip bg-primary text-white">인기</span>}
+              <p className={`text-[12px] font-bold ${p.hot ? "text-white/70" : "text-ink-soft"}`}>{p.name}</p>
+              <p className="mt-2 text-[24px] font-black">
+                {p.price === "0" ? "무료" : <>₩{p.price}<span className={`text-[12px] font-semibold ${p.hot ? "text-white/60" : "text-muted-foreground"}`}>/월</span></>}
+              </p>
+              <ul className={`mt-3 space-y-1.5 text-[13px] ${p.hot ? "text-white/85" : "text-ink-soft"}`}>
+                <li>학생 {p.students}명</li>
+                <li>알림 {p.msgs}건/월</li>
+                <li>AI 최적 시간표</li>
+              </ul>
+            </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -362,7 +364,7 @@ function PricingPreview() {
 
 function ReferralCard() {
   return (
-    <section className="mt-14 rounded-3xl bg-gradient-to-br from-primary to-[#FF6BA8] text-white p-8 sm:p-10 relative overflow-hidden">
+    <Reveal variant="scale" as="section" className="mt-14 rounded-3xl bg-gradient-to-br from-primary to-[#FF6BA8] text-white p-8 sm:p-10 relative overflow-hidden">
       <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-white/20 blur-3xl" />
       <div className="grid md:grid-cols-[1.5fr,1fr] gap-6 items-center">
         <div>
@@ -373,7 +375,7 @@ function ReferralCard() {
           <p className="mt-3 text-white/85 text-[14px] max-w-md">
             초대한 쌤이 첫 일정을 만들면 두 분 모두 14일 무료. 첫 결제 시 1개월 무료 + 초대받은 쌤 50% 할인.
           </p>
-          <button className="mt-5 inline-flex h-12 items-center px-6 rounded-full bg-white text-primary text-[14px] font-bold">
+          <button className="mt-5 inline-flex h-12 items-center px-6 rounded-full bg-white text-primary text-[14px] font-bold transition-transform hover:-translate-y-0.5">
             동료쌤 초대하기 <ArrowRight className="ml-1 h-4 w-4" />
           </button>
         </div>
@@ -387,7 +389,7 @@ function ReferralCard() {
           </p>
         </div>
       </div>
-    </section>
+    </Reveal>
   );
 }
 
@@ -395,15 +397,16 @@ function FinalCTA() {
   return (
     <section className="mt-14 text-center py-10 border-t border-border">
       <h3 className="text-[28px] sm:text-[34px] font-black text-ink leading-tight">
-        운동은 선생님이,<br />
-        <span className="grad-pink-text">일정은 픽짐피티가.</span>
+        <Reveal variant="fade-up" as="span" className="block">운동은 선생님이,</Reveal>
+        <Reveal variant="fade-up" delay={140} as="span" className="block"><span className="grad-pink-text">일정은 픽짐피티가.</span></Reveal>
       </h3>
-      <div className="mt-5 flex justify-center gap-3 flex-wrap">
-        <Link to="/schedule" className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white font-bold shadow-pink">
-          무료로 시작하기
-        </Link>
-        <Link to="/pricing" className="inline-flex h-12 items-center px-6 rounded-full bg-card border border-border-strong text-ink font-bold">
-          요금제 비교하기
+      <Reveal variant="fade-up" delay={280}>
+        <div className="mt-5 flex justify-center gap-3 flex-wrap">
+          <Link to="/schedule" className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white font-bold shadow-pink transition-transform hover:-translate-y-0.5">
+            무료로 시작하기
+          </Link>
+          <Link to="/pricing" className="inline-flex h-12 items-center px-6 rounded-full bg-card border border-border-strong text-ink font-bold transition-transform hover:-translate-y-0.5">
+            요금제 비교하기
         </Link>
       </div>
     </section>
