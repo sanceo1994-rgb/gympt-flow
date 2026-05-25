@@ -8,6 +8,7 @@ import stepOpen from "@/assets/step-open.png";
 import stepPick from "@/assets/step-pick.png";
 import stepAi from "@/assets/step-ai.png";
 import { Badge } from "@/components/Badge";
+import { Reveal } from "@/components/Reveal";
 
 export const Route = createFileRoute("/")({
   head: () => ({
