@@ -42,85 +42,102 @@ function Hero() {
       <div className="absolute -top-6 -right-6 h-40 w-40 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
       <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-8 items-center">
         <div>
-          <span className="chip"><Sparkles className="h-3 w-3" /> AI 일정 비서 · 베타 오픈</span>
+          <Reveal variant="fade-up"><span className="chip"><Sparkles className="h-3 w-3" /> AI 일정 비서 · 베타 오픈</span></Reveal>
           <h1 className="mt-4 text-[34px] sm:text-[44px] lg:text-[52px] leading-[1.05] font-black text-ink text-balance">
-            PT 일정 조율,<br />
-            아직도 <span className="grad-pink-text">카톡으로</span><br />
-            하나씩 맞추세요?
+            <Reveal variant="fade-up" delay={80} as="span" className="block">PT 일정 조율,</Reveal>
+            <Reveal variant="fade-up" delay={200} as="span" className="block">아직도 <span className="grad-pink-text">카톡으로</span></Reveal>
+            <Reveal variant="fade-up" delay={320} as="span" className="block">하나씩 맞추세요?</Reveal>
           </h1>
-          <p className="mt-5 text-[15px] sm:text-[16px] text-ink-soft leading-relaxed text-pretty max-w-lg">
-            학생은 원하는 시간을 고르고, 선생님은 가장 많은 수업이 가능한 시간표를 받습니다.
-            <br />선착순이 아니라, <b className="text-ink">모두에게 더 잘 맞는</b> 시간표.
-          </p>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Link
-              to="/schedule"
-              className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white text-[14px] font-bold shadow-pink hover:brightness-110"
-            >
-              무료로 시작하기 <ArrowRight className="ml-1 h-4 w-4" />
-            </Link>
-            <Link
-              to="/booking"
-              className="inline-flex h-12 items-center px-6 rounded-full bg-card border border-border-strong text-ink text-[14px] font-bold hover:bg-muted"
-            >
-              학생 예약 화면 보기
-            </Link>
-          </div>
-          <div className="mt-6 flex items-center gap-4 text-[12px] text-muted-foreground">
-            <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> 카드등록 없이 시작</span>
-            <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> 학생 3명 무료</span>
-            <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> 1분이면 셋업</span>
-          </div>
+          <Reveal variant="fade-up" delay={440}>
+            <p className="mt-5 text-[15px] sm:text-[16px] text-ink-soft leading-relaxed text-pretty max-w-lg">
+              학생은 원하는 시간을 고르고, 선생님은 가장 많은 수업이 가능한 시간표를 받습니다.
+              <br />선착순이 아니라, <b className="text-ink">모두에게 더 잘 맞는</b> 시간표.
+            </p>
+          </Reveal>
+          <Reveal variant="fade-up" delay={560}>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link
+                to="/schedule"
+                className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white text-[14px] font-bold shadow-pink hover:brightness-110 transition-transform hover:-translate-y-0.5"
+              >
+                무료로 시작하기 <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+              <Link
+                to="/booking"
+                className="inline-flex h-12 items-center px-6 rounded-full bg-card border border-border-strong text-ink text-[14px] font-bold hover:bg-muted transition-transform hover:-translate-y-0.5"
+              >
+                학생 예약 화면 보기
+              </Link>
+            </div>
+          </Reveal>
+          <Reveal variant="fade" delay={720}>
+            <div className="mt-6 flex items-center gap-4 text-[12px] text-muted-foreground">
+              <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> 카드등록 없이 시작</span>
+              <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> 학생 3명 무료</span>
+              <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> 1분이면 셋업</span>
+            </div>
+          </Reveal>
         </div>
 
         <div className="relative">
           <div className="absolute inset-0 bg-grid opacity-[0.5] rounded-3xl pointer-events-none" />
           <div className="relative grid grid-cols-2 gap-3">
-            <div className="col-span-2 panel p-5 flex items-center gap-4">
-              <img src={heroDumbbell} alt="PickGymPT" className="h-24 w-24 -my-2" width={1024} height={1024} />
-              <div>
-                <p className="text-[11px] font-bold text-primary uppercase tracking-wider">이번 주 결과</p>
-                <p className="text-[22px] font-black text-ink leading-tight">학생 14명 중<br />13명 시간 확정</p>
-                <p className="text-[12px] text-muted-foreground mt-1">평균 1순위 매칭 92%</p>
+            <Reveal variant="scale" delay={120} className="col-span-2">
+              <div className="panel p-5 flex items-center gap-4">
+                <img src={heroDumbbell} alt="PickGymPT" className="h-24 w-24 -my-2" width={1024} height={1024} />
+                <div>
+                  <p className="text-[11px] font-bold text-primary uppercase tracking-wider">이번 주 결과</p>
+                  <p className="text-[22px] font-black text-ink leading-tight">학생 14명 중<br />13명 시간 확정</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">평균 1순위 매칭 92%</p>
+                </div>
               </div>
-            </div>
-            <div className="panel p-4">
-              <img src={iconCalendar} alt="" className="h-9 w-9" loading="lazy" />
-              <p className="mt-2 text-[12px] text-ink-soft">총 슬롯</p>
-              <p className="text-[20px] font-extrabold text-ink">38</p>
-            </div>
-            <div className="panel p-4">
-              <img src={iconChat} alt="" className="h-9 w-9" loading="lazy" />
-              <p className="mt-2 text-[12px] text-ink-soft">알림 발송</p>
-              <p className="text-[20px] font-extrabold text-ink">126</p>
-            </div>
-            <div className="col-span-2 panel p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] font-bold text-ink-soft uppercase">슬롯 점유율</p>
-                <p className="text-[10px] font-bold text-primary">평균 62%</p>
+            </Reveal>
+            <Reveal variant="scale" delay={240}>
+              <div className="panel p-4">
+                <img src={iconCalendar} alt="" className="h-9 w-9" loading="lazy" />
+                <p className="mt-2 text-[12px] text-ink-soft">총 슬롯</p>
+                <p className="text-[20px] font-extrabold text-ink">38</p>
               </div>
-              <div className="mt-2 grid grid-cols-7 gap-1.5 items-end h-16">
-                {[
-                  { d: "월", v: 40 },
-                  { d: "화", v: 70 },
-                  { d: "수", v: 55 },
-                  { d: "목", v: 95 },
-                  { d: "금", v: 80 },
-                  { d: "토", v: 35 },
-                  { d: "일", v: 60 },
-                ].map(({ d, v }) => (
-                  <div key={d} className="flex flex-col items-center justify-end gap-1 h-full">
-                    <span className="text-[9px] font-extrabold tabular-nums text-ink-soft">{v}%</span>
-                    <div className="w-full rounded-md bg-primary/15 relative overflow-hidden" style={{ height: "100%" }}>
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary to-[#FF6FB1] rounded-md transition-all" style={{ height: `${v}%` }} />
+            </Reveal>
+            <Reveal variant="scale" delay={340}>
+              <div className="panel p-4">
+                <img src={iconChat} alt="" className="h-9 w-9" loading="lazy" />
+                <p className="mt-2 text-[12px] text-ink-soft">알림 발송</p>
+                <p className="text-[20px] font-extrabold text-ink">126</p>
+              </div>
+            </Reveal>
+            <Reveal variant="scale" delay={440} className="col-span-2">
+              <div className="panel p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold text-ink-soft uppercase">슬롯 점유율</p>
+                  <p className="text-[10px] font-bold text-primary">평균 62%</p>
+                </div>
+                <div className="mt-2 grid grid-cols-7 gap-1.5 items-end h-16">
+                  {[
+                    { d: "월", v: 40 },
+                    { d: "화", v: 70 },
+                    { d: "수", v: 55 },
+                    { d: "목", v: 95 },
+                    { d: "금", v: 80 },
+                    { d: "토", v: 35 },
+                    { d: "일", v: 60 },
+                  ].map(({ d, v }, i) => (
+                    <div key={d} className="flex flex-col items-center justify-end gap-1 h-full">
+                      <span className="text-[9px] font-extrabold tabular-nums text-ink-soft">{v}%</span>
+                      <div className="w-full rounded-md bg-primary/15 relative overflow-hidden" style={{ height: "100%" }}>
+                        <div
+                          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary to-[#FF6FB1] rounded-md"
+                          style={{ height: `${v}%`, transition: `height 900ms cubic-bezier(0.22,1,0.36,1) ${500 + i * 90}ms` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="mt-1.5 grid grid-cols-7 gap-1.5 text-[10px] text-muted-foreground font-semibold text-center">
+                  <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span>
+                </div>
               </div>
-              <div className="mt-1.5 grid grid-cols-7 gap-1.5 text-[10px] text-muted-foreground font-semibold text-center">
-                <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span>
-              </div>
-            </div>
+            </Reveal>
           </div>
         </div>
       </div>
