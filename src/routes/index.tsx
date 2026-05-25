@@ -166,17 +166,19 @@ function HowItWorks() {
   ];
   return (
     <section className="mt-14">
-      <SectionHead eyebrow="작동 방식" title="3단계로 끝나는 다음 주 일정" />
+      <Reveal variant="fade-up"><SectionHead eyebrow="작동 방식" title="3단계로 끝나는 다음 주 일정" /></Reveal>
       <div className="mt-6 grid md:grid-cols-3 gap-3">
-        {steps.map((s) => (
-          <div key={s.n} className="panel p-6 relative overflow-hidden">
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-[11px] font-black text-primary tracking-widest">{s.n}</span>
-              <img src={s.img} alt="" loading="lazy" width={512} height={512} className="h-20 w-20 -mt-2 -mr-2 object-contain drop-shadow-md" />
+        {steps.map((s, i) => (
+          <Reveal key={s.n} variant="fade-up" delay={i * 130}>
+            <div className="panel p-6 relative overflow-hidden h-full transition-transform hover:-translate-y-1">
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-[11px] font-black text-primary tracking-widest">{s.n}</span>
+                <img src={s.img} alt="" loading="lazy" width={512} height={512} className="h-20 w-20 -mt-2 -mr-2 object-contain drop-shadow-md" />
+              </div>
+              <h3 className="mt-1 text-[17px] font-extrabold text-ink leading-snug">{s.title}</h3>
+              <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">{s.desc}</p>
             </div>
-            <h3 className="mt-1 text-[17px] font-extrabold text-ink leading-snug">{s.title}</h3>
-            <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">{s.desc}</p>
-          </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -186,32 +188,36 @@ function HowItWorks() {
 function Benefits() {
   return (
     <section className="mt-14 grid md:grid-cols-2 gap-3">
-      <div className="rounded-2xl bg-ink text-white p-7 relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-primary/40 blur-3xl" />
-        <span className="pill-dark bg-white/10">트레이너용</span>
-        <h3 className="mt-3 text-[24px] font-black leading-tight">
-          매주 2시간씩<br />아끼는 시간표 비서
-        </h3>
-        <ul className="mt-5 space-y-2.5 text-[13px] text-white/85">
-          <Bullet>카톡으로 하나씩 묻지 않아도 돼요</Bullet>
-          <Bullet>응답 안 한 학생은 자동으로 표시</Bullet>
-          <Bullet>알림톡 일괄 발송 + 재전송</Bullet>
-          <Bullet>AI가 1순위 매칭률을 최대로</Bullet>
-        </ul>
-      </div>
-      <div className="rounded-2xl bg-card border border-border p-7 relative overflow-hidden">
-        <div className="absolute -left-10 -top-10 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
-        <span className="chip">학생용</span>
-        <h3 className="mt-3 text-[24px] font-black leading-tight text-ink">
-          원하는 시간 3개만<br />고르면 끝
-        </h3>
-        <ul className="mt-5 space-y-2.5 text-[13px] text-ink-soft">
-          <Bullet color>가입 없이 링크로 바로 선택</Bullet>
-          <Bullet color>1·2·3순위로 표현 가능</Bullet>
-          <Bullet color>혼잡한 시간대를 미리 확인</Bullet>
-          <Bullet color>확정 후 카톡으로 알림</Bullet>
-        </ul>
-      </div>
+      <Reveal variant="slide-left">
+        <div className="rounded-2xl bg-ink text-white p-7 relative overflow-hidden h-full">
+          <div className="absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-primary/40 blur-3xl" />
+          <span className="pill-dark bg-white/10">트레이너용</span>
+          <h3 className="mt-3 text-[24px] font-black leading-tight">
+            매주 2시간씩<br />아끼는 시간표 비서
+          </h3>
+          <ul className="mt-5 space-y-2.5 text-[13px] text-white/85">
+            <Bullet>카톡으로 하나씩 묻지 않아도 돼요</Bullet>
+            <Bullet>응답 안 한 학생은 자동으로 표시</Bullet>
+            <Bullet>알림톡 일괄 발송 + 재전송</Bullet>
+            <Bullet>AI가 1순위 매칭률을 최대로</Bullet>
+          </ul>
+        </div>
+      </Reveal>
+      <Reveal variant="slide-right" delay={120}>
+        <div className="rounded-2xl bg-card border border-border p-7 relative overflow-hidden h-full">
+          <div className="absolute -left-10 -top-10 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
+          <span className="chip">학생용</span>
+          <h3 className="mt-3 text-[24px] font-black leading-tight text-ink">
+            원하는 시간 3개만<br />고르면 끝
+          </h3>
+          <ul className="mt-5 space-y-2.5 text-[13px] text-ink-soft">
+            <Bullet color>가입 없이 링크로 바로 선택</Bullet>
+            <Bullet color>1·2·3순위로 표현 가능</Bullet>
+            <Bullet color>혼잡한 시간대를 미리 확인</Bullet>
+            <Bullet color>확정 후 카톡으로 알림</Bullet>
+          </ul>
+        </div>
+      </Reveal>
     </section>
   );
 }
@@ -228,30 +234,36 @@ function Bullet({ children, color = false }: { children: React.ReactNode; color?
 function AISection() {
   return (
     <section className="mt-14 panel p-6 sm:p-8">
-      <div className="flex items-center gap-2">
-        <span className="chip"><Zap className="h-3 w-3" /> 핵심 기술</span>
-        <span className="text-[12px] text-muted-foreground">아무도 빠지지 않게 · 모두가 PT</span>
-      </div>
+      <Reveal variant="fade-up">
+        <div className="flex items-center gap-2">
+          <span className="chip"><Zap className="h-3 w-3" /> 핵심 기술</span>
+          <span className="text-[12px] text-muted-foreground">아무도 빠지지 않게 · 모두가 PT</span>
+        </div>
+      </Reveal>
       <h3 className="mt-3 text-[26px] font-black text-ink leading-tight">
-        한 명도 놓치지 않는<br />
-        <span className="grad-pink-text">모두를 위한</span> 시간표
+        <Reveal variant="fade-up" delay={100} as="span" className="block">한 명도 놓치지 않는</Reveal>
+        <Reveal variant="fade-up" delay={220} as="span" className="block"><span className="grad-pink-text">모두를 위한</span> 시간표</Reveal>
       </h3>
-      <p className="mt-3 text-[14px] text-ink-soft leading-relaxed max-w-2xl">
-        픽짐피티는 누가 더 빨랐는지를 보지 않아요. 모든 학생의 가능 시간을 한꺼번에 맞춰서,
-        <b className="text-ink"> 한 명이라도 더 PT를 받을 수 있는</b> 조합을 찾아드려요.
-        붐비는 시간은 정원만큼만, 비어있던 시간은 자연스럽게 채우면서요.
-      </p>
+      <Reveal variant="fade-up" delay={340}>
+        <p className="mt-3 text-[14px] text-ink-soft leading-relaxed max-w-2xl">
+          픽짐피티는 누가 더 빨랐는지를 보지 않아요. 모든 학생의 가능 시간을 한꺼번에 맞춰서,
+          <b className="text-ink"> 한 명이라도 더 PT를 받을 수 있는</b> 조합을 찾아드려요.
+          붐비는 시간은 정원만큼만, 비어있던 시간은 자연스럽게 채우면서요.
+        </p>
+      </Reveal>
       <div className="mt-6 grid sm:grid-cols-3 gap-3">
         {[
           { k: "전원 배정", v: "최우선 목표", hi: true, desc: "한 명이라도 빠지면 다시 계산" },
           { k: "정원 보호", v: "혼잡 방지", desc: "트레이너님 페이스를 지켜요" },
           { k: "빈 시간 활용", v: "유연 분산", desc: "비어있던 슬롯을 자연스럽게 채워요" },
         ].map((r, i) => (
-          <div key={i} className={`rounded-xl p-4 ${r.hi ? "bg-primary text-white" : "bg-surface-muted"}`}>
-            <p className={`text-[11px] font-bold uppercase ${r.hi ? "text-white/80" : "text-ink-soft"}`}>{r.k}</p>
-            <p className={`mt-1 text-[18px] font-black ${r.hi ? "text-white" : "text-ink"}`}>{r.v}</p>
-            <p className={`mt-1 text-[11.5px] ${r.hi ? "text-white/80" : "text-ink-soft"} leading-relaxed`}>{r.desc}</p>
-          </div>
+          <Reveal key={i} variant="scale" delay={120 + i * 100}>
+            <div className={`rounded-xl p-4 h-full ${r.hi ? "bg-primary text-white" : "bg-surface-muted"}`}>
+              <p className={`text-[11px] font-bold uppercase ${r.hi ? "text-white/80" : "text-ink-soft"}`}>{r.k}</p>
+              <p className={`mt-1 text-[18px] font-black ${r.hi ? "text-white" : "text-ink"}`}>{r.v}</p>
+              <p className={`mt-1 text-[11.5px] ${r.hi ? "text-white/80" : "text-ink-soft"} leading-relaxed`}>{r.desc}</p>
+            </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -261,50 +273,58 @@ function AISection() {
 function MockPreview() {
   return (
     <section className="mt-14">
-      <SectionHead eyebrow="실제 화면" title="이렇게 생긴 픽짐피티" />
+      <Reveal variant="fade-up"><SectionHead eyebrow="실제 화면" title="이렇게 생긴 픽짐피티" /></Reveal>
       <div className="mt-6 grid md:grid-cols-2 gap-3">
-        <div className="panel p-5">
-          <p className="text-[11px] font-bold text-primary uppercase">트레이너 화면</p>
-          <p className="mt-1 font-extrabold text-ink">이번 주 학생 응답</p>
-          <div className="mt-3 space-y-2">
-            {[
-              ["김지원", "응답완료", "primary"],
-              ["박서윤", "확정완료", "ink"],
-              ["이도현", "응답대기", "muted"],
-              ["최유나", "응답완료", "primary"],
-            ].map(([n, s, c], i) => (
-              <div key={i} className="flex items-center justify-between rounded-xl bg-surface-muted px-4 py-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-full bg-card grid place-items-center font-black text-[11px] text-ink">{(n as string)[0]}</div>
-                  <span className="font-semibold text-ink text-[13px]">{n}</span>
-                </div>
-                <Badge tone={c as any}>{s}</Badge>
-              </div>
-            ))}
+        <Reveal variant="slide-left">
+          <div className="panel p-5 h-full">
+            <p className="text-[11px] font-bold text-primary uppercase">트레이너 화면</p>
+            <p className="mt-1 font-extrabold text-ink">이번 주 학생 응답</p>
+            <div className="mt-3 space-y-2">
+              {[
+                ["김지원", "응답완료", "primary"],
+                ["박서윤", "확정완료", "ink"],
+                ["이도현", "응답대기", "muted"],
+                ["최유나", "응답완료", "primary"],
+              ].map(([n, s, c], i) => (
+                <Reveal key={i} variant={i % 2 === 0 ? "slide-left" : "slide-right"} delay={150 + i * 110}>
+                  <div className="flex items-center justify-between rounded-xl bg-surface-muted px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-full bg-card grid place-items-center font-black text-[11px] text-ink">{(n as string)[0]}</div>
+                      <span className="font-semibold text-ink text-[13px]">{n}</span>
+                    </div>
+                    <Badge tone={c as any}>{s}</Badge>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="panel p-5">
-          <p className="text-[11px] font-bold text-primary uppercase">학생 예약 화면</p>
-          <p className="mt-1 font-extrabold text-ink">원하는 시간을 골라보세요</p>
-          <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
-            {["월", "화", "수", "목", "금", "토"].map((d, i) => (
-              <button key={i} className={`shrink-0 px-3 h-9 rounded-full text-[13px] font-bold ${i === 1 ? "bg-ink text-white" : "bg-surface-muted text-ink-soft"}`}>{d}</button>
-            ))}
+        </Reveal>
+        <Reveal variant="slide-right" delay={120}>
+          <div className="panel p-5 h-full">
+            <p className="text-[11px] font-bold text-primary uppercase">학생 예약 화면</p>
+            <p className="mt-1 font-extrabold text-ink">원하는 시간을 골라보세요</p>
+            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
+              {["월", "화", "수", "목", "금", "토"].map((d, i) => (
+                <button key={i} className={`shrink-0 px-3 h-9 rounded-full text-[13px] font-bold transition-transform hover:-translate-y-0.5 ${i === 1 ? "bg-ink text-white" : "bg-surface-muted text-ink-soft"}`}>{d}</button>
+              ))}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {[
+                ["07:00", "여유"],
+                ["09:00", "추천", true],
+                ["12:00", "혼잡"],
+                ["19:00", "혼잡"],
+              ].map(([t, l, hi], i) => (
+                <Reveal key={i} variant="scale" delay={250 + i * 120}>
+                  <button className={`w-full rounded-xl px-3 py-3 text-left border transition-transform hover:-translate-y-0.5 ${hi ? "border-primary bg-primary-soft" : "border-border bg-card"}`}>
+                    <p className="font-extrabold text-ink">{t}</p>
+                    <p className={`text-[11px] font-bold mt-0.5 ${l === "혼잡" ? "text-primary" : "text-ink-soft"}`}>{l}</p>
+                  </button>
+                </Reveal>
+              ))}
+            </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {[
-              ["07:00", "여유"],
-              ["09:00", "추천", true],
-              ["12:00", "혼잡"],
-              ["19:00", "혼잡"],
-            ].map(([t, l, hi], i) => (
-              <button key={i} className={`rounded-xl px-3 py-3 text-left border ${hi ? "border-primary bg-primary-soft" : "border-border bg-card"}`}>
-                <p className="font-extrabold text-ink">{t}</p>
-                <p className={`text-[11px] font-bold mt-0.5 ${l === "혼잡" ? "text-primary" : "text-ink-soft"}`}>{l}</p>
-              </button>
-            ))}
-          </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
