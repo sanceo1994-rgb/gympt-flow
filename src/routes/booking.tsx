@@ -287,12 +287,14 @@ function Booking() {
       </div>
 
       {/* Week label */}
-      <div className="mt-4 rounded-2xl bg-surface-muted border border-border px-5 py-4 flex items-center justify-between">
-        <div>
+      <div className="mt-4 rounded-2xl bg-surface-muted border border-border px-5 py-4 flex items-center justify-between gap-2">
+        <div className="min-w-0">
           <p className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">조율 주차</p>
-          <p className="text-[18px] font-black text-ink mt-0.5">다음 주 · 5.18 (월) – 5.24 (일)</p>
+          <p className="mt-0.5 whitespace-nowrap">
+            <span className="text-[18px] font-black text-ink">다음 주</span>
+            <span className="text-[13px] font-medium text-ink-soft ml-1.5">· 5.18 (월) – 5.24 (일)</span>
+          </p>
         </div>
-        <span className="hidden sm:inline-flex chip bg-white text-ink-soft border border-border">트레이너 박재현</span>
       </div>
 
       {/* Heatmap legend */}
