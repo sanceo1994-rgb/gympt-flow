@@ -11,7 +11,7 @@ export function SupportFab() {
   return (
     <>
       {open && (
-        <div className="fixed right-3 bottom-24 sm:bottom-24 sm:right-5 z-[60] w-72 max-w-[calc(100vw-24px)] rounded-2xl bg-white border border-border shadow-pop p-4 animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed right-3 bottom-44 sm:bottom-24 sm:right-5 z-[60] w-72 max-w-[calc(100vw-24px)] rounded-2xl bg-white border border-border shadow-pop p-4 animate-in fade-in slide-in-from-bottom-2">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[13px] font-extrabold text-ink">고객센터</p>
             <button onClick={() => setOpen(false)} className="h-6 w-6 grid place-items-center rounded-full hover:bg-muted text-ink-soft">
@@ -57,7 +57,7 @@ export function SupportFab() {
         onClick={() => setOpen((v) => !v)}
         title="고객센터"
         aria-label="고객센터"
-        className="fixed right-3 bottom-20 sm:bottom-5 sm:right-5 z-[60] h-11 w-11 sm:h-14 sm:w-14 rounded-full bg-ink text-white shadow-pop grid place-items-center hover:brightness-125 active:scale-95 transition"
+        className="fixed right-3 bottom-40 sm:bottom-5 sm:right-5 z-[60] h-11 w-11 sm:h-14 sm:w-14 rounded-full bg-ink text-white shadow-pop grid place-items-center hover:brightness-125 active:scale-95 transition"
       >
         {open ? <X className="h-5 w-5 sm:h-6 sm:w-6" /> : <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />}
       </button>

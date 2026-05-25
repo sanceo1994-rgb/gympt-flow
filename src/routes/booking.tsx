@@ -287,12 +287,14 @@ function Booking() {
       </div>
 
       {/* Week label */}
-      <div className="mt-4 rounded-2xl bg-surface-muted border border-border px-5 py-4 flex items-center justify-between">
-        <div>
+      <div className="mt-4 rounded-2xl bg-surface-muted border border-border px-5 py-4 flex items-center justify-between gap-2">
+        <div className="min-w-0">
           <p className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">조율 주차</p>
-          <p className="text-[18px] font-black text-ink mt-0.5">다음 주 · 5.18 (월) – 5.24 (일)</p>
+          <p className="mt-0.5 whitespace-nowrap">
+            <span className="text-[18px] font-black text-ink">다음 주</span>
+            <span className="text-[13px] font-medium text-ink-soft ml-1.5">· 5.18 (월) – 5.24 (일)</span>
+          </p>
         </div>
-        <span className="hidden sm:inline-flex chip bg-white text-ink-soft border border-border">트레이너 박재현</span>
       </div>
 
       {/* Heatmap legend */}
@@ -442,12 +444,12 @@ function Booking() {
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
         {willEarn && (
           <div className="absolute -top-9 left-1/2 -translate-x-1/2 z-10 w-[min(680px,calc(100vw-32px))]">
-            <div className="rounded-full bg-primary text-white text-[12px] font-extrabold px-4 h-8 inline-flex items-center justify-center w-full shadow-pink whitespace-nowrap overflow-hidden">
+            <div className="rounded-full bg-emerald-500 text-white text-[12px] font-extrabold px-4 h-8 inline-flex items-center justify-center w-full shadow-pop whitespace-nowrap overflow-hidden">
               <span className="truncate">{earnMsg}</span>
             </div>
           </div>
         )}
-        <div className={`rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5 transition ${willEarn ? "ring-2 ring-primary" : ""}`}>
+        <div className={`rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5 transition ${willEarn ? "ring-2 ring-emerald-500" : ""}`}>
           <button onClick={onUnavailableClick} className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"}`}>
             <Ban className="h-3.5 w-3.5" /> {unavailable ? "PT 불가 ON" : "PT 불가"}
           </button>

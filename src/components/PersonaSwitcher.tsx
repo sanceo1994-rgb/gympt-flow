@@ -130,7 +130,7 @@ export function PersonaSwitcher() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 left-5 z-[60] w-80 rounded-2xl bg-white border border-border shadow-pop p-4 animate-in fade-in slide-in-from-bottom-2">
+        <div className="hidden sm:block fixed bottom-24 left-5 z-[60] w-80 rounded-2xl bg-white border border-border shadow-pop p-4 animate-in fade-in slide-in-from-bottom-2">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[13px] font-extrabold text-ink">QA 신분 전환</p>
             <button onClick={() => setOpen(false)} className="h-6 w-6 grid place-items-center rounded-full hover:bg-muted text-ink-soft">
@@ -176,7 +176,7 @@ export function PersonaSwitcher() {
         onClick={() => setOpen((v) => !v)}
         title="QA 신분 전환"
         aria-label="QA 신분 전환"
-        className="fixed bottom-5 left-5 z-[60] h-12 px-4 rounded-full bg-ink text-white shadow-pop inline-flex items-center gap-2 hover:brightness-110 active:scale-95 transition text-[12px] font-bold"
+        className="hidden sm:inline-flex fixed bottom-5 left-5 z-[60] h-12 px-4 rounded-full bg-ink text-white shadow-pop items-center gap-2 hover:brightness-110 active:scale-95 transition text-[12px] font-bold"
       >
         <UserCog className="h-4 w-4" />
         {activeId ? PERSONAS.find((p) => p.id === activeId)?.label ?? "Custom" : "비로그인"}
