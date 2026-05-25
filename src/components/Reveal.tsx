@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties, type ElementType } from "react";
 
 type Variant = "fade-up" | "fade" | "slide-left" | "slide-right" | "scale" | "zoom";
 
@@ -8,7 +8,7 @@ type Props = {
   delay?: number; // ms
   duration?: number; // ms
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: ElementType;
   once?: boolean;
   threshold?: number;
   style?: CSSProperties;
