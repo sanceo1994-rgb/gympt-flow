@@ -444,12 +444,12 @@ function Booking() {
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
         {willEarn && (
           <div className="absolute -top-9 left-1/2 -translate-x-1/2 z-10 w-[min(680px,calc(100vw-32px))]">
-            <div className="rounded-full bg-primary text-white text-[12px] font-extrabold px-4 h-8 inline-flex items-center justify-center w-full shadow-pink whitespace-nowrap overflow-hidden">
+            <div className="rounded-full bg-emerald-500 text-white text-[12px] font-extrabold px-4 h-8 inline-flex items-center justify-center w-full shadow-pop whitespace-nowrap overflow-hidden">
               <span className="truncate">{earnMsg}</span>
             </div>
           </div>
         )}
-        <div className={`rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5 transition ${willEarn ? "ring-2 ring-primary" : ""}`}>
+        <div className={`rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5 transition ${willEarn ? "ring-2 ring-emerald-500" : ""}`}>
           <button onClick={onUnavailableClick} className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"}`}>
             <Ban className="h-3.5 w-3.5" /> {unavailable ? "PT 불가 ON" : "PT 불가"}
           </button>
