@@ -407,8 +407,9 @@ function FinalCTA() {
           </Link>
           <Link to="/pricing" className="inline-flex h-12 items-center px-6 rounded-full bg-card border border-border-strong text-ink font-bold transition-transform hover:-translate-y-0.5">
             요금제 비교하기
-        </Link>
-      </div>
+          </Link>
+        </div>
+      </Reveal>
     </section>
   );
 }
