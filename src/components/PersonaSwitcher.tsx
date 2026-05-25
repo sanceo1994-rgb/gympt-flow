@@ -176,7 +176,7 @@ export function PersonaSwitcher() {
         onClick={() => setOpen((v) => !v)}
         title="QA 신분 전환"
         aria-label="QA 신분 전환"
-        className="fixed bottom-5 left-5 z-[60] h-12 px-4 rounded-full bg-ink text-white shadow-pop inline-flex items-center gap-2 hover:brightness-110 active:scale-95 transition text-[12px] font-bold"
+        className="hidden sm:inline-flex fixed bottom-5 left-5 z-[60] h-12 px-4 rounded-full bg-ink text-white shadow-pop items-center gap-2 hover:brightness-110 active:scale-95 transition text-[12px] font-bold"
       >
         <UserCog className="h-4 w-4" />
         {activeId ? PERSONAS.find((p) => p.id === activeId)?.label ?? "Custom" : "비로그인"}
