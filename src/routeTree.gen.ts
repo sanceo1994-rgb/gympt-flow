@@ -19,6 +19,8 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as BookingRouteImport } from './routes/booking'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DemoTrainerRouteImport } from './routes/demo.trainer'
+import { Route as DemoStudentRouteImport } from './routes/demo.student'
 
 const TeamRoute = TeamRouteImport.update({
   id: '/team',
@@ -70,6 +72,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoTrainerRoute = DemoTrainerRouteImport.update({
+  id: '/demo/trainer',
+  path: '/demo/trainer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoStudentRoute = DemoStudentRouteImport.update({
+  id: '/demo/student',
+  path: '/demo/student',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +94,8 @@ export interface FileRoutesByFullPath {
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
+  '/demo/student': typeof DemoStudentRoute
+  '/demo/trainer': typeof DemoTrainerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +108,8 @@ export interface FileRoutesByTo {
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
+  '/demo/student': typeof DemoStudentRoute
+  '/demo/trainer': typeof DemoTrainerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +123,8 @@ export interface FileRoutesById {
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
+  '/demo/student': typeof DemoStudentRoute
+  '/demo/trainer': typeof DemoTrainerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +139,8 @@ export interface FileRouteTypes {
     | '/signup-email'
     | '/students'
     | '/team'
+    | '/demo/student'
+    | '/demo/trainer'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +153,8 @@ export interface FileRouteTypes {
     | '/signup-email'
     | '/students'
     | '/team'
+    | '/demo/student'
+    | '/demo/trainer'
   id:
     | '__root__'
     | '/'
@@ -145,6 +167,8 @@ export interface FileRouteTypes {
     | '/signup-email'
     | '/students'
     | '/team'
+    | '/demo/student'
+    | '/demo/trainer'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +182,8 @@ export interface RootRouteChildren {
   SignupEmailRoute: typeof SignupEmailRoute
   StudentsRoute: typeof StudentsRoute
   TeamRoute: typeof TeamRoute
+  DemoStudentRoute: typeof DemoStudentRoute
+  DemoTrainerRoute: typeof DemoTrainerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +258,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/trainer': {
+      id: '/demo/trainer'
+      path: '/demo/trainer'
+      fullPath: '/demo/trainer'
+      preLoaderRoute: typeof DemoTrainerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/student': {
+      id: '/demo/student'
+      path: '/demo/student'
+      fullPath: '/demo/student'
+      preLoaderRoute: typeof DemoStudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -246,7 +286,19 @@ const rootRouteChildren: RootRouteChildren = {
   SignupEmailRoute: SignupEmailRoute,
   StudentsRoute: StudentsRoute,
   TeamRoute: TeamRoute,
+  DemoStudentRoute: DemoStudentRoute,
+  DemoTrainerRoute: DemoTrainerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
