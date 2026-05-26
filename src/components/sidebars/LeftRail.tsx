@@ -21,7 +21,7 @@ export function LeftRail() {
         <div className="flex items-center justify-center">
           <img src={logo} alt="픽짐피티" className="h-24 w-auto object-contain" />
         </div>
-        <p className="mt-3 text-center text-[14px] font-black text-ink leading-snug tracking-tight">
+        <p className="-mt-1 text-center text-[14px] font-black text-ink leading-snug tracking-tight">
           PT 일정 조율, <span className="text-primary">50배</span> 빠르게.
         </p>
       </Link>
