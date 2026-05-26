@@ -56,15 +56,19 @@ function Pricing() {
       {/* Team plan */}
       <div className="mt-10 rounded-3xl bg-gradient-to-br from-primary to-[#FF6BA8] text-white p-8 sm:p-10 relative overflow-hidden">
         <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/20 blur-3xl" />
+        <div className="absolute top-5 right-5 z-10 inline-flex items-center gap-1.5 px-3 h-7 rounded-full bg-white text-primary text-[11px] font-black tracking-wide shadow-lg">
+          🚧 COMING SOON
+        </div>
         <div className="grid lg:grid-cols-[1.4fr,1fr] gap-6 items-center">
           <div>
-            <span className="pill-dark bg-white/15">Team Plan · 미리보기</span>
+            <span className="pill-dark bg-white/15">Team Plan · 추후 오픈 예정</span>
             <h2 className="mt-3 text-[28px] sm:text-[32px] font-black leading-tight">팀 단위 운영을 시작하세요</h2>
             <p className="mt-2 text-white/85 text-[14px]">팀장이 트레이너를 관리하고, 전체 가동률과 인기 시간을 한눈에 확인해요.</p>
-            <p className="mt-5 text-[24px] font-black">₩49,000<span className="text-[13px] font-semibold text-white/80">/월</span></p>
+            <p className="mt-2 text-[12.5px] text-white font-bold bg-white/15 inline-block px-3 py-1.5 rounded-lg">⏰ 2026년 하반기 정식 오픈 예정 — 사전 알림 신청을 받고 있어요</p>
+            <p className="mt-5 text-[24px] font-black">₩49,000<span className="text-[13px] font-semibold text-white/80">/월 (예정가)</span></p>
             <p className="text-[12px] text-white/80">트레이너 3명 · 학생 80명 · 팀 대시보드</p>
             <button className="mt-5 inline-flex h-12 items-center px-6 rounded-full bg-white text-primary text-[14px] font-bold">
-              팀 플랜 체험 신청
+              오픈 알림 신청하기
             </button>
           </div>
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-5">

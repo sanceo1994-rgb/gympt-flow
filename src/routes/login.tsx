@@ -183,7 +183,7 @@ function Login() {
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
                   <RoleCard title="트레이너" sub="회원 일정 자동 조율" img={trainerImg} active={role === "trainer"} onClick={() => setRole("trainer")} />
-                  <RoleCard title="학생 / 회원" sub="원하는 시간 선택" img={studentImg} active={role === "student"} onClick={() => setRole("student")} />
+                  <RoleCard title="회원" sub="원하는 시간 선택" img={studentImg} active={role === "student"} onClick={() => setRole("student")} />
                 </div>
 
                 <button
@@ -211,7 +211,7 @@ function Login() {
                       {profile.name?.[0] || "?"}
                     </div>
                   )}
-                  <span className="chip bg-primary/10 text-primary">{role === "trainer" ? "트레이너" : "학생 / 회원"}</span>
+                  <span className="chip bg-primary/10 text-primary">{role === "trainer" ? "트레이너" : "회원"}</span>
                 </div>
 
                 <div className="mt-5 grid gap-3">
@@ -493,8 +493,8 @@ function RoleCard({ title, sub, img, active, onClick }: { title: string; sub: st
       onClick={onClick}
       className={`group relative rounded-2xl border-2 p-4 text-left transition bg-white ${active ? "border-primary shadow-pop -translate-y-0.5" : "border-border hover:border-ink/50"}`}
     >
-      <div className="aspect-square w-full grid place-items-center">
-        <img src={img} alt="" className="h-24 w-24 object-contain drop-shadow-md" />
+      <div className="aspect-square w-full grid place-items-center overflow-hidden">
+        <img src={img} alt="" className="h-32 w-32 object-contain drop-shadow-md" />
       </div>
       <h3 className="mt-1 text-[15px] font-black tracking-tight">{title}</h3>
       <p className="mt-0.5 text-[11.5px] text-ink-soft">{sub}</p>

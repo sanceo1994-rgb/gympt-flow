@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { DemoBanner } from "@/components/DemoBanner";
 import React, { useMemo, useState } from "react";
 import { Send, Sparkles, Check, ChevronLeft, ChevronRight, Ban, Lock, Users, MailCheck, CalendarCheck, Pencil, MessageCircle, X, Activity, ChevronUp, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -271,6 +272,7 @@ function Schedule() {
 
   return (
     <AppShell>
+      <DemoBanner role="trainer" />
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
