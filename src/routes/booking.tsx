@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { DemoBanner } from "@/components/DemoBanner";
 import { Check, Ban, Info, X, Lock, Instagram, Megaphone, Award, Coffee, Sparkles, ArrowRight } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -174,6 +175,7 @@ function Booking() {
 
   return (
     <AppShell>
+      <DemoBanner role="student" />
       {/* Trainer profile — restructured, no overlap */}
       <section className="rounded-2xl border border-border overflow-hidden bg-white">
         <div className="h-16 bg-gradient-to-br from-primary to-[#FF6FB1]" />
