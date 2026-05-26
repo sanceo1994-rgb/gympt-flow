@@ -12,15 +12,15 @@ export function DemoBanner({ role }: { role: "student" | "trainer" }) {
   if (!show) return null;
   const label = role === "student" ? "회원" : "트레이너";
   return (
-    <div className="sticky top-0 z-40 bg-gradient-to-r from-primary to-[#FF6FB1] text-white">
+    <div className="sticky top-0 z-40 bg-slate-800 text-white border-b border-slate-700">
       <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center gap-3 text-[13px]">
-        <Sparkles className="h-4 w-4 shrink-0" />
+        <Sparkles className="h-4 w-4 shrink-0 text-sky-300" />
         <span className="flex-1 font-bold">
           🎬 <b>{label} 화면 체험 모드</b> · 모든 데이터는 가상이에요. 자유롭게 클릭해보세요!
         </span>
         <Link
           to="/login"
-          className="hidden sm:inline-flex h-8 items-center px-3 rounded-full bg-white text-primary text-[12px] font-extrabold hover:brightness-105"
+          className="hidden sm:inline-flex h-8 items-center px-3 rounded-full bg-white text-slate-900 text-[12px] font-extrabold hover:brightness-105"
         >
           가입하고 진짜 쓰기
         </Link>
