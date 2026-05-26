@@ -23,14 +23,14 @@ function SignupEmail() {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email, password: pw,
-          options: { data: { name }, emailRedirectTo: window.location.origin + "/onboarding/role" },
+          options: { data: { name }, emailRedirectTo: window.location.origin + "/" },
         });
         if (error) throw error;
-        navigate({ to: "/onboarding/role" });
+        navigate({ to: "/" });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
         if (error) throw error;
-        navigate({ to: "/onboarding/role" });
+        navigate({ to: "/" });
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : "오류가 발생했어요");

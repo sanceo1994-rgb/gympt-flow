@@ -19,7 +19,6 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as BookingRouteImport } from './routes/booking'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as OnboardingRoleRouteImport } from './routes/onboarding.role'
 
 const TeamRoute = TeamRouteImport.update({
   id: '/team',
@@ -71,11 +70,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OnboardingRoleRoute = OnboardingRoleRouteImport.update({
-  id: '/onboarding/role',
-  path: '/onboarding/role',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,7 +82,6 @@ export interface FileRoutesByFullPath {
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
-  '/onboarding/role': typeof OnboardingRoleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -101,7 +94,6 @@ export interface FileRoutesByTo {
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
-  '/onboarding/role': typeof OnboardingRoleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -115,7 +107,6 @@ export interface FileRoutesById {
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
-  '/onboarding/role': typeof OnboardingRoleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,7 +121,6 @@ export interface FileRouteTypes {
     | '/signup-email'
     | '/students'
     | '/team'
-    | '/onboarding/role'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -143,7 +133,6 @@ export interface FileRouteTypes {
     | '/signup-email'
     | '/students'
     | '/team'
-    | '/onboarding/role'
   id:
     | '__root__'
     | '/'
@@ -156,7 +145,6 @@ export interface FileRouteTypes {
     | '/signup-email'
     | '/students'
     | '/team'
-    | '/onboarding/role'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -170,7 +158,6 @@ export interface RootRouteChildren {
   SignupEmailRoute: typeof SignupEmailRoute
   StudentsRoute: typeof StudentsRoute
   TeamRoute: typeof TeamRoute
-  OnboardingRoleRoute: typeof OnboardingRoleRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -245,13 +232,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/onboarding/role': {
-      id: '/onboarding/role'
-      path: '/onboarding/role'
-      fullPath: '/onboarding/role'
-      preLoaderRoute: typeof OnboardingRoleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -266,7 +246,6 @@ const rootRouteChildren: RootRouteChildren = {
   SignupEmailRoute: SignupEmailRoute,
   StudentsRoute: StudentsRoute,
   TeamRoute: TeamRoute,
-  OnboardingRoleRoute: OnboardingRoleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

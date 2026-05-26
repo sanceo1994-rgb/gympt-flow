@@ -57,16 +57,25 @@ function Hero() {
           <Reveal variant="fade-up" delay={560}>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
-                to="/schedule"
+                to="/login"
                 className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white text-[14px] font-bold shadow-pink hover:brightness-110 transition-transform hover:-translate-y-0.5"
               >
                 무료로 시작하기 <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-[12px] font-bold text-ink-soft mr-1">로그인 없이 미리 체험:</span>
               <Link
-                to="/booking"
-                className="inline-flex h-12 items-center px-6 rounded-full bg-card border border-border-strong text-ink text-[14px] font-bold hover:bg-muted transition-transform hover:-translate-y-0.5"
+                to="/demo/student"
+                className="inline-flex h-10 items-center px-4 rounded-full bg-card border border-border-strong text-ink text-[12.5px] font-bold hover:bg-muted hover:-translate-y-0.5 transition-transform"
               >
-                학생 예약 화면 보기
+                🧑‍🎓 학생 화면 체험
+              </Link>
+              <Link
+                to="/demo/trainer"
+                className="inline-flex h-10 items-center px-4 rounded-full bg-card border border-border-strong text-ink text-[12.5px] font-bold hover:bg-muted hover:-translate-y-0.5 transition-transform"
+              >
+                💪 트레이너 화면 체험
               </Link>
             </div>
           </Reveal>
