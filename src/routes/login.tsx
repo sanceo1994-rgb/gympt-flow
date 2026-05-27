@@ -162,7 +162,8 @@ function Login() {
         {step !== "method" && step !== "done" && (
           <button
             onClick={() => setStep(
-              step === "consent" ? "method" :
+              step === "email" ? "method" :
+              step === "consent" ? (method === "email" ? "email" : "method") :
               step === "role" ? "consent" :
               step === "confirm" ? "role" :
               step === "preview" ? "confirm" : "role"
