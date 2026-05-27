@@ -11,7 +11,7 @@ export const Route = createFileRoute("/login")({
   component: Login,
 });
 
-type Step = "method" | "consent" | "role" | "confirm" | "preview" | "done";
+type Step = "method" | "email" | "consent" | "role" | "confirm" | "preview" | "done";
 type Role = "trainer" | "student";
 
 const KAKAO_MOCK = {
@@ -44,15 +44,60 @@ function Login() {
   const [specDraft, setSpecDraft] = useState("");
   const [trainerIntro, setTrainerIntro] = useState("");
   const [welcome, setWelcome] = useState<string | null>(null);
+  const [emailMode, setEmailMode] = useState<"login" | "signup" | null>(null);
+  const [emailErr, setEmailErr] = useState<string | null>(null);
 
   const allOk = agree.tos && agree.priv && agree.age;
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
 
-  const startMethod = (m: "kakao" | "email") => { setMethod(m); setStep("consent"); };
+  const startMethod = (m: "kakao" | "email") => {
+    setMethod(m);
+    setEmailErr(null);
+    if (m === "email") {
+      setEmailMode(null);
+      setStep("email");
+    } else {
+      setStep("consent");
+    }
+  };
+
+  // Detect existing user vs new signup from a tiny localStorage "users" registry
+  const submitEmail = () => {
+    setEmailErr(null);
+    if (!emailPw.email || !emailPw.password) {
+      setEmailErr("이메일과 비밀번호를 입력해주세요");
+      return;
+    }
+    let users: Array<{ email: string; password: string; name: string; role: Role; avatar?: string }> = [];
+    try {
+      users = JSON.parse(localStorage.getItem("gympt-users") || "[]");
+    } catch {}
+    const existing = users.find((u) => u.email.toLowerCase() === emailPw.email.toLowerCase());
+    if (existing) {
+      // Login branch
+      if (existing.password !== emailPw.password) {
+        setEmailErr("비밀번호가 일치하지 않아요");
+        setEmailMode("login");
+        return;
+      }
+      const user = { name: existing.name, email: existing.email, avatar: existing.avatar || "", role: existing.role };
+      try {
+        localStorage.setItem("gympt-user", JSON.stringify(user));
+        window.dispatchEvent(new Event("gympt-auth"));
+      } catch {}
+      setWelcome(existing.name + " (로그인)");
+      setTimeout(() => { setWelcome(null); navigate({ to: "/profile" }); }, 1200);
+      return;
+    }
+    // Signup branch — continue onboarding
+    setEmailMode("signup");
+    setProfile({ name: "", email: emailPw.email, avatar: "" });
+    setEmailPw((p) => ({ ...p, confirm: p.password }));
+    setStep("consent");
+  };
 
   const afterConsent = () => {
     if (method === "kakao") setProfile(KAKAO_MOCK);
-    else setProfile({ name: "", email: emailPw.email, avatar: "" });
     setStep("role");
   };
 
@@ -60,6 +105,15 @@ function Login() {
     const user = { ...profile, role };
     try {
       localStorage.setItem("gympt-user", JSON.stringify(user));
+      // Append to registry so this email can log in next time
+      if (method === "email" && emailPw.email && emailPw.password) {
+        let users: Array<{ email: string; password: string; name: string; role: Role; avatar?: string }> = [];
+        try { users = JSON.parse(localStorage.getItem("gympt-users") || "[]"); } catch {}
+        if (!users.find((u) => u.email.toLowerCase() === emailPw.email.toLowerCase())) {
+          users.push({ email: profile.email, password: emailPw.password, name: profile.name, role: role as Role, avatar: profile.avatar });
+          localStorage.setItem("gympt-users", JSON.stringify(users));
+        }
+      }
       window.dispatchEvent(new Event("gympt-auth"));
     } catch {}
     setWelcome(profile.name || "회원");
@@ -108,7 +162,8 @@ function Login() {
         {step !== "method" && step !== "done" && (
           <button
             onClick={() => setStep(
-              step === "consent" ? "method" :
+              step === "email" ? "method" :
+              step === "consent" ? (method === "email" ? "email" : "method") :
               step === "role" ? "consent" :
               step === "confirm" ? "role" :
               step === "preview" ? "confirm" : "role"
@@ -126,7 +181,7 @@ function Login() {
               <div className="mt-6">
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">로그인 / 회원가입</p>
                 <h2 className="mt-3 text-[24px] font-black leading-tight">3초 만에 시작하기</h2>
-                <p className="mt-2 text-[13px] text-ink-soft">카카오로 가장 빠르게 가입할 수 있어요.</p>
+                <p className="mt-2 text-[13px] text-ink-soft">처음이세요? 가입과 동시에 시작돼요. 이미 계정이 있으면 같은 입력으로 바로 로그인.</p>
 
                 <button
                   onClick={() => startMethod("kakao")}
@@ -145,10 +200,51 @@ function Login() {
                   onClick={() => startMethod("email")}
                   className="mt-5 h-12 w-full rounded-2xl bg-white border border-border-strong text-ink text-[13.5px] font-bold inline-flex items-center justify-center gap-2 hover:bg-muted"
                 >
-                  <Mail className="h-4 w-4" /> 이메일로 직접 가입
+                  <Mail className="h-4 w-4" /> 이메일로 계속하기
                 </button>
 
-                <p className="mt-6 text-[11.5px] text-ink-soft">가입 시 카카오에서 이름·프로필·이메일을 불러옵니다.</p>
+                <p className="mt-6 text-[11.5px] text-ink-soft">카카오로 시작하면 이름·프로필·이메일을 자동으로 불러옵니다.</p>
+              </div>
+            )}
+
+            {step === "email" && (
+              <div className="mt-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">이메일로 계속하기</p>
+                <h2 className="mt-3 text-[24px] font-black leading-tight">한 번에 로그인 · 가입</h2>
+                <p className="mt-2 text-[13px] text-ink-soft">
+                  이메일을 입력하면 <b className="text-ink">기존 회원은 로그인</b>, <b className="text-ink">처음이라면 가입</b>으로 자동 분기해드려요.
+                </p>
+
+                <div className="mt-5 grid gap-3">
+                  <Field
+                    label="이메일"
+                    type="email"
+                    value={emailPw.email}
+                    onChange={(v) => { setEmailPw((p) => ({ ...p, email: v })); setEmailErr(null); setEmailMode(null); }}
+                    placeholder="you@example.com"
+                  />
+                  <Field
+                    label="비밀번호"
+                    type="password"
+                    value={emailPw.password}
+                    onChange={(v) => { setEmailPw((p) => ({ ...p, password: v })); setEmailErr(null); }}
+                    placeholder="8자 이상"
+                  />
+                </div>
+
+                {emailErr && <p className="mt-3 text-[12px] font-bold text-destructive">{emailErr}</p>}
+
+                <button
+                  onClick={submitEmail}
+                  disabled={!emailPw.email || !emailPw.password}
+                  className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
+                >
+                  계속하기 <ArrowRight className="h-4 w-4" />
+                </button>
+
+                <p className="mt-4 text-center text-[11.5px] text-ink-soft">
+                  비밀번호를 잊으셨나요? <a className="text-primary font-bold hover:underline" href="#">재설정</a>
+                </p>
               </div>
             )}
 
@@ -217,14 +313,10 @@ function Login() {
                 <div className="mt-5 grid gap-3">
                   <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" />
                   <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
-                  {method === "email" && (
-                    <>
-                      <Field label="비밀번호" type="password" value={emailPw.password} onChange={(v) => setEmailPw((p) => ({ ...p, password: v }))} placeholder="8자 이상" />
-                      <Field label="비밀번호 확인" type="password" value={emailPw.confirm} onChange={(v) => setEmailPw((p) => ({ ...p, confirm: v }))} placeholder="다시 한 번 입력" />
-                      {emailPw.password && emailPw.confirm && emailPw.password !== emailPw.confirm && (
-                        <p className="text-[11px] text-destructive font-bold">비밀번호가 일치하지 않아요</p>
-                      )}
-                    </>
+                  {method === "email" && emailPw.password && (
+                    <div className="rounded-xl bg-surface-muted border border-border px-3.5 py-2.5 text-[12px] text-ink-soft inline-flex items-center gap-2">
+                      <Check className="h-3.5 w-3.5 text-primary" /> 비밀번호가 설정되었어요
+                    </div>
                   )}
                   {role === "trainer" && (
                     <>
@@ -327,7 +419,7 @@ function Login() {
 
                 <button
                   onClick={() => role === "trainer" ? setStep("preview") : completeSignup()}
-                  disabled={!profile.name || !profile.email || (method === "email" && (!emailPw.password || emailPw.password !== emailPw.confirm))}
+                  disabled={!profile.name || !profile.email || (method === "email" && !emailPw.password)}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
                   {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
