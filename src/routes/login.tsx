@@ -44,15 +44,60 @@ function Login() {
   const [specDraft, setSpecDraft] = useState("");
   const [trainerIntro, setTrainerIntro] = useState("");
   const [welcome, setWelcome] = useState<string | null>(null);
+  const [emailMode, setEmailMode] = useState<"login" | "signup" | null>(null);
+  const [emailErr, setEmailErr] = useState<string | null>(null);
 
   const allOk = agree.tos && agree.priv && agree.age;
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
 
-  const startMethod = (m: "kakao" | "email") => { setMethod(m); setStep("consent"); };
+  const startMethod = (m: "kakao" | "email") => {
+    setMethod(m);
+    setEmailErr(null);
+    if (m === "email") {
+      setEmailMode(null);
+      setStep("email");
+    } else {
+      setStep("consent");
+    }
+  };
+
+  // Detect existing user vs new signup from a tiny localStorage "users" registry
+  const submitEmail = () => {
+    setEmailErr(null);
+    if (!emailPw.email || !emailPw.password) {
+      setEmailErr("이메일과 비밀번호를 입력해주세요");
+      return;
+    }
+    let users: Array<{ email: string; password: string; name: string; role: Role; avatar?: string }> = [];
+    try {
+      users = JSON.parse(localStorage.getItem("gympt-users") || "[]");
+    } catch {}
+    const existing = users.find((u) => u.email.toLowerCase() === emailPw.email.toLowerCase());
+    if (existing) {
+      // Login branch
+      if (existing.password !== emailPw.password) {
+        setEmailErr("비밀번호가 일치하지 않아요");
+        setEmailMode("login");
+        return;
+      }
+      const user = { name: existing.name, email: existing.email, avatar: existing.avatar || "", role: existing.role };
+      try {
+        localStorage.setItem("gympt-user", JSON.stringify(user));
+        window.dispatchEvent(new Event("gympt-auth"));
+      } catch {}
+      setWelcome(existing.name + " (로그인)");
+      setTimeout(() => { setWelcome(null); navigate({ to: "/profile" }); }, 1200);
+      return;
+    }
+    // Signup branch — continue onboarding
+    setEmailMode("signup");
+    setProfile({ name: "", email: emailPw.email, avatar: "" });
+    setEmailPw((p) => ({ ...p, confirm: p.password }));
+    setStep("consent");
+  };
 
   const afterConsent = () => {
     if (method === "kakao") setProfile(KAKAO_MOCK);
-    else setProfile({ name: "", email: emailPw.email, avatar: "" });
     setStep("role");
   };
 
@@ -60,6 +105,15 @@ function Login() {
     const user = { ...profile, role };
     try {
       localStorage.setItem("gympt-user", JSON.stringify(user));
+      // Append to registry so this email can log in next time
+      if (method === "email" && emailPw.email && emailPw.password) {
+        let users: Array<{ email: string; password: string; name: string; role: Role; avatar?: string }> = [];
+        try { users = JSON.parse(localStorage.getItem("gympt-users") || "[]"); } catch {}
+        if (!users.find((u) => u.email.toLowerCase() === emailPw.email.toLowerCase())) {
+          users.push({ email: profile.email, password: emailPw.password, name: profile.name, role: role as Role, avatar: profile.avatar });
+          localStorage.setItem("gympt-users", JSON.stringify(users));
+        }
+      }
       window.dispatchEvent(new Event("gympt-auth"));
     } catch {}
     setWelcome(profile.name || "회원");
