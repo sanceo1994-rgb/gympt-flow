@@ -181,7 +181,7 @@ function Login() {
               <div className="mt-6">
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">로그인 / 회원가입</p>
                 <h2 className="mt-3 text-[24px] font-black leading-tight">3초 만에 시작하기</h2>
-                <p className="mt-2 text-[13px] text-ink-soft">카카오로 가장 빠르게 가입할 수 있어요.</p>
+                <p className="mt-2 text-[13px] text-ink-soft">처음이세요? 가입과 동시에 시작돼요. 이미 계정이 있으면 같은 입력으로 바로 로그인.</p>
 
                 <button
                   onClick={() => startMethod("kakao")}
@@ -200,10 +200,51 @@ function Login() {
                   onClick={() => startMethod("email")}
                   className="mt-5 h-12 w-full rounded-2xl bg-white border border-border-strong text-ink text-[13.5px] font-bold inline-flex items-center justify-center gap-2 hover:bg-muted"
                 >
-                  <Mail className="h-4 w-4" /> 이메일로 직접 가입
+                  <Mail className="h-4 w-4" /> 이메일로 계속하기
                 </button>
 
-                <p className="mt-6 text-[11.5px] text-ink-soft">가입 시 카카오에서 이름·프로필·이메일을 불러옵니다.</p>
+                <p className="mt-6 text-[11.5px] text-ink-soft">카카오로 시작하면 이름·프로필·이메일을 자동으로 불러옵니다.</p>
+              </div>
+            )}
+
+            {step === "email" && (
+              <div className="mt-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">이메일로 계속하기</p>
+                <h2 className="mt-3 text-[24px] font-black leading-tight">한 번에 로그인 · 가입</h2>
+                <p className="mt-2 text-[13px] text-ink-soft">
+                  이메일을 입력하면 <b className="text-ink">기존 회원은 로그인</b>, <b className="text-ink">처음이라면 가입</b>으로 자동 분기해드려요.
+                </p>
+
+                <div className="mt-5 grid gap-3">
+                  <Field
+                    label="이메일"
+                    type="email"
+                    value={emailPw.email}
+                    onChange={(v) => { setEmailPw((p) => ({ ...p, email: v })); setEmailErr(null); setEmailMode(null); }}
+                    placeholder="you@example.com"
+                  />
+                  <Field
+                    label="비밀번호"
+                    type="password"
+                    value={emailPw.password}
+                    onChange={(v) => { setEmailPw((p) => ({ ...p, password: v })); setEmailErr(null); }}
+                    placeholder="8자 이상"
+                  />
+                </div>
+
+                {emailErr && <p className="mt-3 text-[12px] font-bold text-destructive">{emailErr}</p>}
+
+                <button
+                  onClick={submitEmail}
+                  disabled={!emailPw.email || !emailPw.password}
+                  className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
+                >
+                  계속하기 <ArrowRight className="h-4 w-4" />
+                </button>
+
+                <p className="mt-4 text-center text-[11.5px] text-ink-soft">
+                  비밀번호를 잊으셨나요? <a className="text-primary font-bold hover:underline" href="#">재설정</a>
+                </p>
               </div>
             )}
 
