@@ -313,14 +313,10 @@ function Login() {
                 <div className="mt-5 grid gap-3">
                   <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" />
                   <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
-                  {method === "email" && (
-                    <>
-                      <Field label="비밀번호" type="password" value={emailPw.password} onChange={(v) => setEmailPw((p) => ({ ...p, password: v }))} placeholder="8자 이상" />
-                      <Field label="비밀번호 확인" type="password" value={emailPw.confirm} onChange={(v) => setEmailPw((p) => ({ ...p, confirm: v }))} placeholder="다시 한 번 입력" />
-                      {emailPw.password && emailPw.confirm && emailPw.password !== emailPw.confirm && (
-                        <p className="text-[11px] text-destructive font-bold">비밀번호가 일치하지 않아요</p>
-                      )}
-                    </>
+                  {method === "email" && emailPw.password && (
+                    <div className="rounded-xl bg-surface-muted border border-border px-3.5 py-2.5 text-[12px] text-ink-soft inline-flex items-center gap-2">
+                      <Check className="h-3.5 w-3.5 text-primary" /> 비밀번호가 설정되었어요
+                    </div>
                   )}
                   {role === "trainer" && (
                     <>
