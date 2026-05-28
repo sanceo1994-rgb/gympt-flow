@@ -74,7 +74,8 @@ export function LeftRail() {
 
 
       {/* Footer — legal links + business info */}
-      <div className="px-2 pt-2 pb-6 text-[10.5px] text-ink-soft">
+      <div className="px-2 pt-1 pb-2 text-[10.5px] text-ink-soft">
+
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <Link to="/" className="hover:text-ink">이용약관</Link>
           <span className="text-border">·</span>
