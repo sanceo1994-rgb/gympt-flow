@@ -36,7 +36,8 @@ export function RightRail() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 pr-1">
+
       {/* Top floating toast */}
       {toast && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[80] w-[min(520px,calc(100vw-24px))] animate-in fade-in slide-in-from-top-2">
