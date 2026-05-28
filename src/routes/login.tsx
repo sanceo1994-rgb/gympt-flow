@@ -4,6 +4,8 @@ import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X 
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
+import { OtterPicker } from "@/components/OtterPicker";
+
 
 
 export const Route = createFileRoute("/login")({
