@@ -613,10 +613,13 @@ function RoleCard({ title, sub, img, active, onClick, imgClass }: { title: strin
 }
 
 
-function Field({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+function Field({ label, value, onChange, placeholder, type = "text", hint }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; hint?: string }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">{label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft inline-flex items-center gap-2 flex-wrap">
+        {label}
+        {hint && <span className="text-[10.5px] font-medium normal-case tracking-normal text-muted-foreground">· {hint}</span>}
+      </span>
       <input
         type={type}
         value={value}
@@ -627,3 +630,4 @@ function Field({ label, value, onChange, placeholder, type = "text" }: { label: 
     </label>
   );
 }
+
