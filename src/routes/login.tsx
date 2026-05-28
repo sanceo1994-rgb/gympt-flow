@@ -4,6 +4,8 @@ import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X 
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
+import { OtterPicker } from "@/components/OtterPicker";
+
 
 
 export const Route = createFileRoute("/login")({
@@ -92,7 +94,7 @@ function Login() {
     // Signup branch — continue onboarding
     setEmailMode("signup");
     setProfile({ name: "", email: emailPw.email, avatar: "" });
-    setEmailPw((p) => ({ ...p, confirm: p.password }));
+    setEmailPw((p) => ({ ...p, confirm: "" }));
     setStep("consent");
   };
 
@@ -278,8 +280,9 @@ function Login() {
                 <p className="mt-2 text-[13px] text-ink-soft">나중에 언제든 바꿀 수 있어요.</p>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
-                  <RoleCard title="트레이너" sub="회원 일정 자동 조율" img={trainerImg} active={role === "trainer"} onClick={() => setRole("trainer")} />
+                  <RoleCard title="트레이너" sub="회원 일정 자동 조율" img={trainerImg} imgClass="h-[141px] w-[141px]" active={role === "trainer"} onClick={() => setRole("trainer")} />
                   <RoleCard title="회원" sub="원하는 시간 선택" img={studentImg} active={role === "student"} onClick={() => setRole("student")} />
+
                 </div>
 
                 <button
@@ -311,13 +314,25 @@ function Login() {
                 </div>
 
                 <div className="mt-5 grid gap-3">
-                  <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" />
+                  <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" hint="실명을 입력하면 트레이너/회원이 더 원활하게 알아볼 수 있어요" />
                   <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
-                  {method === "email" && emailPw.password && (
-                    <div className="rounded-xl bg-surface-muted border border-border px-3.5 py-2.5 text-[12px] text-ink-soft inline-flex items-center gap-2">
-                      <Check className="h-3.5 w-3.5 text-primary" /> 비밀번호가 설정되었어요
-                    </div>
+                  {method === "email" && (
+                    <>
+                      <Field label="비밀번호" type="password" value={emailPw.password} onChange={(v) => setEmailPw((p) => ({ ...p, password: v }))} placeholder="8자 이상" />
+                      <div>
+                        <Field label="비밀번호 확인" type="password" value={emailPw.confirm} onChange={(v) => setEmailPw((p) => ({ ...p, confirm: v }))} placeholder="한 번 더 입력해주세요" />
+                        {emailPw.confirm.length > 0 && (
+                          emailPw.password === emailPw.confirm ? (
+                            <p className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-bold text-emerald-600"><Check className="h-3.5 w-3.5" /> 비밀번호가 일치해요</p>
+                          ) : (
+                            <p className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-bold text-destructive"><X className="h-3.5 w-3.5" /> 비밀번호가 일치하지 않아요</p>
+                          )
+                        )}
+                      </div>
+                    </>
                   )}
+                  <OtterPicker value={profile.avatar} onChange={(url) => setProfile((p) => ({ ...p, avatar: url }))} />
+
                   {role === "trainer" && (
                     <>
                       <Field label="소속 헬스장 (지점)" value={trainerGym} onChange={setTrainerGym} placeholder="하이엔드 피트니스 강남점" />
@@ -419,7 +434,7 @@ function Login() {
 
                 <button
                   onClick={() => role === "trainer" ? setStep("preview") : completeSignup()}
-                  disabled={!profile.name || !profile.email || (method === "email" && !emailPw.password)}
+                  disabled={!profile.name || !profile.email || (method === "email" && (!emailPw.password || emailPw.password !== emailPw.confirm))}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
                   {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
@@ -579,14 +594,14 @@ function CheckRow({ label, checked, onChange, link, bold }: { label: string; che
   );
 }
 
-function RoleCard({ title, sub, img, active, onClick }: { title: string; sub: string; img: string; active: boolean; onClick: () => void }) {
+function RoleCard({ title, sub, img, active, onClick, imgClass }: { title: string; sub: string; img: string; active: boolean; onClick: () => void; imgClass?: string }) {
   return (
     <button
       onClick={onClick}
       className={`group relative rounded-2xl border-2 p-4 text-left transition bg-white ${active ? "border-primary shadow-pop -translate-y-0.5" : "border-border hover:border-ink/50"}`}
     >
       <div className="aspect-square w-full grid place-items-center overflow-hidden">
-        <img src={img} alt="" className="h-32 w-32 object-contain drop-shadow-md" />
+        <img src={img} alt="" className={`${imgClass ?? "h-32 w-32"} object-contain drop-shadow-md`} />
       </div>
       <h3 className="mt-1 text-[15px] font-black tracking-tight">{title}</h3>
       <p className="mt-0.5 text-[11.5px] text-ink-soft">{sub}</p>
@@ -597,10 +612,14 @@ function RoleCard({ title, sub, img, active, onClick }: { title: string; sub: st
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+
+function Field({ label, value, onChange, placeholder, type = "text", hint }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; hint?: string }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">{label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft inline-flex items-center gap-2 flex-wrap">
+        {label}
+        {hint && <span className="text-[10.5px] font-medium normal-case tracking-normal text-muted-foreground">· {hint}</span>}
+      </span>
       <input
         type={type}
         value={value}
@@ -611,3 +630,4 @@ function Field({ label, value, onChange, placeholder, type = "text" }: { label: 
     </label>
   );
 }
+

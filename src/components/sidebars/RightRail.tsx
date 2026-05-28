@@ -36,7 +36,8 @@ export function RightRail() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 pr-1">
+
       {/* Top floating toast */}
       {toast && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[80] w-[min(520px,calc(100vw-24px))] animate-in fade-in slide-in-from-top-2">
@@ -52,7 +53,7 @@ export function RightRail() {
 
       {/* User card */}
       {user ? (
-        <div className="rounded-2xl bg-white border border-border p-4">
+        <div className="rounded-2xl bg-white border border-border p-3.5">
           <div className="flex items-center gap-3">
             {avatar ? (
               <img src={avatar} alt="" className="h-12 w-12 rounded-full object-cover ring-2 ring-border" />
@@ -88,7 +89,7 @@ export function RightRail() {
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl bg-white border border-border p-4">
+        <div className="rounded-2xl bg-white border border-border p-3.5">
           <p className="text-[14px] font-extrabold text-ink">픽짐피티에 오신 걸 환영해요</p>
           <p className="mt-1 text-[12px] text-ink-soft">로그인하면 PT 일정과 내역을 한 번에 관리할 수 있어요.</p>
           <Link to="/login" className="mt-3 inline-flex h-9 items-center gap-1 px-4 rounded-full bg-ink text-white text-[12px] font-bold">
@@ -98,7 +99,7 @@ export function RightRail() {
       )}
 
       {/* Gym ranking */}
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="rounded-2xl border border-border bg-card p-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Trophy className="h-4 w-4 text-primary" />
@@ -130,7 +131,7 @@ export function RightRail() {
       </div>
 
       {/* Promo / invite */}
-      <div className="rounded-2xl bg-white border border-border p-4">
+      <div className="rounded-2xl bg-white border border-border p-3.5">
         <span className="inline-flex items-center px-2 h-5 rounded-full bg-ink text-white text-[10px] font-black tracking-widest">EVENT</span>
         <p className="mt-3 text-[15px] font-extrabold text-ink leading-tight">
           동료쌤 초대 +<br />Basic 14일 무료
@@ -147,7 +148,7 @@ export function RightRail() {
       </div>
 
       {/* Notice */}
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="rounded-2xl border border-border bg-card p-3.5">
         <div className="flex items-center gap-2">
           <Megaphone className="h-4 w-4 text-primary" />
           <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">공지</p>
@@ -156,14 +157,6 @@ export function RightRail() {
           <li className="flex gap-2">
             <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
             <p className="text-ink leading-snug">12월 알림톡 정책 변경 안내</p>
-          </li>
-          <li className="flex gap-2">
-            <span className="mt-1.5 h-1 w-1 rounded-full bg-muted-foreground shrink-0" />
-            <p className="text-ink-soft leading-snug">v2.4 업데이트 — AI 시간표 속도 개선</p>
-          </li>
-          <li className="flex gap-2">
-            <span className="mt-1.5 h-1 w-1 rounded-full bg-muted-foreground shrink-0" />
-            <p className="text-ink-soft leading-snug">단체 트레이너 요금제 베타 모집</p>
           </li>
         </ul>
       </div>
