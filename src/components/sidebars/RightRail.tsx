@@ -53,7 +53,7 @@ export function RightRail() {
 
       {/* User card */}
       {user ? (
-        <div className="rounded-2xl bg-white border border-border p-4">
+        <div className="rounded-2xl bg-white border border-border p-3.5">
           <div className="flex items-center gap-3">
             {avatar ? (
               <img src={avatar} alt="" className="h-12 w-12 rounded-full object-cover ring-2 ring-border" />
@@ -89,7 +89,7 @@ export function RightRail() {
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl bg-white border border-border p-4">
+        <div className="rounded-2xl bg-white border border-border p-3.5">
           <p className="text-[14px] font-extrabold text-ink">픽짐피티에 오신 걸 환영해요</p>
           <p className="mt-1 text-[12px] text-ink-soft">로그인하면 PT 일정과 내역을 한 번에 관리할 수 있어요.</p>
           <Link to="/login" className="mt-3 inline-flex h-9 items-center gap-1 px-4 rounded-full bg-ink text-white text-[12px] font-bold">
@@ -99,7 +99,7 @@ export function RightRail() {
       )}
 
       {/* Gym ranking */}
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="rounded-2xl border border-border bg-card p-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Trophy className="h-4 w-4 text-primary" />
@@ -131,7 +131,7 @@ export function RightRail() {
       </div>
 
       {/* Promo / invite */}
-      <div className="rounded-2xl bg-white border border-border p-4">
+      <div className="rounded-2xl bg-white border border-border p-3.5">
         <span className="inline-flex items-center px-2 h-5 rounded-full bg-ink text-white text-[10px] font-black tracking-widest">EVENT</span>
         <p className="mt-3 text-[15px] font-extrabold text-ink leading-tight">
           동료쌤 초대 +<br />Basic 14일 무료
@@ -148,7 +148,7 @@ export function RightRail() {
       </div>
 
       {/* Notice */}
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="rounded-2xl border border-border bg-card p-3.5">
         <div className="flex items-center gap-2">
           <Megaphone className="h-4 w-4 text-primary" />
           <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">공지</p>
