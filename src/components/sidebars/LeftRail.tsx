@@ -15,23 +15,21 @@ export function LeftRail() {
   const [bizOpen, setBizOpen] = useState(false);
 
   return (
-    <div className="space-y-3">
+    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 pr-1">
       {/* Brand / slogan — directly on gray, centered */}
-      <Link to="/" className="block px-4 pt-2 pb-3">
+      <Link to="/" className="block px-4 pt-1 pb-1">
         <div className="flex items-center justify-center">
-          <img src={logo} alt="픽짐피티" className="h-32 w-auto object-contain" />
+          <img src={logo} alt="픽짐피티" className="h-24 xl:h-28 w-auto object-contain" />
         </div>
-        <p className="-mt-3 text-center text-[14px] font-black text-ink leading-snug tracking-tight">
+        <p className="-mt-3 text-center text-[13px] font-black text-ink leading-snug tracking-tight">
           PT 일정 조율, <span className="text-primary">50배</span> 빠르게.
         </p>
       </Link>
 
-      <div className="h-1" />
-
       {/* Ad slot */}
-      <div className="rounded-2xl bg-white border border-border p-4">
+      <div className="rounded-2xl bg-white border border-border p-3.5">
         <span className="inline-flex items-center px-2 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-black tracking-widest">AD</span>
-        <p className="mt-3 text-[16px] font-extrabold text-ink leading-tight">
+        <p className="mt-2 text-[15px] font-extrabold text-ink leading-tight">
           픽짐피티 Pro<br />첫 달 50% 할인
         </p>
         <p className="mt-2 text-[12px] text-ink-soft leading-relaxed">
