@@ -278,8 +278,9 @@ function Login() {
                 <p className="mt-2 text-[13px] text-ink-soft">나중에 언제든 바꿀 수 있어요.</p>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
-                  <RoleCard title="트레이너" sub="회원 일정 자동 조율" img={trainerImg} active={role === "trainer"} onClick={() => setRole("trainer")} />
+                  <RoleCard title="트레이너" sub="회원 일정 자동 조율" img={trainerImg} imgClass="h-[141px] w-[141px]" active={role === "trainer"} onClick={() => setRole("trainer")} />
                   <RoleCard title="회원" sub="원하는 시간 선택" img={studentImg} active={role === "student"} onClick={() => setRole("student")} />
+
                 </div>
 
                 <button
