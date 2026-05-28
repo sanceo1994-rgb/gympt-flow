@@ -312,13 +312,25 @@ function Login() {
                 </div>
 
                 <div className="mt-5 grid gap-3">
-                  <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" />
+                  <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" hint="실명을 입력하면 트레이너/회원이 더 원활하게 알아볼 수 있어요" />
                   <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
-                  {method === "email" && emailPw.password && (
-                    <div className="rounded-xl bg-surface-muted border border-border px-3.5 py-2.5 text-[12px] text-ink-soft inline-flex items-center gap-2">
-                      <Check className="h-3.5 w-3.5 text-primary" /> 비밀번호가 설정되었어요
-                    </div>
+                  {method === "email" && (
+                    <>
+                      <Field label="비밀번호" type="password" value={emailPw.password} onChange={(v) => setEmailPw((p) => ({ ...p, password: v }))} placeholder="8자 이상" />
+                      <div>
+                        <Field label="비밀번호 확인" type="password" value={emailPw.confirm} onChange={(v) => setEmailPw((p) => ({ ...p, confirm: v }))} placeholder="한 번 더 입력해주세요" />
+                        {emailPw.confirm.length > 0 && (
+                          emailPw.password === emailPw.confirm ? (
+                            <p className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-bold text-emerald-600"><Check className="h-3.5 w-3.5" /> 비밀번호가 일치해요</p>
+                          ) : (
+                            <p className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-bold text-destructive"><X className="h-3.5 w-3.5" /> 비밀번호가 일치하지 않아요</p>
+                          )
+                        )}
+                      </div>
+                    </>
                   )}
+                  <OtterPicker value={profile.avatar} onChange={(url) => setProfile((p) => ({ ...p, avatar: url }))} />
+
                   {role === "trainer" && (
                     <>
                       <Field label="소속 헬스장 (지점)" value={trainerGym} onChange={setTrainerGym} placeholder="하이엔드 피트니스 강남점" />
