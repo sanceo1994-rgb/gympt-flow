@@ -579,14 +579,14 @@ function CheckRow({ label, checked, onChange, link, bold }: { label: string; che
   );
 }
 
-function RoleCard({ title, sub, img, active, onClick }: { title: string; sub: string; img: string; active: boolean; onClick: () => void }) {
+function RoleCard({ title, sub, img, active, onClick, imgClass }: { title: string; sub: string; img: string; active: boolean; onClick: () => void; imgClass?: string }) {
   return (
     <button
       onClick={onClick}
       className={`group relative rounded-2xl border-2 p-4 text-left transition bg-white ${active ? "border-primary shadow-pop -translate-y-0.5" : "border-border hover:border-ink/50"}`}
     >
       <div className="aspect-square w-full grid place-items-center overflow-hidden">
-        <img src={img} alt="" className="h-32 w-32 object-contain drop-shadow-md" />
+        <img src={img} alt="" className={`${imgClass ?? "h-32 w-32"} object-contain drop-shadow-md`} />
       </div>
       <h3 className="mt-1 text-[15px] font-black tracking-tight">{title}</h3>
       <p className="mt-0.5 text-[11.5px] text-ink-soft">{sub}</p>
@@ -596,6 +596,7 @@ function RoleCard({ title, sub, img, active, onClick }: { title: string; sub: st
     </button>
   );
 }
+
 
 function Field({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
   return (
