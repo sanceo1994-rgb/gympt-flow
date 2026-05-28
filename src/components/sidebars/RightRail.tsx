@@ -158,14 +158,6 @@ export function RightRail() {
             <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
             <p className="text-ink leading-snug">12월 알림톡 정책 변경 안내</p>
           </li>
-          <li className="flex gap-2">
-            <span className="mt-1.5 h-1 w-1 rounded-full bg-muted-foreground shrink-0" />
-            <p className="text-ink-soft leading-snug">v2.4 업데이트 — AI 시간표 속도 개선</p>
-          </li>
-          <li className="flex gap-2">
-            <span className="mt-1.5 h-1 w-1 rounded-full bg-muted-foreground shrink-0" />
-            <p className="text-ink-soft leading-snug">단체 트레이너 요금제 베타 모집</p>
-          </li>
         </ul>
       </div>
     </div>
