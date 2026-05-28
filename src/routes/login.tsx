@@ -94,7 +94,7 @@ function Login() {
     // Signup branch — continue onboarding
     setEmailMode("signup");
     setProfile({ name: "", email: emailPw.email, avatar: "" });
-    setEmailPw((p) => ({ ...p, confirm: p.password }));
+    setEmailPw((p) => ({ ...p, confirm: "" }));
     setStep("consent");
   };
 
