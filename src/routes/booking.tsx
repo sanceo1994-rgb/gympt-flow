@@ -267,24 +267,24 @@ function Booking() {
       </div>
 
       {/* Point reward banner */}
-      <div className="mt-4 rounded-2xl border border-[oklch(0.92_0.10_70)] bg-[oklch(0.98_0.04_70)] p-4 flex items-start gap-3">
-        <div className="h-9 w-9 rounded-xl bg-[oklch(0.85_0.15_70)] grid place-items-center shrink-0">
-          <Coffee className="h-4.5 w-4.5 text-[oklch(0.30_0.15_50)]" />
+      <div className="mt-4 rounded-2xl border border-border bg-white p-4 flex items-start gap-3">
+        <div className="h-9 w-9 rounded-xl bg-surface-muted border border-border grid place-items-center shrink-0">
+          <Coffee className="h-4.5 w-4.5 text-ink-soft" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="text-[13px] font-extrabold text-ink">
-              <span className="text-[oklch(0.45_0.18_50)]">픽짐피티 포인트</span> · 이번 주 {weekPoints}/10P 적립
+              <span className="text-ink-soft">픽짐피티 포인트</span> · 이번 주 {weekPoints}/10P 적립
             </p>
-            {weekPoints >= 10 && <span className="text-[10px] font-bold text-[oklch(0.45_0.18_50)]">이번 주 최대치 도달</span>}
+            {weekPoints >= 10 && <span className="text-[10px] font-bold text-ink-soft">이번 주 최대치 도달</span>}
           </div>
           <p className="mt-0.5 text-[12px] text-ink-soft leading-relaxed">
             <b className="text-ink">아무도 선택 안 한 시간</b>을 고르거나 <b className="text-ink">5개 이상</b>을 선택하면 +10P. 모아서 커피 한 잔 ☕
           </p>
           {!submitted && (hasEmpty || fivePlus) && weekPoints < 10 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {hasEmpty && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-white text-[oklch(0.45_0.18_50)] text-[11px] font-extrabold ring-1 ring-[oklch(0.85_0.15_70)]"><Sparkles className="h-3 w-3" /> 비어있는 시간 +10P 가능</span>}
-              {fivePlus && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-white text-[oklch(0.45_0.18_50)] text-[11px] font-extrabold ring-1 ring-[oklch(0.85_0.15_70)]"><Sparkles className="h-3 w-3" /> 5개 이상 +10P 가능</span>}
+              {hasEmpty && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-surface-muted text-ink text-[11px] font-extrabold ring-1 ring-border"><Sparkles className="h-3 w-3" /> 비어있는 시간 +10P 가능</span>}
+              {fivePlus && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-surface-muted text-ink text-[11px] font-extrabold ring-1 ring-border"><Sparkles className="h-3 w-3" /> 5개 이상 +10P 가능</span>}
             </div>
           )}
         </div>
