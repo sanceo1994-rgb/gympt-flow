@@ -676,3 +676,15 @@ function Field({ label, value, onChange, placeholder, type = "text", hint }: { l
   );
 }
 
+function pwStrong(pw: string): boolean {
+  return pw.length >= 8 && /[a-zA-Z]/.test(pw) && /\d/.test(pw) && /[^a-zA-Z0-9]/.test(pw);
+}
+
+function PwRule({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 h-6 rounded-full text-[11px] font-bold border ${ok ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-surface-muted text-ink-soft border-border"}`}>
+      {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />} {label}
+    </span>
+  );
+}
+
