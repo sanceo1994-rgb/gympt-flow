@@ -189,9 +189,11 @@ function Booking() {
               href="https://instagram.com/"
               target="_blank"
               rel="noreferrer"
-              className="ml-auto mt-10 sm:mt-0 h-9 px-3 sm:px-3.5 rounded-full bg-ink text-white text-[12px] font-bold inline-flex items-center gap-1.5 hover:brightness-110 self-start sm:self-end order-2 sm:order-3"
+              aria-label="인스타그램"
+              className="ml-auto mt-10 sm:mt-0 h-9 w-9 rounded-full text-white grid place-items-center hover:brightness-110 self-start sm:self-end order-2 sm:order-3 shadow-sm"
+              style={{ background: "radial-gradient(circle at 30% 110%, #FED373 0%, #F15245 35%, #D92E7F 60%, #9B36B7 85%, #515ECF 100%)" }}
             >
-              <Instagram className="h-3.5 w-3.5" /> <span className="hidden sm:inline">인스타그램</span>
+              <Instagram className="h-4 w-4" />
             </a>
             <div className="w-full sm:flex-1 sm:min-w-0 sm:pb-1.5 flex items-baseline gap-3 flex-wrap order-3 sm:order-2">
               <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">박재현 트레이너</h1>
@@ -216,13 +218,13 @@ function Booking() {
       </section>
 
       {/* Announcement */}
-      <section className="mt-3 rounded-2xl border border-primary/20 bg-primary/[0.04] p-4 sm:p-5 flex gap-3">
-        <div className="h-8 w-8 rounded-full bg-primary text-white grid place-items-center shrink-0">
+      <section className="mt-3 rounded-2xl border border-border bg-white p-4 sm:p-5 flex gap-3">
+        <div className="h-8 w-8 rounded-full bg-surface-muted text-ink-soft grid place-items-center shrink-0 border border-border">
           <Megaphone className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-primary">트레이너 공지</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">트레이너 공지</p>
             {isOwnerTrainer && (
               <button
                 onClick={() => { setAnnDraft(announcement); setAnnOpen(true); }}
@@ -265,24 +267,24 @@ function Booking() {
       </div>
 
       {/* Point reward banner */}
-      <div className="mt-4 rounded-2xl border border-[oklch(0.92_0.10_70)] bg-[oklch(0.98_0.04_70)] p-4 flex items-start gap-3">
-        <div className="h-9 w-9 rounded-xl bg-[oklch(0.85_0.15_70)] grid place-items-center shrink-0">
-          <Coffee className="h-4.5 w-4.5 text-[oklch(0.30_0.15_50)]" />
+      <div className="mt-4 rounded-2xl border border-border bg-white p-4 flex items-start gap-3">
+        <div className="h-9 w-9 rounded-xl bg-surface-muted border border-border grid place-items-center shrink-0">
+          <Coffee className="h-4.5 w-4.5 text-ink-soft" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="text-[13px] font-extrabold text-ink">
-              <span className="text-[oklch(0.45_0.18_50)]">픽짐피티 포인트</span> · 이번 주 {weekPoints}/10P 적립
+              <span className="text-ink-soft">픽짐피티 포인트</span> · 이번 주 {weekPoints}/10P 적립
             </p>
-            {weekPoints >= 10 && <span className="text-[10px] font-bold text-[oklch(0.45_0.18_50)]">이번 주 최대치 도달</span>}
+            {weekPoints >= 10 && <span className="text-[10px] font-bold text-ink-soft">이번 주 최대치 도달</span>}
           </div>
           <p className="mt-0.5 text-[12px] text-ink-soft leading-relaxed">
             <b className="text-ink">아무도 선택 안 한 시간</b>을 고르거나 <b className="text-ink">5개 이상</b>을 선택하면 +10P. 모아서 커피 한 잔 ☕
           </p>
           {!submitted && (hasEmpty || fivePlus) && weekPoints < 10 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {hasEmpty && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-white text-[oklch(0.45_0.18_50)] text-[11px] font-extrabold ring-1 ring-[oklch(0.85_0.15_70)]"><Sparkles className="h-3 w-3" /> 비어있는 시간 +10P 가능</span>}
-              {fivePlus && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-white text-[oklch(0.45_0.18_50)] text-[11px] font-extrabold ring-1 ring-[oklch(0.85_0.15_70)]"><Sparkles className="h-3 w-3" /> 5개 이상 +10P 가능</span>}
+              {hasEmpty && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-surface-muted text-ink text-[11px] font-extrabold ring-1 ring-border"><Sparkles className="h-3 w-3" /> 비어있는 시간 +10P 가능</span>}
+              {fivePlus && <span className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-surface-muted text-ink text-[11px] font-extrabold ring-1 ring-border"><Sparkles className="h-3 w-3" /> 5개 이상 +10P 가능</span>}
             </div>
           )}
         </div>
@@ -311,7 +313,7 @@ function Booking() {
           <span>많이 선택</span>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-ink-soft">
-          <span className="inline-flex items-center gap-1.5"><span className="h-3 w-5 rounded-sm bg-ink" /> 내 선택</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-3 w-5 rounded-sm bg-primary" /> 내 선택</span>
           <span className="inline-flex items-center gap-1.5"><Lock className="h-3 w-3" /> 닫힘</span>
         </div>
       </div>

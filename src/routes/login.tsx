@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X } from "lucide-react";
+import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Camera } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
-import { OtterPicker } from "@/components/OtterPicker";
+import { OTTER_PRESETS, otterDataUrl } from "@/components/OtterPicker";
+import { useRef } from "react";
 
 
 
@@ -33,6 +34,7 @@ const PALETTES: { id: string; label: string; from: string; to: string }[] = [
 function Login() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("method");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [method, setMethod] = useState<"kakao" | "email">("kakao");
   const [agree, setAgree] = useState({ tos: false, priv: false, age: false });
   const [role, setRole] = useState<Role | null>(null);
@@ -302,15 +304,58 @@ function Login() {
                   {method === "kakao" ? "카카오에서 받아온 정보예요. 필요하면 수정할 수 있어요." : "기본 정보를 입력해주세요."}
                 </p>
 
-                <div className="mt-5 flex items-center gap-3">
-                  {profile.avatar ? (
-                    <img src={profile.avatar} alt="" className="h-16 w-16 rounded-2xl bg-muted object-cover ring-2 ring-border" />
-                  ) : (
-                    <div className="h-16 w-16 rounded-2xl bg-surface-muted grid place-items-center text-[22px] font-black text-ink ring-2 ring-border">
-                      {profile.name?.[0] || "?"}
+                <div className="mt-5 flex items-start gap-3">
+                  <div className="relative shrink-0">
+                    {profile.avatar ? (
+                      <img src={profile.avatar} alt="" className="h-24 w-24 rounded-2xl bg-muted object-cover ring-2 ring-border" />
+                    ) : (
+                      <div className="h-24 w-24 rounded-2xl bg-surface-muted grid place-items-center text-[28px] font-black text-ink ring-2 ring-border">
+                        {profile.name?.[0] || "?"}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      aria-label="프로필 사진 업로드"
+                      className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-ink text-white grid place-items-center ring-2 ring-white shadow-md hover:brightness-110"
+                    >
+                      <Camera className="h-3.5 w-3.5" />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setProfile((p) => ({ ...p, avatar: String(reader.result || "") }));
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10.5px] font-extrabold uppercase tracking-wider text-ink-soft">기본 프로필 아이콘</p>
+                    <div className="mt-1.5 grid grid-cols-3 grid-rows-2 gap-1.5">
+                      {OTTER_PRESETS.map((preset) => {
+                        const url = otterDataUrl(preset);
+                        const active = profile.avatar === url;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => setProfile((p) => ({ ...p, avatar: url }))}
+                            title={preset.label}
+                            className={`h-10 w-10 rounded-xl overflow-hidden border-2 transition ${active ? "border-primary shadow-pop" : "border-transparent hover:border-border-strong"}`}
+                          >
+                            <img src={url} alt={preset.label} className="h-full w-full block" />
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
-                  <span className="chip bg-primary/10 text-primary">{role === "trainer" ? "트레이너" : "회원"}</span>
+                    <span className="mt-2 inline-flex chip bg-primary/10 text-primary">{role === "trainer" ? "트레이너" : "회원"}</span>
+                  </div>
                 </div>
 
                 <div className="mt-5 grid gap-3">
@@ -318,7 +363,17 @@ function Login() {
                   <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
                   {method === "email" && (
                     <>
-                      <Field label="비밀번호" type="password" value={emailPw.password} onChange={(v) => setEmailPw((p) => ({ ...p, password: v }))} placeholder="8자 이상" />
+                      <div>
+                        <Field label="비밀번호" type="password" value={emailPw.password} onChange={(v) => setEmailPw((p) => ({ ...p, password: v }))} placeholder="영문+숫자+특수문자, 8자 이상" />
+                        {emailPw.password.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            <PwRule ok={emailPw.password.length >= 8} label="8자 이상" />
+                            <PwRule ok={/[a-zA-Z]/.test(emailPw.password)} label="영문" />
+                            <PwRule ok={/\d/.test(emailPw.password)} label="숫자" />
+                            <PwRule ok={/[^a-zA-Z0-9]/.test(emailPw.password)} label="특수문자" />
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <Field label="비밀번호 확인" type="password" value={emailPw.confirm} onChange={(v) => setEmailPw((p) => ({ ...p, confirm: v }))} placeholder="한 번 더 입력해주세요" />
                         {emailPw.confirm.length > 0 && (
@@ -331,7 +386,7 @@ function Login() {
                       </div>
                     </>
                   )}
-                  <OtterPicker value={profile.avatar} onChange={(url) => setProfile((p) => ({ ...p, avatar: url }))} />
+
 
                   {role === "trainer" && (
                     <>
@@ -434,7 +489,7 @@ function Login() {
 
                 <button
                   onClick={() => role === "trainer" ? setStep("preview") : completeSignup()}
-                  disabled={!profile.name || !profile.email || (method === "email" && (!emailPw.password || emailPw.password !== emailPw.confirm))}
+                  disabled={!profile.name || !profile.email || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
                   {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
@@ -517,7 +572,7 @@ function TrainerPreview({
           <span className="absolute top-3 right-3 chip bg-white/20 text-white backdrop-blur">미니홈피 · {p.label}</span>
         </div>
         <div className="px-5 pb-5">
-          <div className="-mt-10">
+          <div className="-mt-10 relative z-10">
             {avatar ? (
               <img src={avatar} alt="" className="h-20 w-20 rounded-2xl object-cover ring-4 ring-white bg-muted" />
             ) : (
@@ -545,16 +600,6 @@ function TrainerPreview({
             <p className="mt-1.5 text-[13px] text-ink leading-relaxed whitespace-pre-wrap">
               {intro || "(아직 소개글이 비어있어요)"}
             </p>
-          </div>
-
-          {/* Mock schedule preview */}
-          <div className="mt-4 rounded-xl border border-border p-3">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">예약 가능 시간 (예시)</p>
-            <div className="mt-2 grid grid-cols-4 gap-1.5">
-              {["월 19시", "화 07시", "수 19시", "수 20시", "목 07시", "금 19시", "토 09시", "토 11시"].map((t, i) => (
-                <span key={i} className="text-center text-[11px] font-bold py-1.5 rounded-md text-white" style={{ background: i % 3 === 0 ? p.from : "rgba(0,0,0,0.7)" }}>{t}</span>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -628,6 +673,18 @@ function Field({ label, value, onChange, placeholder, type = "text", hint }: { l
         className="mt-1.5 h-11 w-full px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[14px] font-semibold text-ink"
       />
     </label>
+  );
+}
+
+function pwStrong(pw: string): boolean {
+  return pw.length >= 8 && /[a-zA-Z]/.test(pw) && /\d/.test(pw) && /[^a-zA-Z0-9]/.test(pw);
+}
+
+function PwRule({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 h-6 rounded-full text-[11px] font-bold border ${ok ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-surface-muted text-ink-soft border-border"}`}>
+      {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />} {label}
+    </span>
   );
 }
 
