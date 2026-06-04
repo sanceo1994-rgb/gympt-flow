@@ -572,7 +572,7 @@ function TrainerPreview({
           <span className="absolute top-3 right-3 chip bg-white/20 text-white backdrop-blur">미니홈피 · {p.label}</span>
         </div>
         <div className="px-5 pb-5">
-          <div className="-mt-10">
+          <div className="-mt-10 relative z-10">
             {avatar ? (
               <img src={avatar} alt="" className="h-20 w-20 rounded-2xl object-cover ring-4 ring-white bg-muted" />
             ) : (
@@ -600,16 +600,6 @@ function TrainerPreview({
             <p className="mt-1.5 text-[13px] text-ink leading-relaxed whitespace-pre-wrap">
               {intro || "(아직 소개글이 비어있어요)"}
             </p>
-          </div>
-
-          {/* Mock schedule preview */}
-          <div className="mt-4 rounded-xl border border-border p-3">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">예약 가능 시간 (예시)</p>
-            <div className="mt-2 grid grid-cols-4 gap-1.5">
-              {["월 19시", "화 07시", "수 19시", "수 20시", "목 07시", "금 19시", "토 09시", "토 11시"].map((t, i) => (
-                <span key={i} className="text-center text-[11px] font-bold py-1.5 rounded-md text-white" style={{ background: i % 3 === 0 ? p.from : "rgba(0,0,0,0.7)" }}>{t}</span>
-              ))}
-            </div>
           </div>
         </div>
       </div>
