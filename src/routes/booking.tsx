@@ -218,8 +218,8 @@ function Booking() {
       </section>
 
       {/* Announcement */}
-      <section className="mt-3 rounded-2xl border border-primary/20 bg-primary/[0.04] p-4 sm:p-5 flex gap-3">
-        <div className="h-8 w-8 rounded-full bg-primary text-white grid place-items-center shrink-0">
+      <section className="mt-3 rounded-2xl border border-border bg-white p-4 sm:p-5 flex gap-3">
+        <div className="h-8 w-8 rounded-full bg-surface-muted text-ink-soft grid place-items-center shrink-0 border border-border">
           <Megaphone className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
