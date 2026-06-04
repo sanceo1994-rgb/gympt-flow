@@ -224,7 +224,7 @@ function Booking() {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-primary">트레이너 공지</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">트레이너 공지</p>
             {isOwnerTrainer && (
               <button
                 onClick={() => { setAnnDraft(announcement); setAnnOpen(true); }}
