@@ -189,9 +189,11 @@ function Booking() {
               href="https://instagram.com/"
               target="_blank"
               rel="noreferrer"
-              className="ml-auto mt-10 sm:mt-0 h-9 px-3 sm:px-3.5 rounded-full bg-ink text-white text-[12px] font-bold inline-flex items-center gap-1.5 hover:brightness-110 self-start sm:self-end order-2 sm:order-3"
+              aria-label="인스타그램"
+              className="ml-auto mt-10 sm:mt-0 h-9 w-9 rounded-full text-white grid place-items-center hover:brightness-110 self-start sm:self-end order-2 sm:order-3 shadow-sm"
+              style={{ background: "radial-gradient(circle at 30% 110%, #FED373 0%, #F15245 35%, #D92E7F 60%, #9B36B7 85%, #515ECF 100%)" }}
             >
-              <Instagram className="h-3.5 w-3.5" /> <span className="hidden sm:inline">인스타그램</span>
+              <Instagram className="h-4 w-4" />
             </a>
             <div className="w-full sm:flex-1 sm:min-w-0 sm:pb-1.5 flex items-baseline gap-3 flex-wrap order-3 sm:order-2">
               <h1 className="text-[20px] sm:text-[22px] font-black text-ink leading-tight">박재현 트레이너</h1>
