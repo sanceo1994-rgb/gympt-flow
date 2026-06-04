@@ -34,6 +34,7 @@ const PALETTES: { id: string; label: string; from: string; to: string }[] = [
 function Login() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("method");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [method, setMethod] = useState<"kakao" | "email">("kakao");
   const [agree, setAgree] = useState({ tos: false, priv: false, age: false });
   const [role, setRole] = useState<Role | null>(null);
