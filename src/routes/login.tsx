@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X } from "lucide-react";
+import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Camera } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
-import { OtterPicker } from "@/components/OtterPicker";
+import { OTTER_PRESETS, otterDataUrl } from "@/components/OtterPicker";
+import { useRef } from "react";
 
 
 
