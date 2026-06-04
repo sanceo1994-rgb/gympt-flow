@@ -313,7 +313,7 @@ function Booking() {
           <span>많이 선택</span>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-ink-soft">
-          <span className="inline-flex items-center gap-1.5"><span className="h-3 w-5 rounded-sm bg-ink" /> 내 선택</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-3 w-5 rounded-sm bg-primary" /> 내 선택</span>
           <span className="inline-flex items-center gap-1.5"><Lock className="h-3 w-3" /> 닫힘</span>
         </div>
       </div>
