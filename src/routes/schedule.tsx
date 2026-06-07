@@ -989,20 +989,41 @@ function Schedule() {
       {/* Floating invite bar — primary CTA, hidden when pendingClose bar overlays it */}
       {pendingClose.size === 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[min(720px,calc(100vw-24px))]">
-          <div className="rounded-2xl bg-primary text-white shadow-pop p-3 flex items-center gap-2.5">
-            <span className="h-11 w-11 rounded-xl bg-[#FEE500] grid place-items-center shrink-0">
-              <MessageCircle className="h-5 w-5 fill-[#191600] text-[#191600]" />
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-extrabold leading-tight">가장 먼저 할 일 · {WEEK_LABELS[weekOffset]} 가능 시간을 학생에게 물어보세요</p>
-              <p className="text-[11px] text-white/80 mt-0.5 leading-snug">응답이 모여야 AI가 최적 시간표를 짤 수 있어요. 지금 바로 카톡으로 한 번에 요청 보내기!</p>
+          {requestSentWeek === weekOffset ? (
+            <div className="rounded-2xl bg-ink text-white shadow-pop p-3 flex items-center gap-2.5">
+              <span className="h-11 w-11 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-extrabold leading-tight">
+                  {WEEK_LABELS[weekOffset]} 응답 현황 · {STUDENTS.length}명에게 알림 발송됨
+                </p>
+                <p className="text-[11px] text-white/70 mt-0.5 leading-snug tabular-nums">
+                  <b className="text-white">{STUDENTS.filter(s=>s.status!=="응답대기").length}명</b> 시간 선택 완료 · <b className="text-primary">{AI_RESULT_INIT.length}명</b> 자동 배정됨 · <b className="text-white">{pendingResponders.length}명</b> 응답 대기
+                </p>
+              </div>
+              <button
+                onClick={() => { setPanel("confirm"); setPanelWeek(weekOffset); setPanelSelected(new Set(STUDENTS.map((s) => s.name))); }}
+                className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-110">
+                <Check className="h-3.5 w-3.5" /> 확정 알림 보내기
+              </button>
             </div>
-            <button
-              onClick={() => setInviteIntent(true)}
-              className="h-11 px-4 rounded-xl bg-ink text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-125">
-              <Send className="h-3.5 w-3.5" /> 요청 보내기
-            </button>
-          </div>
+          ) : (
+            <div className="rounded-2xl bg-primary text-white shadow-pop p-3 flex items-center gap-2.5">
+              <span className="h-11 w-11 rounded-xl bg-[#FEE500] grid place-items-center shrink-0">
+                <MessageCircle className="h-5 w-5 fill-[#191600] text-[#191600]" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-extrabold leading-tight">가장 먼저 할 일 · {WEEK_LABELS[weekOffset]} 가능 시간을 학생에게 물어보세요</p>
+                <p className="text-[11px] text-white/80 mt-0.5 leading-snug">응답이 모여야 AI가 최적 시간표를 짤 수 있어요. 지금 바로 카톡으로 한 번에 요청 보내기!</p>
+              </div>
+              <button
+                onClick={() => setInviteIntent(true)}
+                className="h-11 px-4 rounded-xl bg-ink text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-125">
+                <Send className="h-3.5 w-3.5" /> 요청 보내기
+              </button>
+            </div>
+          )}
         </div>
       )}
 
