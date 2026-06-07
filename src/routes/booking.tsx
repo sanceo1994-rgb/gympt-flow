@@ -73,6 +73,7 @@ function Booking() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [confirmUnavail, setConfirmUnavail] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [editConfirm, setEditConfirm] = useState(false);
   const [toast, setToast] = useState<{ title: string; sub?: string } | null>(null);
   const [weekPoints, setWeekPoints] = useState<number>(0);
 
