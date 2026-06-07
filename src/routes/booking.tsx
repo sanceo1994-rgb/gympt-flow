@@ -455,28 +455,44 @@ function Booking() {
           </div>
         )}
         <div className={`rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5 transition ${willEarn ? "ring-2 ring-emerald-500" : ""}`}>
-          <button onClick={onUnavailableClick} className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"}`}>
-            <Ban className="h-3.5 w-3.5" /> {unavailable ? "PT 불가 ON" : "PT 불가"}
-          </button>
+          <div className={`flex-1 min-w-0 flex items-center gap-2.5 transition ${submitted ? "opacity-55 pointer-events-none" : ""}`}>
+            <button onClick={onUnavailableClick} className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"}`}>
+              <Ban className="h-3.5 w-3.5" /> {unavailable ? "PT 불가 ON" : "PT 불가"}
+            </button>
 
-          <div className="flex-1 min-w-0">
-            {unavailable ? (
-              <p className="text-[13px] font-semibold">이번 주는 PT가 어려워요. 트레이너에게 자동으로 전달됩니다.</p>
-            ) : selectedList.length === 0 ? (
-              <p className="text-[12px] text-white/70">가능한 시간을 <b className="text-white">원하는 만큼</b> 골라주세요.</p>
-            ) : (
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                {selectedList.map((s) => (
-                  <span key={s} className="shrink-0 inline-flex items-center gap-1.5 pl-2.5 pr-1.5 h-7 rounded-full bg-white/15 text-white text-[12px] font-bold">
-                    {s.replace("-", " ")}시
-                    <button onClick={(e) => { e.stopPropagation(); setSelected((p) => { const n = new Set(p); n.delete(s); return n; }); }} className="opacity-70 hover:opacity-100"><X className="h-3 w-3" /></button>
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="flex-1 min-w-0">
+              {submitted ? (
+                <p className="text-[12.5px] font-semibold text-white/90 inline-flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-emerald-300" />
+                  {unavailable
+                    ? "‘이번 주 PT 불가’로 트레이너에게 전달됐어요"
+                    : `${selectedList.length}개 시간이 트레이너에게 전달됐어요`}
+                </p>
+              ) : unavailable ? (
+                <p className="text-[13px] font-semibold">이번 주는 PT가 어려워요. 트레이너에게 자동으로 전달됩니다.</p>
+              ) : selectedList.length === 0 ? (
+                <p className="text-[12px] text-white/70">가능한 시간을 <b className="text-white">원하는 만큼</b> 골라주세요.</p>
+              ) : (
+                <div className="flex items-center gap-1.5 overflow-x-auto">
+                  {selectedList.map((s) => (
+                    <span key={s} className="shrink-0 inline-flex items-center gap-1.5 pl-2.5 pr-1.5 h-7 rounded-full bg-white/15 text-white text-[12px] font-bold">
+                      {s.replace("-", " ")}시
+                      <button onClick={(e) => { e.stopPropagation(); setSelected((p) => { const n = new Set(p); n.delete(s); return n; }); }} className="opacity-70 hover:opacity-100"><X className="h-3 w-3" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          <button onClick={handleSubmit} disabled={!unavailable && selectedList.length === 0} className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 disabled:opacity-40 hover:brightness-110">
+          <button
+            onClick={() => {
+              if (submitted) setEditConfirm(true);
+              else handleSubmit();
+            }}
+            disabled={!submitted && !unavailable && selectedList.length === 0}
+            className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 disabled:opacity-40 hover:brightness-110"
+          >
             {submitted ? "수정 제출" : "제출"} <Check className="h-4 w-4" />
           </button>
         </div>
