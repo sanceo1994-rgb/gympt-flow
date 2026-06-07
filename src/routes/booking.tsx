@@ -218,8 +218,8 @@ function Booking() {
       </section>
 
       {/* Announcement */}
-      <section className="mt-3 rounded-2xl border border-border bg-white p-4 sm:p-5 flex gap-3">
-        <div className="h-8 w-8 rounded-full bg-surface-muted text-ink-soft grid place-items-center shrink-0 border border-border">
+      <section className="mt-3 rounded-2xl border-2 border-border-strong bg-white p-4 sm:p-5 flex gap-3">
+        <div className="h-9 w-9 rounded-full bg-[oklch(0.95_0.08_240)] text-[oklch(0.45_0.18_240)] grid place-items-center shrink-0 border border-[oklch(0.80_0.10_240)]">
           <Megaphone className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
@@ -267,9 +267,9 @@ function Booking() {
       </div>
 
       {/* Point reward banner */}
-      <div className="mt-4 rounded-2xl border border-border bg-white p-4 flex items-start gap-3">
-        <div className="h-9 w-9 rounded-xl bg-surface-muted border border-border grid place-items-center shrink-0">
-          <Coffee className="h-4.5 w-4.5 text-ink-soft" />
+      <div className="mt-4 rounded-2xl border-2 border-border-strong bg-white p-4 flex items-start gap-3">
+        <div className="h-9 w-9 rounded-xl bg-[oklch(0.95_0.08_75)] border border-[oklch(0.80_0.12_75)] grid place-items-center shrink-0">
+          <Coffee className="h-4.5 w-4.5 text-[oklch(0.50_0.15_55)]" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
