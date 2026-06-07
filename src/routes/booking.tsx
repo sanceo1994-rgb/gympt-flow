@@ -73,6 +73,7 @@ function Booking() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [confirmUnavail, setConfirmUnavail] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [editConfirm, setEditConfirm] = useState(false);
   const [toast, setToast] = useState<{ title: string; sub?: string } | null>(null);
   const [weekPoints, setWeekPoints] = useState<number>(0);
 
@@ -454,28 +455,44 @@ function Booking() {
           </div>
         )}
         <div className={`rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-2.5 transition ${willEarn ? "ring-2 ring-emerald-500" : ""}`}>
-          <button onClick={onUnavailableClick} className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"}`}>
-            <Ban className="h-3.5 w-3.5" /> {unavailable ? "PT 불가 ON" : "PT 불가"}
-          </button>
+          <div className={`flex-1 min-w-0 flex items-center gap-2.5 transition ${submitted ? "opacity-55 pointer-events-none" : ""}`}>
+            <button onClick={onUnavailableClick} className={`h-11 px-3 rounded-xl text-[12px] font-bold inline-flex items-center gap-1 shrink-0 transition ${unavailable ? "bg-destructive text-white" : "bg-destructive/15 text-destructive hover:bg-destructive/25"}`}>
+              <Ban className="h-3.5 w-3.5" /> {unavailable ? "PT 불가 ON" : "PT 불가"}
+            </button>
 
-          <div className="flex-1 min-w-0">
-            {unavailable ? (
-              <p className="text-[13px] font-semibold">이번 주는 PT가 어려워요. 트레이너에게 자동으로 전달됩니다.</p>
-            ) : selectedList.length === 0 ? (
-              <p className="text-[12px] text-white/70">가능한 시간을 <b className="text-white">원하는 만큼</b> 골라주세요.</p>
-            ) : (
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                {selectedList.map((s) => (
-                  <span key={s} className="shrink-0 inline-flex items-center gap-1.5 pl-2.5 pr-1.5 h-7 rounded-full bg-white/15 text-white text-[12px] font-bold">
-                    {s.replace("-", " ")}시
-                    <button onClick={(e) => { e.stopPropagation(); setSelected((p) => { const n = new Set(p); n.delete(s); return n; }); }} className="opacity-70 hover:opacity-100"><X className="h-3 w-3" /></button>
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="flex-1 min-w-0">
+              {submitted ? (
+                <p className="text-[12.5px] font-semibold text-white/90 inline-flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-emerald-300" />
+                  {unavailable
+                    ? "‘이번 주 PT 불가’로 트레이너에게 전달됐어요"
+                    : `${selectedList.length}개 시간이 트레이너에게 전달됐어요`}
+                </p>
+              ) : unavailable ? (
+                <p className="text-[13px] font-semibold">이번 주는 PT가 어려워요. 트레이너에게 자동으로 전달됩니다.</p>
+              ) : selectedList.length === 0 ? (
+                <p className="text-[12px] text-white/70">가능한 시간을 <b className="text-white">원하는 만큼</b> 골라주세요.</p>
+              ) : (
+                <div className="flex items-center gap-1.5 overflow-x-auto">
+                  {selectedList.map((s) => (
+                    <span key={s} className="shrink-0 inline-flex items-center gap-1.5 pl-2.5 pr-1.5 h-7 rounded-full bg-white/15 text-white text-[12px] font-bold">
+                      {s.replace("-", " ")}시
+                      <button onClick={(e) => { e.stopPropagation(); setSelected((p) => { const n = new Set(p); n.delete(s); return n; }); }} className="opacity-70 hover:opacity-100"><X className="h-3 w-3" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          <button onClick={handleSubmit} disabled={!unavailable && selectedList.length === 0} className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 disabled:opacity-40 hover:brightness-110">
+          <button
+            onClick={() => {
+              if (submitted) setEditConfirm(true);
+              else handleSubmit();
+            }}
+            disabled={!submitted && !unavailable && selectedList.length === 0}
+            className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 disabled:opacity-40 hover:brightness-110"
+          >
             {submitted ? "수정 제출" : "제출"} <Check className="h-4 w-4" />
           </button>
         </div>
@@ -551,7 +568,44 @@ function Booking() {
         </DialogContent>
       </Dialog>
 
-      {/* Toasts */}
+      {/* Edit (modify submission) confirm */}
+      <Dialog open={editConfirm} onOpenChange={setEditConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="h-10 w-10 rounded-full bg-primary/15 text-primary grid place-items-center mb-2">
+              <Check className="h-5 w-5" />
+            </div>
+            <DialogTitle className="text-[18px] font-black">시간을 수정하시겠어요?</DialogTitle>
+            <DialogDescription className="leading-relaxed">
+              {unavailable ? (
+                <>현재 <b className="text-ink">‘이번 주 PT 불가’</b>로 전달된 상태예요. 수정하면 다시 시간을 선택하거나 PT 불가를 재설정할 수 있어요.</>
+              ) : (
+                <>이미 선택해 보낸 시간은 <b className="text-ink">{selectedList.length}개</b>예요. 수정하면 다시 시간을 고르거나 PT 불가로 바꿀 수 있고, 변경 후 다시 제출하면 트레이너에게 새 응답으로 전달돼요.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {!unavailable && selectedList.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+              {selectedList.map((s) => (
+                <span key={s} className="inline-flex items-center h-7 px-2.5 rounded-full bg-surface-muted border border-border text-ink text-[12px] font-bold">
+                  {s.replace("-", " ")}시
+                </span>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <button onClick={() => setEditConfirm(false)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
+            <button
+              onClick={() => { setSubmitted(false); setEditConfirm(false); }}
+              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-bold shadow-pop"
+            >
+              네, 수정할게요
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
           <div className="rounded-2xl bg-ink text-white px-4 py-3 shadow-pop flex items-center gap-2.5 min-w-[280px]">
