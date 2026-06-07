@@ -146,6 +146,7 @@ function Schedule() {
   const [sendToast, setSendToast] = useState<string | null>(null);
   const [notifyConfirm, setNotifyConfirm] = useState<{ name: string; scope: "individual" | "remind" } | null>(null);
   const [inviteIntent, setInviteIntent] = useState(false);
+  const [requestSentWeek, setRequestSentWeek] = useState<number | null>(null);
 
   // Right-side panel for "요청 보내기" / "확정 알림"
   const [panel, setPanel] = useState<null | "invite" | "confirm">(null);
