@@ -558,7 +558,7 @@ function Schedule() {
                       className={`relative min-h-[52px] sm:min-h-[68px] border-b border-l border-border transition group text-left p-1 sm:p-1.5
                         ${willBeClosed && !isPending ? "bg-muted text-muted-foreground/50" : ""}
                         ${!willBeClosed ? `heat-${lvl}` : ""}
-                        ${isPending ? "ring-2 ring-primary ring-inset bg-primary/10" : ""}
+                        ${isPending ? "ring-2 ring-ink-soft/60 ring-inset bg-ink-soft/10" : ""}
                         hover:ring-2 hover:ring-ink/40 hover:ring-inset
                       `}
                     >
@@ -581,7 +581,7 @@ function Schedule() {
                         </>
                       ) : null}
                       {isPending && (
-                        <span className="absolute top-1 right-1 h-4 px-1 rounded bg-primary text-white text-[8px] font-extrabold grid place-items-center">
+                        <span className="absolute top-1 right-1 h-4 px-1 rounded bg-ink-soft text-white text-[8px] font-extrabold grid place-items-center">
                           {isClosed ? "열기" : "닫기"}
                         </span>
                       )}
