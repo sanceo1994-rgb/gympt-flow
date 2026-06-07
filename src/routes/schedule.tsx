@@ -260,6 +260,7 @@ function Schedule() {
     const all = count === STUDENTS.length;
     if (panel === "invite") {
       fireToast(all ? `전원에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓` : `${count}명에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`);
+      setRequestSentWeek(panelWeek);
     } else {
       fireToast(all ? `전원에게 확정 알림 발송 ✓` : `${count}명에게 확정 알림 발송 ✓`);
     }
