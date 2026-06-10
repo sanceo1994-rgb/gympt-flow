@@ -8,10 +8,10 @@ export const Route = createFileRoute("/pricing")({
 });
 
 const PLANS = [
-  { name: "Free", price: 0, students: 3, msgs: 30, sub: "처음 사용하는 트레이너" },
-  { name: "Mini", price: 5900, students: 7, msgs: 100, sub: "소규모로 시작하는 1:1 PT" },
-  { name: "Basic", price: 9900, students: 15, msgs: 220, sub: "가장 많이 선택하는 플랜", hot: true },
-  { name: "Pro", price: 19900, students: 40, msgs: 600, sub: "풀타임 트레이너에게" },
+  { name: "Free", price: 0, students: 3, msgs: 20, sub: "처음 사용하는 트레이너" },
+  { name: "Mini", price: 19000, students: 5, msgs: 80, overage: "초과 알림톡 100건당 3,000원", sub: "소규모로 시작하는 1:1 PT" },
+  { name: "Basic", price: 39000, students: 10, msgs: 200, overage: "초과 알림톡 100건당 2,500원", sub: "가장 많이 선택하는 플랜", hot: true },
+  { name: "Pro", price: 79000, students: 20, msgs: 500, overage: "초과 알림톡 100건당 2,000원", sub: "풀타임 트레이너에게", proBadge: true },
 ];
 
 function Pricing() {
