@@ -139,6 +139,10 @@ function Booking() {
     setUnavailable(true);
     setSelected(new Set());
     setConfirmUnavail(false);
+    // 팝업 확인 즉시 제출 처리
+    setSubmitted(true);
+    setToast({ title: "‘이번 주 PT 불가’로 전달했어요" });
+    setTimeout(() => setToast(null), 2400);
   };
 
   const selectedList = useMemo(() => Array.from(selected), [selected]);

@@ -341,10 +341,10 @@ function MockPreview() {
 
 function PricingPreview() {
   const plans = [
-    { name: "Free", price: "0", students: 3, msgs: 30 },
-    { name: "Mini", price: "5,900", students: 7, msgs: 100 },
-    { name: "Basic", price: "9,900", students: 15, msgs: 220, hot: true },
-    { name: "Pro", price: "19,900", students: 40, msgs: 600 },
+    { name: "Free", price: "0", students: 3, msgs: 20 },
+    { name: "Mini", price: "19,000", students: 5, msgs: 80, overage: "초과 100건당 3,000원" },
+    { name: "Basic", price: "39,000", students: 10, msgs: 200, overage: "초과 100건당 2,500원", hot: true },
+    { name: "Pro", price: "79,000", students: 20, msgs: 500, overage: "초과 100건당 2,000원", proBadge: true },
   ];
   return (
     <section className="mt-14">
@@ -352,16 +352,18 @@ function PricingPreview() {
       <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {plans.map((p, i) => (
           <Reveal key={p.name} variant="fade-up" delay={i * 110}>
-            <div className={`relative rounded-2xl p-5 h-full transition-transform hover:-translate-y-1 ${p.hot ? "bg-ink text-white" : "bg-card border border-border"}`}>
+            <div className={`relative rounded-2xl p-5 h-full transition-transform hover:-translate-y-1 ${p.hot ? "bg-ink text-white" : p.proBadge ? "bg-card border-2 border-primary shadow-pink" : "bg-card border border-border"}`}>
               {p.hot && <span className="absolute -top-2 right-4 chip bg-primary text-white">인기</span>}
+              {p.proBadge && <span className="absolute -top-2 right-4 chip bg-primary text-white inline-flex items-center gap-1">✨ PRO 전용 뱃지</span>}
               <p className={`text-[12px] font-bold ${p.hot ? "text-white/70" : "text-ink-soft"}`}>{p.name}</p>
               <p className="mt-2 text-[24px] font-black">
                 {p.price === "0" ? "무료" : <>₩{p.price}<span className={`text-[12px] font-semibold ${p.hot ? "text-white/60" : "text-muted-foreground"}`}>/월</span></>}
               </p>
               <ul className={`mt-3 space-y-1.5 text-[13px] ${p.hot ? "text-white/85" : "text-ink-soft"}`}>
-                <li>학생 {p.students}명</li>
-                <li>알림 {p.msgs}건/월</li>
-                <li>AI 최적 시간표</li>
+                <li>관리 학생 {p.students}명</li>
+                <li>알림톡 {p.msgs}건/월</li>
+                {p.overage && <li className={p.hot ? "text-white/70" : "text-muted-foreground"}>{p.overage}</li>}
+                {p.proBadge && <li className="text-primary font-extrabold">프로 전용 특별 뱃지</li>}
               </ul>
             </div>
           </Reveal>
