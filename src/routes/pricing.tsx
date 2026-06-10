@@ -27,8 +27,13 @@ function Pricing() {
 
       <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {PLANS.map((p) => (
-          <div key={p.name} className={`relative rounded-2xl p-6 flex flex-col ${p.hot ? "bg-ink text-white" : "bg-card border border-border"}`}>
+          <div key={p.name} className={`relative rounded-2xl p-6 flex flex-col ${p.hot ? "bg-ink text-white" : p.proBadge ? "bg-card border-2 border-primary shadow-pink" : "bg-card border border-border"}`}>
             {p.hot && <span className="absolute -top-3 left-1/2 -translate-x-1/2 chip bg-primary text-white">가장 인기</span>}
+            {p.proBadge && (
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-gradient-to-r from-primary to-[#FF6BA8] text-white text-[11px] font-black tracking-wide shadow-pink">
+                ✨ PRO 전용 특별 뱃지
+              </span>
+            )}
             <p className={`text-[13px] font-bold ${p.hot ? "text-white/70" : "text-ink-soft"}`}>{p.name}</p>
             <p className="mt-2">
               <span className={`text-[32px] font-black ${p.hot ? "text-white" : "text-ink"}`}>
@@ -39,14 +44,20 @@ function Pricing() {
             <p className={`mt-1 text-[12px] ${p.hot ? "text-white/70" : "text-muted-foreground"}`}>{p.sub}</p>
 
             <ul className={`mt-5 space-y-2 text-[13px] flex-1 ${p.hot ? "text-white/90" : "text-ink-soft"}`}>
-              <Li>학생 {p.students}명</Li>
-              <Li>알림톡 {p.msgs}건/월</Li>
+              <Li>관리 학생 최대 {p.students}명</Li>
+              <Li>알림톡 월 {p.msgs}건</Li>
+              {p.overage && <Li>{p.overage}</Li>}
               <Li>AI 최적 시간표</Li>
               <Li>예약 링크 무제한</Li>
-              <Li>주간 리포트</Li>
+              {p.proBadge && (
+                <li className="flex items-start gap-2 pt-2 mt-2 border-t border-border">
+                  <span className="mt-0.5 inline-flex h-5 px-2 rounded-full bg-gradient-to-r from-primary to-[#FF6BA8] text-white text-[10px] font-black items-center shrink-0">PRO 전용</span>
+                  <span className="font-extrabold text-primary">프로필에 표시되는 특별 뱃지</span>
+                </li>
+              )}
             </ul>
 
-            <button className={`mt-6 h-11 rounded-full font-bold text-[13px] ${p.hot ? "bg-primary text-white" : p.price === 0 ? "bg-card border border-border-strong text-ink" : "bg-ink text-white"}`}>
+            <button className={`mt-6 h-11 rounded-full font-bold text-[13px] ${p.hot ? "bg-primary text-white" : p.proBadge ? "bg-gradient-to-r from-primary to-[#FF6BA8] text-white shadow-pink" : p.price === 0 ? "bg-card border border-border-strong text-ink" : "bg-ink text-white"}`}>
               {p.price === 0 ? "무료로 시작하기" : `${p.name} 시작하기`}
             </button>
           </div>
