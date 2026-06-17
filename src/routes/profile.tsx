@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Check, Pencil, CreditCard, Gift, Copy, Sparkles, CalendarClock, MessageSquare, Receipt, Zap, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "내 정보 — 픽짐피티" }] }),
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/profile")({
 function ProfilePage() {
   const { user } = useAuth();
   const meta = (user?.user_metadata ?? {}) as { name?: string; avatar_url?: string; role?: string; verified?: boolean };
-  const role = (meta.role as "trainer" | "student" | undefined) ?? "student";
+  const [role, setRole] = useState<"trainer" | "student">((meta.role as "trainer" | "student" | undefined) ?? "student");
   const isVerified = meta.verified !== false; // default true (first 100 trainers)
 
   const [editMode, setEditMode] = useState(false);
@@ -65,10 +66,69 @@ function ProfilePage() {
     setEmail(user?.email ?? "");
   }, [user]);
 
-  const save = () => {
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    async function loadProfile() {
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!cancelled && (roleRow?.role === "trainer" || roleRow?.role === "student")) {
+        setRole(roleRow.role);
+      }
+
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("display_name,email")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!cancelled && profileRow) {
+        setName(profileRow.display_name ?? meta.name ?? "");
+        setEmail(profileRow.email ?? user.email ?? "");
+      }
+
+      const { data: trainerRow } = await supabase
+        .from("trainer_profiles")
+        .select("display_name,phone,gym_name,intro")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!cancelled && trainerRow) {
+        setRole("trainer");
+        setName(trainerRow.display_name ?? meta.name ?? "");
+        setPhone(trainerRow.phone ?? "");
+        setGym(trainerRow.gym_name ?? "");
+        setIntro(trainerRow.intro ?? "");
+      }
+    }
+
+    loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const save = async () => {
     try {
-      const cur = JSON.parse(localStorage.getItem("gympt-user") ?? "{}");
-      localStorage.setItem("gympt-user", JSON.stringify({ ...cur, name, email }));
+      if (user) {
+        await supabase.auth.updateUser({ data: { name, full_name: name } });
+        await supabase.from("profiles").update({ display_name: name, email }).eq("id", user.id);
+
+        if (role === "trainer") {
+          await supabase
+            .from("trainer_profiles")
+            .update({ display_name: name, phone: phone || null, gym_name: gym || null, intro: intro || null })
+            .eq("user_id", user.id);
+        }
+      } else {
+        const cur = JSON.parse(localStorage.getItem("gympt-user") ?? "{}");
+        localStorage.setItem("gympt-user", JSON.stringify({ ...cur, name, email }));
+      }
       window.dispatchEvent(new Event("gympt-auth"));
     } catch {}
     setSaved(true);

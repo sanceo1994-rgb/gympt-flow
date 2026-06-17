@@ -6,6 +6,7 @@ import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
 import { OTTER_PRESETS, otterDataUrl } from "@/components/OtterPicker";
 import { useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 
 
@@ -50,6 +51,7 @@ function Login() {
   const [welcome, setWelcome] = useState<string | null>(null);
   const [emailMode, setEmailMode] = useState<"login" | "signup" | null>(null);
   const [emailErr, setEmailErr] = useState<string | null>(null);
+  const [emailBusy, setEmailBusy] = useState(false);
 
   const allOk = agree.tos && agree.priv && agree.age;
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
@@ -66,12 +68,40 @@ function Login() {
   };
 
   // Detect existing user vs new signup from a tiny localStorage "users" registry
-  const submitEmail = () => {
+  const submitEmail = async () => {
     setEmailErr(null);
     if (!emailPw.email || !emailPw.password) {
       setEmailErr("이메일과 비밀번호를 입력해주세요");
       return;
     }
+    setEmailBusy(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailPw.email,
+        password: emailPw.password,
+      });
+      if (!error && data.user) {
+        const displayName =
+          (data.user.user_metadata?.name as string | undefined) ||
+          (data.user.user_metadata?.full_name as string | undefined) ||
+          data.user.email?.split("@")[0] ||
+          "회원";
+        try {
+          localStorage.removeItem("gympt-user");
+          localStorage.removeItem("gympt-users");
+          window.dispatchEvent(new Event("gympt-auth"));
+        } catch {}
+        setWelcome(`${displayName} 로그인`);
+        setTimeout(() => {
+          setWelcome(null);
+          navigate({ to: "/profile" });
+        }, 800);
+        return;
+      }
+    } finally {
+      setEmailBusy(false);
+    }
+
     let users: Array<{ email: string; password: string; name: string; role: Role; avatar?: string }> = [];
     try {
       users = JSON.parse(localStorage.getItem("gympt-users") || "[]");
@@ -240,7 +270,7 @@ function Login() {
 
                 <button
                   onClick={submitEmail}
-                  disabled={!emailPw.email || !emailPw.password}
+                  disabled={emailBusy || !emailPw.email || !emailPw.password}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
                   계속하기 <ArrowRight className="h-4 w-4" />
