@@ -93,16 +93,16 @@ function ProfilePage() {
       }
 
       const { data: trainerRow } = await supabase
-        .from("trainer_profiles")
-        .select("display_name,phone,gym_name,intro")
+        .from("trainers")
+        .select("name,gym,intro")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (!cancelled && trainerRow) {
         setRole("trainer");
-        setName(trainerRow.display_name ?? meta.name ?? "");
-        setPhone(trainerRow.phone ?? "");
-        setGym(trainerRow.gym_name ?? "");
+        setName(trainerRow.name ?? meta.name ?? "");
+        setPhone("");
+        setGym(trainerRow.gym ?? "");
         setIntro(trainerRow.intro ?? "");
       }
     }
@@ -121,9 +121,8 @@ function ProfilePage() {
 
         if (role === "trainer") {
           await supabase
-            .from("trainer_profiles")
-            .update({ display_name: name, phone: phone || null, gym_name: gym || null, intro: intro || null })
-            .eq("user_id", user.id);
+            .from("trainers")
+            .upsert({ user_id: user.id, name: name || "트레이너", gym: gym || null, intro: intro || null }, { onConflict: "user_id" });
         }
       } else {
         const cur = JSON.parse(localStorage.getItem("gympt-user") ?? "{}");

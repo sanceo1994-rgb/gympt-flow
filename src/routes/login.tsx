@@ -102,6 +102,10 @@ function Login() {
       setEmailBusy(false);
     }
 
+    setEmailErr("등록된 계정이 아니거나 비밀번호가 맞지 않습니다. 신규 가입은 회원가입 화면에서 진행해주세요.");
+    setEmailMode("login");
+    return;
+
     let users: Array<{ email: string; password: string; name: string; role: Role; avatar?: string }> = [];
     try {
       users = JSON.parse(localStorage.getItem("gympt-users") || "[]");

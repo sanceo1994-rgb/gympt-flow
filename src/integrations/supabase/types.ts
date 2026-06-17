@@ -142,6 +142,59 @@ export type Database = {
           },
         ]
       }
+      student_rosters: {
+        Row: {
+          created_at: string
+          id: string
+          memo: string | null
+          remaining_sessions: number
+          status: string
+          student_email: string
+          student_name: string
+          student_phone: string | null
+          student_user_id: string | null
+          total_sessions: number
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          memo?: string | null
+          remaining_sessions?: number
+          status?: string
+          student_email: string
+          student_name: string
+          student_phone?: string | null
+          student_user_id?: string | null
+          total_sessions?: number
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          memo?: string | null
+          remaining_sessions?: number
+          status?: string
+          student_email?: string
+          student_name?: string
+          student_phone?: string | null
+          student_user_id?: string | null
+          total_sessions?: number
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_rosters_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_slots: {
         Row: {
           capacity: number
