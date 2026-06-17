@@ -68,13 +68,14 @@ function ProfilePage() {
 
   useEffect(() => {
     if (!user) return;
+    const currentUser = user;
     let cancelled = false;
 
     async function loadProfile() {
       const { data: roleRow } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
+        .eq("user_id", currentUser.id)
         .maybeSingle();
 
       if (!cancelled && (roleRow?.role === "trainer" || roleRow?.role === "student")) {
@@ -84,18 +85,18 @@ function ProfilePage() {
       const { data: profileRow } = await supabase
         .from("profiles")
         .select("display_name,email")
-        .eq("id", user.id)
+        .eq("id", currentUser.id)
         .maybeSingle();
 
       if (!cancelled && profileRow) {
         setName(profileRow.display_name ?? meta.name ?? "");
-        setEmail(profileRow.email ?? user.email ?? "");
+        setEmail(profileRow.email ?? currentUser.email ?? "");
       }
 
       const { data: trainerRow } = await supabase
         .from("trainers")
         .select("name,gym,intro")
-        .eq("user_id", user.id)
+        .eq("user_id", currentUser.id)
         .maybeSingle();
 
       if (!cancelled && trainerRow) {
