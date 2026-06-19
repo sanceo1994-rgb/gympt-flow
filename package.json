@@ -10,6 +10,10 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test:scheduling": "node --experimental-strip-types scripts/test-scheduling.mjs",
+    "db:new": "node scripts/supabase-workflow.mjs new",
+    "db:status": "node scripts/supabase-workflow.mjs status",
+    "db:push:dry": "node scripts/supabase-workflow.mjs dry-run",
+    "db:push": "node scripts/supabase-workflow.mjs push",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -83,6 +87,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "prettier": "^3.7.3",
+    "supabase": "2.107.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"

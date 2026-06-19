@@ -19,6 +19,8 @@ dist-ssr
 !.env.example
 *.local
 tmp/
+supabase/.temp/
+.claude/settings.local.json
 
 # Wrangler / Cloudflare
 .wrangler/

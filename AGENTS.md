@@ -25,22 +25,30 @@ tools mid-task never causes lost work, confusion, or database drift.
 
 ## 3. Database schema changes go through migrations only
 
+- Read `docs/DATABASE_WORKFLOW.md` before any database schema or seed change.
 - All Supabase schema changes (tables, columns, RLS policies, functions, triggers)
-  must be made as a new file under `supabase/migrations/` and applied with
-  `supabase db push`.
+  must be created with `npm run db:new -- <name>` and applied with
+  `npm run db:push`. Do not invoke raw `supabase db push` because the npm command
+  performs project, history, and dry-run checks first.
 - Never run schema-changing SQL directly in the Supabase Studio SQL Editor. Doing
   so changes the live database but does not record anything in the CLI's
   migration history table, which causes the next `db push` (from either tool) to
   fail with "already exists" errors or, worse, silently diverge from what the
   migration files describe.
-- If schema SQL absolutely had to be run directly (e.g. urgent hotfix), immediately
-  add/adjust the corresponding migration file and run
-  `supabase migration repair --status applied <version>` so the CLI history matches
-  reality before anyone pushes again.
-- Before pushing, run `supabase migration list` to compare local vs remote and make
-  sure there's no unexplained gap.
+- Never run `migration repair` merely because a table exists. First verify every
+  statement in that migration, including RLS, functions, triggers, constraints,
+  grants, and seed data. Partially applied versions must not be marked applied.
+- Before and after database work, run `npm run db:status`.
 
-## 4. Pushing to GitHub
+## 4. Handoff between AI tools
+
+- Read `docs/AI_HANDOFF.md` at the start of every session.
+- Update it before switching tools if work is incomplete, the DB state changed,
+  or another agent needs a non-obvious next step.
+- Never commit `supabase/.temp/`, `.claude/settings.local.json`, `.env`, tokens,
+  database passwords, or generated credentials.
+
+## 5. Pushing to GitHub
 
 - Pushing to the remote (`git push`) is for backup/visibility/PRs, not for
   continuity between tool sessions — the working tree itself is shared on disk.
