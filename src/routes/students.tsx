@@ -1,17 +1,51 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Check, Plus, Search, Trash2 } from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+} from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhoneNumber } from "@/lib/phone";
+import { matchesKoreanSearch } from "@/lib/koreanSearch";
 
 export const Route = createFileRoute("/students")({
   head: () => ({ meta: [{ title: "학생 관리 - PickGymPT" }] }),
   component: StudentsPage,
 });
 
-type Status = "active" | "pending";
+type Status = "unregistered" | "member" | "ended";
+const STATUS_LABEL: Record<Status, string> = {
+  unregistered: "미가입",
+  member: "PT 중",
+  ended: "종료",
+};
+
 type Student = {
   id: string;
   name: string;
@@ -25,20 +59,43 @@ type Student = {
 };
 
 type SortKey = keyof Pick<Student, "name" | "email" | "phone" | "remaining" | "status">;
-type DraftRow = { name: string; email: string; phone: string; remaining: string; total: string; memo: string };
+type DraftRow = {
+  name: string;
+  email: string;
+  phone: string;
+  remaining: string;
+  total: string;
+  memo: string;
+};
 
-const emptyRow = (): DraftRow => ({ name: "", email: "", phone: "", remaining: "10", total: "10", memo: "" });
+const emptyRow = (): DraftRow => ({
+  name: "",
+  email: "",
+  phone: "",
+  remaining: "10",
+  total: "10",
+  memo: "",
+});
+
+function deriveStatus(signedUp: boolean, remaining: number): Status {
+  if (!signedUp) return "unregistered";
+  return remaining > 0 ? "member" : "ended";
+}
 
 function normalizeRosterRow(row: Record<string, unknown>): Student {
+  const remaining = Number(row.remaining_sessions ?? 0);
+  const signedUp = row.student_user_id != null;
   return {
     id: String(row.id),
     name: String(row.student_name ?? ""),
     email: String(row.student_email ?? ""),
-    phone: String(row.student_phone ?? ""),
-    joinedAt: String(row.created_at ?? "").slice(2, 10).replace(/-/g, "."),
-    remaining: Number(row.remaining_sessions ?? 0),
+    phone: formatPhoneNumber(String(row.student_phone ?? "")),
+    joinedAt: String(row.created_at ?? "")
+      .slice(2, 10)
+      .replace(/-/g, "."),
+    remaining,
     total: Number(row.total_sessions ?? 0),
-    status: row.status === "active" ? "active" : "pending",
+    status: deriveStatus(signedUp, remaining),
     memo: String(row.memo ?? ""),
   };
 }
@@ -56,6 +113,12 @@ function StudentsPage() {
   const [rows, setRows] = useState<DraftRow[]>(() => Array.from({ length: 5 }, emptyRow));
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editDraft, setEditDraft] = useState<DraftRow>(emptyRow);
+  const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Student | null>(null);
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDeleteRef = useRef<Student | null>(null);
 
   const loadStudents = async () => {
     if (!user || String(user.id).startsWith("virtual-")) {
@@ -89,7 +152,9 @@ function StudentsPage() {
       .order("created_at", { ascending: false });
 
     if (rosterError) {
-      setError("학생 명단 테이블이 아직 Supabase에 적용되지 않았습니다. 마이그레이션 적용이 필요합니다.");
+      setError(
+        "학생 명단 테이블이 아직 Supabase에 적용되지 않았습니다. 마이그레이션 적용이 필요합니다.",
+      );
       setStudents([]);
     } else {
       setStudents(((data ?? []) as unknown as Record<string, unknown>[]).map(normalizeRosterRow));
@@ -104,11 +169,8 @@ function StudentsPage() {
 
   const sorted = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const list = students.filter((s) =>
-      !needle ||
-      s.name.toLowerCase().includes(needle) ||
-      s.email.toLowerCase().includes(needle) ||
-      s.phone.includes(needle),
+    const list = students.filter(
+      (s) => !needle || matchesKoreanSearch(s.name, needle) || s.phone.includes(needle),
     );
 
     return [...list].sort((a, b) => {
@@ -134,7 +196,8 @@ function StudentsPage() {
   const updateRow = (i: number, patch: Partial<DraftRow>) => {
     setRows((prev) => {
       const next = prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
-      if (i === next.length - 1 && (patch.name || patch.email || patch.phone)) next.push(emptyRow());
+      if (i === next.length - 1 && (patch.name || patch.email || patch.phone))
+        next.push(emptyRow());
       return next;
     });
   };
@@ -146,14 +209,15 @@ function StudentsPage() {
       trainer_id: trainerId,
       student_name: r.name.trim(),
       student_email: r.email.trim().toLowerCase(),
-      student_phone: r.phone.trim(),
+      student_phone: formatPhoneNumber(r.phone),
       remaining_sessions: Number(r.remaining) || 0,
       total_sessions: Number(r.total) || 0,
       memo: r.memo.trim() || null,
-      status: "pending",
     }));
 
-    const { error: insertError } = await supabase.from("student_rosters" as never).insert(payload as never);
+    const { error: insertError } = await supabase
+      .from("student_rosters" as never)
+      .insert(payload as never);
     if (insertError) {
       setError("학생 명단 저장에 실패했습니다.");
       return;
@@ -166,29 +230,134 @@ function StudentsPage() {
     await loadStudents();
   };
 
-  const deleteStudent = async (student: Student) => {
-    const { error: deleteError } = await supabase.from("student_rosters" as never).delete().eq("id", student.id);
+  const commitDelete = async (student: Student) => {
+    const { error: deleteError } = await supabase
+      .from("student_rosters" as never)
+      .delete()
+      .eq("id", student.id);
     if (deleteError) {
       setError("학생 삭제에 실패했습니다.");
+      setStudents((prev) =>
+        prev.some((item) => item.id === student.id) ? prev : [...prev, student],
+      );
+    }
+    if (pendingDeleteRef.current?.id === student.id) {
+      pendingDeleteRef.current = null;
+      setPendingDelete(null);
+    }
+  };
+
+  const scheduleDelete = (student: Student) => {
+    if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+    if (pendingDeleteRef.current) void commitDelete(pendingDeleteRef.current);
+
+    setStudents((prev) => prev.filter((item) => item.id !== student.id));
+    setDeleteTarget(null);
+    setPendingDelete(student);
+    pendingDeleteRef.current = student;
+    deleteTimerRef.current = setTimeout(() => void commitDelete(student), 5000);
+  };
+
+  const undoDelete = () => {
+    if (!pendingDeleteRef.current) return;
+    if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+    setStudents((prev) => [...prev, pendingDeleteRef.current as Student]);
+    pendingDeleteRef.current = null;
+    setPendingDelete(null);
+  };
+
+  useEffect(
+    () => () => {
+      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+      if (pendingDeleteRef.current)
+        void supabase
+          .from("student_rosters" as never)
+          .delete()
+          .eq("id", pendingDeleteRef.current.id);
+    },
+    [],
+  );
+
+  const openEdit = (student: Student) => {
+    setEditingStudent(student);
+    setEditDraft({
+      name: student.name,
+      email: student.email,
+      phone: student.phone,
+      remaining: String(student.remaining),
+      total: String(student.total),
+      memo: student.memo,
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editingStudent || !editDraft.name.trim() || !editDraft.email.trim()) return;
+    const patch = {
+      student_name: editDraft.name.trim(),
+      student_email: editDraft.email.trim().toLowerCase(),
+      student_phone: formatPhoneNumber(editDraft.phone),
+      remaining_sessions: Number(editDraft.remaining) || 0,
+      total_sessions: Number(editDraft.total) || 0,
+      memo: editDraft.memo.trim() || null,
+    };
+    const { error: updateError } = await supabase
+      .from("student_rosters" as never)
+      .update(patch as never)
+      .eq("id", editingStudent.id);
+    if (updateError) {
+      setError("학생 정보 수정에 실패했습니다.");
       return;
     }
-    setStudents((prev) => prev.filter((s) => s.id !== student.id));
+    setStudents((prev) =>
+      prev.map((student) =>
+        student.id === editingStudent.id
+          ? {
+              ...student,
+              ...patch,
+              name: patch.student_name,
+              email: patch.student_email,
+              phone: patch.student_phone,
+              remaining: patch.remaining_sessions,
+              total: patch.total_sessions,
+              memo: patch.memo ?? "",
+              status: deriveStatus(student.status !== "unregistered", patch.remaining_sessions),
+            }
+          : student,
+      ),
+    );
+    setEditingStudent(null);
+    setToast("학생 정보를 수정했습니다.");
+    setTimeout(() => setToast(null), 2400);
   };
 
   return (
     <AppShell>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">트레이너 메뉴</p>
-          <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-tight">학생 관리</h1>
-          <p className="mt-2 text-[13.5px] text-ink-soft">여기에 등록된 학생만 본인 계정으로 로그인했을 때 예약 화면을 열 수 있습니다.</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+            트레이너 메뉴
+          </p>
+          <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-tight">
+            학생 관리
+          </h1>
+          <p className="mt-2 text-[13.5px] text-ink-soft">
+            여기에 등록된 학생만 본인 계정으로 로그인했을 때 예약 화면을 열 수 있습니다.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 bg-surface-muted rounded-xl px-3 h-10 border border-border">
             <Search className="h-4 w-4 text-ink-soft" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름/이메일/전화 검색" className="bg-transparent outline-none text-[13px] w-52" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="이름/전화 검색"
+              className="bg-transparent outline-none text-[13px] w-52"
+            />
           </div>
-          <button onClick={() => setAdding(true)} className="h-10 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center gap-1.5">
+          <button
+            onClick={() => setAdding(true)}
+            className="h-10 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center gap-1.5"
+          >
             <Plus className="h-4 w-4" /> 추가
           </button>
         </div>
@@ -201,47 +370,93 @@ function StudentsPage() {
       )}
 
       <div className="mt-4 rounded-2xl border border-border bg-white overflow-hidden hidden md:block">
-        <table className="w-full text-[13px]">
+        <table className="w-full table-fixed text-[13px]">
+          <colgroup>
+            <col className="w-[10%]" />
+            <col className="w-[14%]" />
+            <col className="w-[10%]" />
+            <col className="w-[10%]" />
+            <col className="w-[45%]" />
+            <col className="w-[11%]" />
+          </colgroup>
           <thead className="bg-surface-muted">
             <tr className="text-[11px] font-bold uppercase text-ink-soft">
               <Th label="학생" k="name" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-              <Th label="이메일" k="email" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
               <Th label="전화번호" k="phone" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-              <Th label="잔여 / 총" k="remaining" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+              <Th
+                label="잔여 / 총"
+                k="remaining"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <Th label="상태" k="status" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-              <th className="px-4 py-3 text-left">메모</th>
-              <th className="px-4 py-3 text-right">관리</th>
+              <th className="px-4 py-3 text-center">메모</th>
+              <th className="px-7 py-3 text-center">관리</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((s) => (
               <tr key={s.id} className="border-t border-border align-top hover:bg-surface-muted/40">
-                <td className="px-4 py-3">
-                  <button onClick={() => navigate({ to: "/pt-history" })} className="font-bold text-ink hover:text-primary text-left">{s.name}</button>
-                  <p className="text-[10.5px] text-muted-foreground mt-0.5 tabular-nums">{s.joinedAt}</p>
+                <td className="px-4 py-3 text-center">
+                  <button
+                    onClick={() => navigate({ to: "/pt-history" })}
+                    className="mx-auto block font-bold text-ink hover:text-primary"
+                  >
+                    {s.name}
+                  </button>
+                  <p className="text-[10.5px] text-muted-foreground mt-0.5 tabular-nums">
+                    {s.joinedAt}
+                  </p>
                 </td>
-                <td className="px-4 py-3 text-ink-soft">{s.email}</td>
-                <td className="px-4 py-3 tabular-nums text-ink-soft">{s.phone || "-"}</td>
-                <td className="px-4 py-3 tabular-nums">
-                  <span className={`font-extrabold ${s.remaining <= 3 ? "text-destructive" : "text-ink"}`}>{s.remaining}</span>
+                <td className="px-4 py-3 text-center tabular-nums text-ink-soft">
+                  {s.phone || "-"}
+                </td>
+                <td className="px-4 py-3 text-center tabular-nums">
+                  <span
+                    className={`font-extrabold ${s.remaining <= 3 ? "text-destructive" : "text-ink"}`}
+                  >
+                    {s.remaining}
+                  </span>
                   <span className="text-muted-foreground"> / {s.total}회</span>
                 </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2.5 h-6 rounded-full text-[11px] font-extrabold ${s.status === "active" ? "bg-primary/10 text-primary" : "bg-muted text-ink-soft"}`}>
-                    {s.status === "active" ? "활성" : "초대"}
+                <td className="px-4 py-3 text-center">
+                  <span
+                    className={`inline-flex items-center px-2.5 h-6 rounded-full text-[11px] font-extrabold ${s.status === "member" ? "bg-emerald-50 text-emerald-700" : s.status === "ended" ? "bg-destructive/10 text-destructive" : "bg-muted text-ink-soft"}`}
+                  >
+                    {STATUS_LABEL[s.status]}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-ink-soft text-[12.5px] max-w-xs">{s.memo || "-"}</td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => void deleteStudent(s)} className="h-8 w-8 rounded-lg text-ink-soft hover:bg-destructive/10 hover:text-destructive inline-grid place-items-center">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                <td className="px-4 py-3 text-center text-ink-soft text-[12.5px]">
+                  {s.memo || "-"}
+                </td>
+                <td className="px-7 py-3 text-center">
+                  <div className="inline-flex items-center justify-center gap-1">
+                    <button
+                      onClick={() => openEdit(s)}
+                      title="수정"
+                      aria-label={`${s.name} 수정`}
+                      className="h-8 w-8 rounded-lg text-ink-soft hover:bg-primary/10 hover:text-primary inline-grid place-items-center"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(s)}
+                      title="삭제"
+                      aria-label={`${s.name} 삭제`}
+                      className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10 inline-grid place-items-center"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
             {!loading && sorted.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-ink-soft">등록된 학생이 없습니다.</td>
+                <td colSpan={6} className="px-4 py-12 text-center text-ink-soft">
+                  등록된 학생이 없습니다.
+                </td>
               </tr>
             )}
           </tbody>
@@ -253,21 +468,42 @@ function StudentsPage() {
           <div key={s.id} className="rounded-xl border border-border bg-white p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <button onClick={() => navigate({ to: "/pt-history" })} className="font-bold text-ink text-[14px] hover:text-primary text-left truncate">{s.name}</button>
-                <p className="text-[11px] text-muted-foreground tabular-nums mt-0.5">{s.email}</p>
+                <button
+                  onClick={() => navigate({ to: "/pt-history" })}
+                  className="font-bold text-ink text-[14px] hover:text-primary text-left truncate"
+                >
+                  {s.name}
+                </button>
                 <p className="text-[11px] text-muted-foreground tabular-nums">{s.phone || "-"}</p>
               </div>
-              <button onClick={() => void deleteStudent(s)} className="h-8 w-8 rounded-lg text-ink-soft hover:bg-destructive/10 hover:text-destructive inline-grid place-items-center shrink-0">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => openEdit(s)}
+                  title="수정"
+                  aria-label={`${s.name} 수정`}
+                  className="h-8 w-8 rounded-lg text-ink-soft hover:bg-primary/10 hover:text-primary inline-grid place-items-center"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(s)}
+                  title="삭제"
+                  aria-label={`${s.name} 삭제`}
+                  className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10 inline-grid place-items-center"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             <div className="mt-2 flex items-center justify-between gap-2">
               <span className="text-[12px] tabular-nums">
                 <b className={s.remaining <= 3 ? "text-destructive" : "text-ink"}>{s.remaining}</b>
                 <span className="text-muted-foreground"> / {s.total}회</span>
               </span>
-              <span className={`inline-flex items-center px-2 h-5 rounded-full text-[10.5px] font-extrabold ${s.status === "active" ? "bg-primary/10 text-primary" : "bg-muted text-ink-soft"}`}>
-                {s.status === "active" ? "활성" : "초대"}
+              <span
+                className={`inline-flex items-center px-2 h-5 rounded-full text-[10.5px] font-extrabold ${s.status === "member" ? "bg-emerald-50 text-emerald-700" : s.status === "ended" ? "bg-destructive/10 text-destructive" : "bg-muted text-ink-soft"}`}
+              >
+                {STATUS_LABEL[s.status]}
               </span>
             </div>
             {s.memo && <p className="mt-1.5 text-[12px] text-ink-soft line-clamp-2">{s.memo}</p>}
@@ -278,8 +514,12 @@ function StudentsPage() {
       <Sheet open={adding} onOpenChange={(v) => !v && setAdding(false)}>
         <SheetContent side="right" className="w-full sm:!max-w-[56vw] overflow-y-auto">
           <SheetHeader>
-            <span className="inline-flex w-fit chip bg-primary/10 text-primary"><Plus className="h-3 w-3" /> 일괄 등록</span>
-            <SheetTitle className="text-[20px] font-black leading-tight">학생을 한 번에 등록하세요</SheetTitle>
+            <span className="inline-flex w-fit chip bg-primary/10 text-primary">
+              <Plus className="h-3 w-3" /> 일괄 등록
+            </span>
+            <SheetTitle className="text-[20px] font-black leading-tight">
+              학생을 한 번에 등록하세요
+            </SheetTitle>
             <SheetDescription>이메일은 학생 로그인 계정과 매칭되는 핵심 값입니다.</SheetDescription>
           </SheetHeader>
 
@@ -287,13 +527,49 @@ function StudentsPage() {
             {rows.map((r, i) => (
               <div key={i} className="rounded-2xl border border-border p-3 bg-white">
                 <div className="grid md:grid-cols-[1fr_1.4fr_1fr_80px_80px_1.2fr_32px] gap-2 items-end">
-                  <Field label="이름"><Cell value={r.name} onChange={(v) => updateRow(i, { name: v })} placeholder="김학생" /></Field>
-                  <Field label="이메일"><Cell value={r.email} onChange={(v) => updateRow(i, { email: v })} placeholder="student@example.com" /></Field>
-                  <Field label="전화번호"><Cell value={r.phone} onChange={(v) => updateRow(i, { phone: v })} placeholder="010-0000-0000" /></Field>
-                  <Field label="잔여"><Cell value={r.remaining} onChange={(v) => updateRow(i, { remaining: v })} center /></Field>
-                  <Field label="총"><Cell value={r.total} onChange={(v) => updateRow(i, { total: v })} center /></Field>
-                  <Field label="메모"><Cell value={r.memo} onChange={(v) => updateRow(i, { memo: v })} placeholder="목표 / 특이사항" /></Field>
-                  <button onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))} className="h-9 w-9 grid place-items-center rounded-md text-ink-soft hover:bg-destructive/10 hover:text-destructive">
+                  <Field label="이름">
+                    <Cell
+                      value={r.name}
+                      onChange={(v) => updateRow(i, { name: v })}
+                      placeholder="김학생"
+                    />
+                  </Field>
+                  <Field label="이메일">
+                    <Cell
+                      value={r.email}
+                      onChange={(v) => updateRow(i, { email: v })}
+                      placeholder="student@example.com"
+                    />
+                  </Field>
+                  <Field label="전화번호">
+                    <Cell
+                      value={r.phone}
+                      onChange={(v) => updateRow(i, { phone: formatPhoneNumber(v) })}
+                      placeholder="010-0000-0000"
+                      inputMode="numeric"
+                    />
+                  </Field>
+                  <Field label="잔여">
+                    <Cell
+                      value={r.remaining}
+                      onChange={(v) => updateRow(i, { remaining: v })}
+                      center
+                    />
+                  </Field>
+                  <Field label="총">
+                    <Cell value={r.total} onChange={(v) => updateRow(i, { total: v })} center />
+                  </Field>
+                  <Field label="메모">
+                    <Cell
+                      value={r.memo}
+                      onChange={(v) => updateRow(i, { memo: v })}
+                      placeholder="목표 / 특이사항"
+                    />
+                  </Field>
+                  <button
+                    onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="h-9 w-9 grid place-items-center rounded-md text-ink-soft hover:bg-destructive/10 hover:text-destructive"
+                  >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -302,7 +578,10 @@ function StudentsPage() {
           </div>
 
           <div className="mt-4 flex items-center justify-between">
-            <button onClick={() => setRows((p) => [...p, emptyRow()])} className="h-9 px-3 rounded-full bg-white border border-border text-ink text-[12px] font-bold inline-flex items-center gap-1 hover:bg-muted">
+            <button
+              onClick={() => setRows((p) => [...p, emptyRow()])}
+              className="h-9 px-3 rounded-full bg-white border border-border text-ink text-[12px] font-bold inline-flex items-center gap-1 hover:bg-muted"
+            >
               <Plus className="h-3.5 w-3.5" /> 줄 추가
             </button>
             <p className="text-[11px] text-ink-soft">이름과 이메일이 있는 줄만 등록됩니다.</p>
@@ -321,10 +600,125 @@ function StudentsPage() {
         </SheetContent>
       </Sheet>
 
+      <Sheet
+        open={Boolean(editingStudent)}
+        onOpenChange={(open) => !open && setEditingStudent(null)}
+      >
+        <SheetContent side="right" className="w-full sm:!max-w-[56vw] overflow-y-auto">
+          <SheetHeader>
+            <span className="inline-flex w-fit chip bg-primary/10 text-primary">
+              <Pencil className="h-3 w-3" /> 학생 편집
+            </span>
+            <SheetTitle className="text-[20px] font-black leading-tight">
+              {editingStudent?.name} 학생 정보
+            </SheetTitle>
+            <SheetDescription>수정한 내용은 학생 명단에 바로 반영됩니다.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 grid gap-4">
+            <Field label="이름">
+              <Cell
+                value={editDraft.name}
+                onChange={(v) => setEditDraft((draft) => ({ ...draft, name: v }))}
+              />
+            </Field>
+            <Field label="이메일">
+              <Cell
+                value={editDraft.email}
+                onChange={(v) => setEditDraft((draft) => ({ ...draft, email: v }))}
+              />
+            </Field>
+            <Field label="전화번호">
+              <Cell
+                value={editDraft.phone}
+                onChange={(v) =>
+                  setEditDraft((draft) => ({ ...draft, phone: formatPhoneNumber(v) }))
+                }
+                inputMode="numeric"
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="잔여">
+                <Cell
+                  value={editDraft.remaining}
+                  onChange={(v) => setEditDraft((draft) => ({ ...draft, remaining: v }))}
+                  center
+                  inputMode="numeric"
+                />
+              </Field>
+              <Field label="총">
+                <Cell
+                  value={editDraft.total}
+                  onChange={(v) => setEditDraft((draft) => ({ ...draft, total: v }))}
+                  center
+                  inputMode="numeric"
+                />
+              </Field>
+            </div>
+            <Field label="메모">
+              <Cell
+                value={editDraft.memo}
+                onChange={(v) => setEditDraft((draft) => ({ ...draft, memo: v }))}
+              />
+            </Field>
+          </div>
+          <div className="mt-8 sticky bottom-0 -mx-6 px-6 py-4 bg-white border-t border-border">
+            <button
+              onClick={() => void saveEdit()}
+              disabled={!editDraft.name.trim() || !editDraft.email.trim()}
+              className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop disabled:opacity-40"
+            >
+              <Check className="h-4 w-4" /> 변경사항 저장
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent className="max-w-md rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black">학생을 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <b className="text-ink">{deleteTarget?.name}</b> 학생이 명단에서 삭제됩니다. 삭제 후
+              5초 동안 되돌릴 수 있습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTarget && scheduleDelete(deleteTarget)}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {pendingDelete && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md">
+          <div className="h-14 rounded-2xl bg-ink text-white px-4 shadow-pop flex items-center justify-between gap-4">
+            <span className="text-[13px] font-bold truncate">
+              {pendingDelete.name} 학생이 삭제되었습니다.
+            </span>
+            <button
+              onClick={undoDelete}
+              className="shrink-0 h-9 px-3 rounded-xl bg-primary text-white text-[12px] font-extrabold inline-flex items-center gap-1.5"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> 돌아가기
+            </button>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
           <div className="rounded-2xl bg-ink text-white px-4 py-3 shadow-pop flex items-center gap-2.5 min-w-[280px]">
-            <span className="h-8 w-8 rounded-full bg-primary grid place-items-center"><Check className="h-4 w-4" /></span>
+            <span className="h-8 w-8 rounded-full bg-primary grid place-items-center">
+              <Check className="h-4 w-4" />
+            </span>
             <p className="text-[13px] font-extrabold">{toast}</p>
           </div>
         </div>
@@ -333,24 +727,56 @@ function StudentsPage() {
   );
 }
 
-function Th({ label, k, sortKey, sortDir, onSort }: { label: string; k: SortKey; sortKey: SortKey; sortDir: "asc" | "desc"; onSort: (k: SortKey) => void }) {
+function Th({
+  label,
+  k,
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  label: string;
+  k: SortKey;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+  onSort: (k: SortKey) => void;
+}) {
   const active = sortKey === k;
+  const SortIcon = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
   return (
-    <th className="px-4 py-3 text-left">
-      <button onClick={() => onSort(k)} className={`inline-flex items-center gap-1 ${active ? "text-ink" : ""} hover:text-ink`}>
-        {label} <ArrowUpDown className={`h-3 w-3 ${active ? "text-primary" : "opacity-40"}`} />
-        {active && <span className="text-primary text-[10px]">{sortDir === "asc" ? "오름" : "내림"}</span>}
+    <th className="px-4 py-3 text-center">
+      <button
+        onClick={() => onSort(k)}
+        className={`inline-flex w-full items-center justify-center gap-1 ${active ? "text-ink" : ""} hover:text-ink`}
+      >
+        {label}{" "}
+        <SortIcon
+          className={`h-3.5 w-3.5 ${active ? "text-primary" : "opacity-40"}`}
+          aria-hidden="true"
+        />
       </button>
     </th>
   );
 }
 
-function Cell({ value, onChange, placeholder, center }: { value: string; onChange: (v: string) => void; placeholder?: string; center?: boolean }) {
+function Cell({
+  value,
+  onChange,
+  placeholder,
+  center,
+  inputMode,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  center?: boolean;
+  inputMode?: "numeric";
+}) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      inputMode={inputMode}
       className={`h-9 w-full px-2 rounded-md bg-transparent border border-border focus:bg-white focus:border-ink outline-none text-[12.5px] font-semibold text-ink ${center ? "text-center tabular-nums" : ""}`}
     />
   );
@@ -359,7 +785,9 @@ function Cell({ value, onChange, placeholder, center }: { value: string; onChang
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[10.5px] font-bold uppercase tracking-wider text-ink-soft mb-0.5">{label}</span>
+      <span className="block text-[10.5px] font-bold uppercase tracking-wider text-ink-soft mb-0.5">
+        {label}
+      </span>
       {children}
     </label>
   );

@@ -194,12 +194,10 @@ async function ensureBookingSchedule(trainerUserId: string): Promise<BookingSche
           is_closed: day === 6,
         });
     }
-    await supabase
-      .from("time_slots" as never)
-      .upsert(grid as never, {
-        onConflict: "schedule_id,day_of_week,hour",
-        ignoreDuplicates: true,
-      });
+    await supabase.from("time_slots" as never).upsert(grid as never, {
+      onConflict: "schedule_id,day_of_week,hour",
+      ignoreDuplicates: true,
+    });
   }
 
   const { data: slots } = await supabase
@@ -822,9 +820,9 @@ function Booking() {
                           key={key}
                           disabled={closed}
                           onClick={() => toggle(key)}
-                          className={`relative h-12 sm:h-10 border-b border-l border-border transition group heat-${lvl}
-                        ${closed ? "bg-muted text-muted-foreground/60 cursor-not-allowed" : submitted ? "cursor-not-allowed opacity-80" : "active:scale-[0.97] hover:ring-2 hover:ring-ink/40 hover:ring-inset"}
-                        ${isMine ? "ring-2 ring-ink ring-inset z-10" : ""}
+                          className={`relative h-12 sm:h-10 border-b border-l border-border transition group
+                        ${closed ? "bg-muted text-muted-foreground/60 cursor-not-allowed" : `heat-${lvl} ${submitted ? "cursor-not-allowed opacity-80" : "active:scale-[0.97] hover:ring-2 hover:ring-ink/40 hover:ring-inset"}`}
+                        ${!closed && isMine ? "ring-2 ring-ink ring-inset z-10" : ""}
                       `}
                         >
                           {closed ? (
@@ -912,6 +910,8 @@ function Booking() {
           </div>
         )}
       </div>
+
+      <div className="h-32" aria-hidden="true" />
 
       {/* Owner (trainer) preview bar — disables submission */}
       {isOwnerTrainer && (

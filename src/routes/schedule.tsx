@@ -2,9 +2,41 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { DemoBanner } from "@/components/DemoBanner";
 import React, { useEffect, useMemo, useState } from "react";
-import { Send, Sparkles, Check, ChevronLeft, ChevronRight, Ban, Lock, Users, MailCheck, CalendarCheck, Pencil, MessageCircle, X, Activity, ChevronUp, ChevronDown, UserRoundSearch, Inbox } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  Send,
+  Sparkles,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Ban,
+  Lock,
+  Users,
+  MailCheck,
+  CalendarCheck,
+  Pencil,
+  MessageCircle,
+  X,
+  Activity,
+  ChevronUp,
+  ChevronDown,
+  UserRoundSearch,
+  Inbox,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { maximizeScheduleAssignments, type MatchingSlot } from "@/lib/maximize-schedule";
@@ -13,7 +45,11 @@ export const Route = createFileRoute("/schedule")({
   head: () => ({
     meta: [
       { title: "트레이너 일정 조율 — 픽짐피티 PickGymPT" },
-      { name: "description", content: "달력으로 학생 응답을 한눈에 확인하고, 안되는 시간만 닫으면 AI가 최적 시간표를 만들어드려요." },
+      {
+        name: "description",
+        content:
+          "달력으로 학생 응답을 한눈에 확인하고, 안되는 시간만 닫으면 AI가 최적 시간표를 만들어드려요.",
+      },
     ],
   }),
   component: Schedule,
@@ -71,16 +107,96 @@ type Student = {
 };
 
 const STUDENTS: Student[] = [
-  { name: "김지원", status: "응답완료", picks: ["월 19시", "월 20시", "수 19시", "금 19시"], lastPT: "5.7 (목)", remaining: 14, total: 30, joinedAt: "24.03.12" },
-  { name: "박서윤", status: "응답완료", picks: ["화 07시", "수 19시", "금 19시", "금 20시"], lastPT: "5.8 (금)", remaining: 7, total: 20, joinedAt: "24.08.21" },
-  { name: "최유나", status: "응답완료", picks: ["수 09시", "수 19시", "금 19시", "토 09시"], lastPT: "5.6 (수)", remaining: 22, total: 40, joinedAt: "23.11.05" },
-  { name: "정수민", status: "응답완료", picks: ["화 07시", "토 09시", "토 11시"], lastPT: "5.4 (월)", remaining: 3, total: 20, joinedAt: "25.01.18" },
-  { name: "한승호", status: "응답완료", picks: ["월 19시", "월 20시", "수 19시", "금 19시"], lastPT: "5.9 (토)", remaining: 11, total: 24, joinedAt: "24.06.30" },
-  { name: "이도현", status: "응답대기", picks: [], lastPT: "5.2 (토)", remaining: 5, total: 10, joinedAt: "25.04.02" },
-  { name: "김태현", status: "응답대기", picks: [], lastPT: "5.1 (금)", remaining: 9, total: 20, joinedAt: "24.12.10" },
-  { name: "윤서아", status: "응답대기", picks: [], lastPT: "4.30 (목)", remaining: 4, total: 10, joinedAt: "25.02.14" },
-  { name: "강민준", status: "응답대기", picks: [], lastPT: "5.3 (일)", remaining: 12, total: 24, joinedAt: "24.09.05" },
-  { name: "오지훈", status: "불가", picks: [], lastPT: "5.5 (화)", remaining: 8, total: 20, joinedAt: "25.03.20" },
+  {
+    name: "김지원",
+    status: "응답완료",
+    picks: ["월 19시", "월 20시", "수 19시", "금 19시"],
+    lastPT: "5.7 (목)",
+    remaining: 14,
+    total: 30,
+    joinedAt: "24.03.12",
+  },
+  {
+    name: "박서윤",
+    status: "응답완료",
+    picks: ["화 07시", "수 19시", "금 19시", "금 20시"],
+    lastPT: "5.8 (금)",
+    remaining: 7,
+    total: 20,
+    joinedAt: "24.08.21",
+  },
+  {
+    name: "최유나",
+    status: "응답완료",
+    picks: ["수 09시", "수 19시", "금 19시", "토 09시"],
+    lastPT: "5.6 (수)",
+    remaining: 22,
+    total: 40,
+    joinedAt: "23.11.05",
+  },
+  {
+    name: "정수민",
+    status: "응답완료",
+    picks: ["화 07시", "토 09시", "토 11시"],
+    lastPT: "5.4 (월)",
+    remaining: 3,
+    total: 20,
+    joinedAt: "25.01.18",
+  },
+  {
+    name: "한승호",
+    status: "응답완료",
+    picks: ["월 19시", "월 20시", "수 19시", "금 19시"],
+    lastPT: "5.9 (토)",
+    remaining: 11,
+    total: 24,
+    joinedAt: "24.06.30",
+  },
+  {
+    name: "이도현",
+    status: "응답대기",
+    picks: [],
+    lastPT: "5.2 (토)",
+    remaining: 5,
+    total: 10,
+    joinedAt: "25.04.02",
+  },
+  {
+    name: "김태현",
+    status: "응답대기",
+    picks: [],
+    lastPT: "5.1 (금)",
+    remaining: 9,
+    total: 20,
+    joinedAt: "24.12.10",
+  },
+  {
+    name: "윤서아",
+    status: "응답대기",
+    picks: [],
+    lastPT: "4.30 (목)",
+    remaining: 4,
+    total: 10,
+    joinedAt: "25.02.14",
+  },
+  {
+    name: "강민준",
+    status: "응답대기",
+    picks: [],
+    lastPT: "5.3 (일)",
+    remaining: 12,
+    total: 24,
+    joinedAt: "24.09.05",
+  },
+  {
+    name: "오지훈",
+    status: "불가",
+    picks: [],
+    lastPT: "5.5 (화)",
+    remaining: 8,
+    total: 20,
+    joinedAt: "25.03.20",
+  },
 ];
 
 const AI_RESULT_INIT = [
@@ -120,7 +236,10 @@ const BODY_GROUPS: { name: string; items: string[] }[] = [
   { name: "가슴", items: ["벤치프레스", "인클라인 벤치", "체스트프레스", "딥스", "케이블 플라이"] },
   { name: "등", items: ["데드리프트", "랫풀다운", "바벨로우", "시티드로우", "풀업"] },
   { name: "하체", items: ["스쿼트", "레그프레스", "런지", "레그익스텐션", "레그컬"] },
-  { name: "어깨", items: ["오버헤드프레스", "사이드 레터럴", "프론트 레이즈", "리어 델트", "쉬러그"] },
+  {
+    name: "어깨",
+    items: ["오버헤드프레스", "사이드 레터럴", "프론트 레이즈", "리어 델트", "쉬러그"],
+  },
   { name: "이두", items: ["바벨컬", "덤벨컬", "해머컬", "프리처컬"] },
   { name: "삼두", items: ["케이블 푸쉬다운", "라잉 익스텐션", "딥스", "오버헤드 익스텐션"] },
   { name: "코어", items: ["플랭크", "행잉 레그레이즈", "케이블 크런치", "러시안 트위스트"] },
@@ -139,7 +258,9 @@ function Schedule() {
   const [trainerName, setTrainerName] = useState("");
   const [dbStudents, setDbStudents] = useState<Student[]>([]);
   const [dbPicks, setDbPicks] = useState<Record<string, string[]>>({});
-  const [dbAiResult, setDbAiResult] = useState<Array<{ day: string; hour: string; name: string }>>([]);
+  const [dbAiResult, setDbAiResult] = useState<Array<{ day: string; hour: string; name: string }>>(
+    [],
+  );
   const [dbUnassigned, setDbUnassigned] = useState<Array<{ name: string; reason: string }>>([]);
   const [dbActivity, setDbActivity] = useState<ActivityItem[]>([]);
   const [slotIds, setSlotIds] = useState<Record<string, string>>({});
@@ -149,13 +270,35 @@ function Schedule() {
   const AI_UNASSIGNED = dbUnassigned;
   const ACTIVITY_LOG = dbActivity;
   const [weekOffset, setWeekOffset] = useState(1);
-  const [closed, setClosed] = useState<Set<string>>(new Set(["일-7", "일-8", "일-9", "일-10", "일-11", "일-12", "일-13", "일-14", "일-15", "일-16", "일-17", "일-18", "일-19", "일-20", "일-21", "일-22"]));
+  const [closed, setClosed] = useState<Set<string>>(
+    new Set([
+      "일-7",
+      "일-8",
+      "일-9",
+      "일-10",
+      "일-11",
+      "일-12",
+      "일-13",
+      "일-14",
+      "일-15",
+      "일-16",
+      "일-17",
+      "일-18",
+      "일-19",
+      "일-20",
+      "일-21",
+      "일-22",
+    ]),
+  );
   const [editing, setEditing] = useState<Student | null>(null);
   const [activeName, setActiveName] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [pendingMove, setPendingMove] = useState<{ day: string; hour: number } | null>(null);
   const [sendToast, setSendToast] = useState<string | null>(null);
-  const [notifyConfirm, setNotifyConfirm] = useState<{ name: string; scope: "individual" | "remind" } | null>(null);
+  const [notifyConfirm, setNotifyConfirm] = useState<{
+    name: string;
+    scope: "individual" | "remind";
+  } | null>(null);
   const [inviteIntent, setInviteIntent] = useState(false);
   const [requestSentWeek, setRequestSentWeek] = useState<number | null>(null);
 
@@ -193,20 +336,39 @@ function Schedule() {
     const weekStart = `${targetMonday.getFullYear()}-${String(targetMonday.getMonth() + 1).padStart(2, "0")}-${String(targetMonday.getDate()).padStart(2, "0")}`;
 
     async function loadSchedule() {
-      const { data: trainer } = await supabase.from("trainers").select("id,name,gym,intro,avatar_url,instagram_url").eq("user_id", userId).maybeSingle();
+      const { data: trainer } = await supabase
+        .from("trainers")
+        .select("id,name,gym,intro,avatar_url,instagram_url")
+        .eq("user_id", userId)
+        .maybeSingle();
       if (trainer && !cancelled) setTrainerName(trainer.name);
       if (!trainer || cancelled) return;
 
       const [{ data: rosters }, { data: sessions }] = await Promise.all([
-        supabase.from("student_rosters").select("id,student_name,status,remaining_sessions,total_sessions,created_at").eq("trainer_id", trainer.id).order("created_at"),
-        supabase.from("pt_sessions").select("roster_id,scheduled_at,status").eq("trainer_id", trainer.id).order("scheduled_at", { ascending: false }),
+        supabase
+          .from("student_rosters")
+          .select("id,student_name,status,remaining_sessions,total_sessions,created_at")
+          .eq("trainer_id", trainer.id)
+          .order("created_at"),
+        supabase
+          .from("pt_sessions")
+          .select("roster_id,scheduled_at,status")
+          .eq("trainer_id", trainer.id)
+          .order("scheduled_at", { ascending: false }),
       ]);
       const activeRosters = (rosters ?? []).filter((roster) => roster.remaining_sessions > 0);
 
       const latestCompleted = new Map<string, string>();
       for (const session of sessions ?? []) {
         if (session.status === "completed" && !latestCompleted.has(session.roster_id)) {
-          latestCompleted.set(session.roster_id, new Date(session.scheduled_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric", weekday: "short" }));
+          latestCompleted.set(
+            session.roster_id,
+            new Date(session.scheduled_at).toLocaleDateString("ko-KR", {
+              month: "numeric",
+              day: "numeric",
+              weekday: "short",
+            }),
+          );
         }
       }
 
@@ -214,18 +376,25 @@ function Schedule() {
       // separate per-trainer mirror row that most trainers don't have yet — not
       // trainers(id). Create it on first visit, then lazily create the week's
       // schedule + its full time-slot grid too, since nothing else in the app does.
-      let { data: scheduleTrainer } = await supabase.from("trainer_profiles").select("id").eq("user_id", userId).maybeSingle();
+      let { data: scheduleTrainer } = await supabase
+        .from("trainer_profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
       if (!scheduleTrainer) {
         const { data: createdProfile } = await supabase
           .from("trainer_profiles")
-          .upsert({
-            user_id: userId,
-            display_name: trainer.name,
-            gym_name: trainer.gym,
-            intro: trainer.intro,
-            avatar_url: trainer.avatar_url,
-            instagram_url: trainer.instagram_url,
-          }, { onConflict: "user_id" })
+          .upsert(
+            {
+              user_id: userId,
+              display_name: trainer.name,
+              gym_name: trainer.gym,
+              intro: trainer.intro,
+              avatar_url: trainer.avatar_url,
+              instagram_url: trainer.instagram_url,
+            },
+            { onConflict: "user_id" },
+          )
           .select("id")
           .maybeSingle();
         scheduleTrainer = createdProfile ?? null;
@@ -234,12 +403,20 @@ function Schedule() {
       if (!scheduleTrainer) return;
 
       let schedule = (
-        await supabase.from("weekly_schedules").select("id").eq("trainer_id", scheduleTrainer.id).eq("week_start", weekStart).maybeSingle()
+        await supabase
+          .from("weekly_schedules")
+          .select("id")
+          .eq("trainer_id", scheduleTrainer.id)
+          .eq("week_start", weekStart)
+          .maybeSingle()
       ).data;
       if (!schedule) {
         const { data: created } = await supabase
           .from("weekly_schedules")
-          .upsert({ trainer_id: scheduleTrainer.id, week_start: weekStart }, { onConflict: "trainer_id,week_start" })
+          .upsert(
+            { trainer_id: scheduleTrainer.id, week_start: weekStart },
+            { onConflict: "trainer_id,week_start" },
+          )
           .select("id")
           .maybeSingle();
         schedule = created ?? null;
@@ -247,15 +424,17 @@ function Schedule() {
       if (cancelled) return;
 
       if (!schedule) {
-        setDbStudents(activeRosters.map((roster) => ({
-          name: roster.student_name,
-          status: "응답대기",
-          picks: [],
-          lastPT: latestCompleted.get(roster.id) || "기록 없음",
-          remaining: roster.remaining_sessions,
-          total: roster.total_sessions,
-          joinedAt: new Date(roster.created_at).toLocaleDateString("ko-KR"),
-        })));
+        setDbStudents(
+          activeRosters.map((roster) => ({
+            name: roster.student_name,
+            status: "응답대기",
+            picks: [],
+            lastPT: latestCompleted.get(roster.id) || "기록 없음",
+            remaining: roster.remaining_sessions,
+            total: roster.total_sessions,
+            joinedAt: new Date(roster.created_at).toLocaleDateString("ko-KR"),
+          })),
+        );
         setDbPicks({});
         setDbAiResult([]);
         setDbUnassigned([]);
@@ -263,19 +442,39 @@ function Schedule() {
         return;
       }
 
-      const { data: existingSlots } = await supabase.from("time_slots").select("id").eq("schedule_id", schedule.id).limit(1);
+      const { data: existingSlots } = await supabase
+        .from("time_slots")
+        .select("id")
+        .eq("schedule_id", schedule.id)
+        .limit(1);
       if (!existingSlots || existingSlots.length === 0) {
         const grid = [];
         for (let day = 0; day < 7; day++) {
-          for (const hour of HOURS) grid.push({ schedule_id: schedule.id, day_of_week: day, hour, capacity: 1, is_closed: day === 6 });
+          for (const hour of HOURS)
+            grid.push({
+              schedule_id: schedule.id,
+              day_of_week: day,
+              hour,
+              capacity: 1,
+              is_closed: day === 6,
+            });
         }
-        await supabase.from("time_slots").upsert(grid, { onConflict: "schedule_id,day_of_week,hour", ignoreDuplicates: true });
+        await supabase
+          .from("time_slots")
+          .upsert(grid, { onConflict: "schedule_id,day_of_week,hour", ignoreDuplicates: true });
       }
       if (cancelled) return;
 
       const [{ data: slots }, { data: selections }] = await Promise.all([
-        supabase.from("time_slots").select("id,day_of_week,hour,capacity,is_closed").eq("schedule_id", schedule.id),
-        supabase.from("student_selections").select("id,slot_id,student_user_id,student_name,status,created_at").eq("schedule_id", schedule.id).order("created_at", { ascending: false }),
+        supabase
+          .from("time_slots")
+          .select("id,day_of_week,hour,capacity,is_closed")
+          .eq("schedule_id", schedule.id),
+        supabase
+          .from("student_selections")
+          .select("id,slot_id,student_user_id,student_name,status,created_at")
+          .eq("schedule_id", schedule.id)
+          .order("created_at", { ascending: false }),
       ]);
       if (cancelled) return;
 
@@ -310,7 +509,11 @@ function Schedule() {
         });
         return {
           name: roster.student_name,
-          status: unavailable ? "불가" as const : picks.length ? "응답완료" as const : "응답대기" as const,
+          status: unavailable
+            ? ("불가" as const)
+            : picks.length
+              ? ("응답완료" as const)
+              : ("응답대기" as const),
           picks,
           lastPT: latestCompleted.get(roster.id) || "기록 없음",
           remaining: roster.remaining_sessions,
@@ -350,23 +553,44 @@ function Schedule() {
       setDbStudents(students);
       setDbPicks(pickMap);
       setDbAiResult(result);
-      setDbUnassigned(matching.unassigned.map((student) => ({ name: student.studentName, reason: student.reason })));
-      setAssignments(result.map((item) => ({ name: item.name, day: item.day, hour: parseInt(item.hour, 10) })));
+      setDbUnassigned(
+        matching.unassigned.map((student) => ({
+          name: student.studentName,
+          reason: student.reason,
+        })),
+      );
+      setAssignments(
+        result.map((item) => ({ name: item.name, day: item.day, hour: parseInt(item.hour, 10) })),
+      );
       setPanelSelected(new Set(students.map((student) => student.name)));
-      setDbActivity((selections ?? []).slice(0, 12).map((selection) => ({
-        kind: "edit" as const,
-        who: selection.student_name,
-        what: selection.status === "unavailable" ? "이번 주 PT 불가로 응답" : "가능 시간을 선택",
-        when: new Date(selection.created_at).toLocaleString("ko-KR"),
-      })));
+      setDbActivity(
+        (selections ?? []).slice(0, 12).map((selection) => ({
+          kind: "edit" as const,
+          who: selection.student_name,
+          what: selection.status === "unavailable" ? "이번 주 PT 불가로 응답" : "가능 시간을 선택",
+          when: new Date(selection.created_at).toLocaleString("ko-KR"),
+        })),
+      );
     }
 
     void loadSchedule();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [authLoading, user?.id, weekOffset]);
 
-  const resetMemo = () => { setMemoFor(null); setMemoGroup(null); setMemoExercises(new Set()); setMemoText(""); };
-  const toggleExercise = (e: string) => setMemoExercises((p) => { const n = new Set(p); n.has(e) ? n.delete(e) : n.add(e); return n; });
+  const resetMemo = () => {
+    setMemoFor(null);
+    setMemoGroup(null);
+    setMemoExercises(new Set());
+    setMemoText("");
+  };
+  const toggleExercise = (e: string) =>
+    setMemoExercises((p) => {
+      const n = new Set(p);
+      n.has(e) ? n.delete(e) : n.add(e);
+      return n;
+    });
 
   const submitMemo = (cancelled = false) => {
     if (!memoFor) return;
@@ -409,7 +633,8 @@ function Schedule() {
       const n = new Set(p);
       HOURS.forEach((h) => {
         const k = `${d}-${h}`;
-        if (n.has(k)) n.delete(k); else n.add(k);
+        if (n.has(k)) n.delete(k);
+        else n.add(k);
       });
       return n;
     });
@@ -420,7 +645,8 @@ function Schedule() {
       const n = new Set(p);
       DAYS.forEach((d) => {
         const k = `${d}-${h}`;
-        if (n.has(k)) n.delete(k); else n.add(k);
+        if (n.has(k)) n.delete(k);
+        else n.add(k);
       });
       return n;
     });
@@ -431,7 +657,8 @@ function Schedule() {
     // setClosed updater — React may invoke that updater more than once (e.g.
     // StrictMode), which silently double-counted toClose/toOpen while the
     // resulting Set itself stayed correct, so only the toast number was wrong.
-    let toClose = 0, toOpen = 0;
+    let toClose = 0,
+      toOpen = 0;
     pendingClose.forEach((k) => {
       if (closed.has(k)) toOpen++;
       else toClose++;
@@ -446,11 +673,16 @@ function Schedule() {
       return n;
     });
     setPendingClose(new Set());
-    await Promise.all(Array.from(pendingClose).map((key) => {
-      const slotId = slotIds[key];
-      if (!slotId) return Promise.resolve();
-      return supabase.from("time_slots").update({ is_closed: !closed.has(key) }).eq("id", slotId);
-    }));
+    await Promise.all(
+      Array.from(pendingClose).map((key) => {
+        const slotId = slotIds[key];
+        if (!slotId) return Promise.resolve();
+        return supabase
+          .from("time_slots")
+          .update({ is_closed: !closed.has(key) })
+          .eq("id", slotId);
+      }),
+    );
     const parts: string[] = [];
     if (toClose) parts.push(`${toClose}개 시간을 닫았어요`);
     if (toOpen) parts.push(`${toOpen}개 시간을 다시 열었어요`);
@@ -468,7 +700,8 @@ function Schedule() {
   const togglePanelStudent = (name: string) => {
     setPanelSelected((p) => {
       const n = new Set(p);
-      if (n.has(name)) n.delete(name); else n.add(name);
+      if (n.has(name)) n.delete(name);
+      else n.add(name);
       return n;
     });
   };
@@ -477,7 +710,11 @@ function Schedule() {
     const count = panelSelected.size;
     const all = count === STUDENTS.length;
     if (panel === "invite") {
-      fireToast(all ? `전원에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓` : `${count}명에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`);
+      fireToast(
+        all
+          ? `전원에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`
+          : `${count}명에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`,
+      );
       setRequestSentWeek(panelWeek);
     } else {
       fireToast(all ? `전원에게 확정 알림 발송 ✓` : `${count}명에게 확정 알림 발송 ✓`);
@@ -488,13 +725,15 @@ function Schedule() {
   const pendingResponders = STUDENTS.filter((s) => s.status === "응답대기");
   const halfPending = pendingResponders;
   const respondedCount = STUDENTS.filter((student) => student.status === "응답완료").length;
-  const assignmentRate = respondedCount > 0 ? Math.round((AI_RESULT_INIT.length / respondedCount) * 100) : 0;
+  const assignmentRate =
+    respondedCount > 0 ? Math.round((AI_RESULT_INIT.length / respondedCount) * 100) : 0;
 
   const activitySlice = ACTIVITY_LOG.slice(actPage * ACT_PAGE, actPage * ACT_PAGE + ACT_PAGE);
-  const accountName = (user?.user_metadata as { name?: string; full_name?: string } | undefined)?.name
-    || (user?.user_metadata as { full_name?: string } | undefined)?.full_name
-    || user?.email?.split("@")[0]
-    || "담당";
+  const accountName =
+    (user?.user_metadata as { name?: string; full_name?: string } | undefined)?.name ||
+    (user?.user_metadata as { full_name?: string } | undefined)?.full_name ||
+    user?.email?.split("@")[0] ||
+    "담당";
   const displayTrainerName = trainerName || accountName;
 
   return (
@@ -503,18 +742,39 @@ function Schedule() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">트레이너 일정 조율</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+            트레이너 일정 조율
+          </p>
           <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-[1.15] tracking-tight">
-            {displayTrainerName} 트레이너님!<br />저희가 시간을 조율해드릴게요
+            {displayTrainerName} 트레이너님!
+            <br />
+            저희가 시간을 조율해드릴게요
           </h1>
         </div>
       </div>
 
       {/* DASHBOARD */}
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <KpiCard icon={<Users className="h-4 w-4" />} label="관리 회원" value={stats.total} suffix="명" />
-        <KpiCard icon={<MailCheck className="h-4 w-4" />} label="응답 완료" value={stats.responded} suffix={`/${stats.total}명`} detail={`이번 주 불가 ${stats.unavailable}명`} accent />
-        <KpiCard icon={<CalendarCheck className="h-4 w-4" />} label="배정 가능" value={stats.assignable} suffix="명 (겹침 없음)" />
+        <KpiCard
+          icon={<Users className="h-4 w-4" />}
+          label="관리 회원"
+          value={stats.total}
+          suffix="명"
+        />
+        <KpiCard
+          icon={<MailCheck className="h-4 w-4" />}
+          label="응답 완료"
+          value={stats.responded}
+          suffix={`/${stats.total}명`}
+          detail={`이번 주 불가 ${stats.unavailable}명`}
+          accent
+        />
+        <KpiCard
+          icon={<CalendarCheck className="h-4 w-4" />}
+          label="배정 가능"
+          value={stats.assignable}
+          suffix="명 (겹침 없음)"
+        />
       </div>
 
       {/* Week selector */}
@@ -550,7 +810,9 @@ function Schedule() {
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
-      <p className="mt-2 text-center text-[12px] font-bold text-ink tabular-nums">{getWeekLabel(weekOffset)}</p>
+      <p className="mt-2 text-center text-[12px] font-bold text-ink tabular-nums">
+        {getWeekLabel(weekOffset)}
+      </p>
 
       {/* Pending responses (left half) + Activity feed (right half) */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -559,11 +821,18 @@ function Schedule() {
             <div className="flex items-center gap-2">
               <UserRoundSearch className="h-4 w-4 shrink-0 text-ink" />
               <span className="text-[13px] font-black text-ink">아직 응답하지 않은 회원</span>
-              <span className="text-[12px] font-bold text-destructive tabular-nums">{halfPending.length}명</span>
+              <span className="text-[12px] font-bold text-destructive tabular-nums">
+                {halfPending.length}명
+              </span>
             </div>
             <button
-              onClick={() => { setPanel("invite"); setPanelWeek(weekOffset); setPanelSelected(new Set(halfPending.map((s) => s.name))); }}
-              className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95">
+              onClick={() => {
+                setPanel("invite");
+                setPanelWeek(weekOffset);
+                setPanelSelected(new Set(halfPending.map((s) => s.name)));
+              }}
+              className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95"
+            >
               <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" /> 전체 카톡 재알림
             </button>
           </div>
@@ -571,22 +840,31 @@ function Schedule() {
             {halfPending.map((s) => (
               <li key={s.name} className="flex items-center justify-between gap-3 px-5 py-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
+                  <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
+                    {s.name[0]}
+                  </div>
                   <div className="min-w-0">
                     <p className="text-[13px] font-bold text-ink">{s.name}</p>
-                    <p className="text-[11px] text-ink-soft">최근 PT {s.lastPT} · 잔여 <span className={s.remaining <= 5 ? "text-destructive font-bold" : ""}>{s.remaining}회</span></p>
+                    <p className="text-[11px] text-ink-soft">
+                      최근 PT {s.lastPT} · 잔여{" "}
+                      <span className={s.remaining <= 5 ? "text-destructive font-bold" : ""}>
+                        {s.remaining}회
+                      </span>
+                    </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setNotifyConfirm({ name: s.name, scope: "remind" })}
-                  className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0">
+                  className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0"
+                >
                   <MessageCircle className="h-3 w-3 fill-[#191600]" /> 재알림
                 </button>
               </li>
             ))}
             {halfPending.length === 0 && (
               <li className="px-5 py-7 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
-                <UserRoundSearch className="h-4 w-4 text-muted-foreground" /> 응답 대기 중인 회원이 없습니다.
+                <UserRoundSearch className="h-4 w-4 text-muted-foreground" /> 응답 대기 중인 회원이
+                없습니다.
               </li>
             )}
           </ul>
@@ -600,43 +878,64 @@ function Schedule() {
               <span className="text-[13px] font-black text-ink">최근 활동</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-[11px] font-bold text-ink-soft tabular-nums">{actPage + 1}/{actMaxPage + 1}</span>
+              <span className="text-[11px] font-bold text-ink-soft tabular-nums">
+                {actPage + 1}/{actMaxPage + 1}
+              </span>
               <button
                 onClick={() => setActPage((p) => Math.max(0, p - 1))}
                 disabled={actPage <= 0}
-                className="h-7 w-7 rounded-lg grid place-items-center bg-white border border-border text-ink-soft hover:bg-muted disabled:opacity-30">
+                className="h-7 w-7 rounded-lg grid place-items-center bg-white border border-border text-ink-soft hover:bg-muted disabled:opacity-30"
+              >
                 <ChevronUp className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => setActPage((p) => Math.min(actMaxPage, p + 1))}
                 disabled={actPage >= actMaxPage}
-                className="h-7 w-7 rounded-lg grid place-items-center bg-white border border-border text-ink-soft hover:bg-muted disabled:opacity-30">
+                className="h-7 w-7 rounded-lg grid place-items-center bg-white border border-border text-ink-soft hover:bg-muted disabled:opacity-30"
+              >
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
           <ul className="divide-y divide-border flex-1">
             {activitySlice.map((a, i) => (
-              <li key={`${actPage}-${i}`} className="px-5 py-3 flex items-start justify-between gap-3">
+              <li
+                key={`${actPage}-${i}`}
+                className="px-5 py-3 flex items-start justify-between gap-3"
+              >
                 <div className="min-w-0">
                   {a.kind === "edit" && (
-                    <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님이 {a.what}</p>
+                    <p className="text-[12.5px] text-ink leading-snug">
+                      <b className="font-extrabold">{a.who}</b>님이 {a.what}
+                    </p>
                   )}
                   {a.kind === "completed" && (
-                    <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님의 <b className="text-primary">{a.sessionNo}번째</b> PT 수업이 종료되었습니다 <span className="text-ink-soft">(남은 횟수: {a.remaining}회)</span></p>
+                    <p className="text-[12.5px] text-ink leading-snug">
+                      <b className="font-extrabold">{a.who}</b>님의{" "}
+                      <b className="text-primary">{a.sessionNo}번째</b> PT 수업이 종료되었습니다{" "}
+                      <span className="text-ink-soft">(남은 횟수: {a.remaining}회)</span>
+                    </p>
                   )}
                   {a.kind === "cancelled" && (
-                    <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님이 <b className="text-destructive">{a.sessionNo}회차 PT를 당일 취소</b>했습니다</p>
+                    <p className="text-[12.5px] text-ink leading-snug">
+                      <b className="font-extrabold">{a.who}</b>님이{" "}
+                      <b className="text-destructive">{a.sessionNo}회차 PT를 당일 취소</b>했습니다
+                    </p>
                   )}
                   {a.kind === "reschedule" && (
-                    <p className="text-[12.5px] text-ink leading-snug"><b className="font-extrabold">{a.who}</b>님이 <b className="text-primary">확정된 PT 일자 변경</b>을 신청했습니다 <span className="text-ink-soft">({a.from})</span></p>
+                    <p className="text-[12.5px] text-ink leading-snug">
+                      <b className="font-extrabold">{a.who}</b>님이{" "}
+                      <b className="text-primary">확정된 PT 일자 변경</b>을 신청했습니다{" "}
+                      <span className="text-ink-soft">({a.from})</span>
+                    </p>
                   )}
                   <p className="mt-0.5 text-[11px] text-ink-soft">{a.when}</p>
                 </div>
                 {a.kind === "completed" && (
                   <button
                     onClick={() => setMemoFor({ name: a.who, sessionNo: a.sessionNo })}
-                    className="shrink-0 h-8 px-3 rounded-full bg-ink text-white text-[11px] font-extrabold hover:brightness-110">
+                    className="shrink-0 h-8 px-3 rounded-full bg-ink text-white text-[11px] font-extrabold hover:brightness-110"
+                  >
                     메모 남기기
                   </button>
                 )}
@@ -644,7 +943,8 @@ function Schedule() {
             ))}
             {activitySlice.length === 0 && (
               <li className="px-5 py-7 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
-                <Inbox className="h-4 w-4 text-muted-foreground" /> 아직 표시할 최근 활동이 없습니다.
+                <Inbox className="h-4 w-4 text-muted-foreground" /> 아직 표시할 최근 활동이
+                없습니다.
               </li>
             )}
           </ul>
@@ -656,17 +956,27 @@ function Schedule() {
         <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-primary/40 blur-3xl" />
         <div className="relative flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <span className="chip bg-white/10 text-white"><Sparkles className="h-3 w-3" /> AI 최적 시간표</span>
+            <span className="chip bg-white/10 text-white">
+              <Sparkles className="h-3 w-3" /> AI 최적 시간표
+            </span>
             <h3 className="mt-2 text-[20px] sm:text-[22px] font-black leading-tight">
               학생 {respondedCount}명 중{" "}
               <span className="text-primary">{AI_RESULT_INIT.length}명 자동 배정</span>
-              <span className="text-white/60 font-bold text-[14px]"> · 배정률 {assignmentRate}%</span>
+              <span className="text-white/60 font-bold text-[14px]">
+                {" "}
+                · 배정률 {assignmentRate}%
+              </span>
             </h3>
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => { setPanel("confirm"); setPanelWeek(weekOffset); setPanelSelected(new Set(STUDENTS.map((s) => s.name))); }}
-              className="h-9 px-3.5 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1">
+              onClick={() => {
+                setPanel("confirm");
+                setPanelWeek(weekOffset);
+                setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
+              }}
+              className="h-9 px-3.5 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1"
+            >
               <Check className="h-3.5 w-3.5" /> 확정 알림
             </button>
           </div>
@@ -676,29 +986,45 @@ function Schedule() {
           <div className="relative mt-4 rounded-xl bg-destructive/15 border border-destructive/30 px-4 py-3">
             <div className="flex items-center gap-2">
               <Ban className="h-3.5 w-3.5 text-[#FF8A8A]" />
-              <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#FFB4B4]">조율 불가 · {AI_UNASSIGNED.length}명</p>
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#FFB4B4]">
+                조율 불가 · {AI_UNASSIGNED.length}명
+              </p>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {AI_UNASSIGNED.map((u) => (
-                <span key={u.name} className="inline-flex items-center gap-1.5 pl-1 pr-2.5 h-7 rounded-full bg-white/10 text-white text-[11px] font-bold">
-                  <span className="h-5 w-5 rounded-full bg-white/20 grid place-items-center text-[10px]">{u.name[0]}</span>
+                <span
+                  key={u.name}
+                  className="inline-flex items-center gap-1.5 pl-1 pr-2.5 h-7 rounded-full bg-white/10 text-white text-[11px] font-bold"
+                >
+                  <span className="h-5 w-5 rounded-full bg-white/20 grid place-items-center text-[10px]">
+                    {u.name[0]}
+                  </span>
                   {u.name}
                   <span className="text-white/50 font-medium">· {u.reason}</span>
                 </span>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-white/60">아래 ‘학생 응답’에서 일정 조정으로 직접 배정해 주세요.</p>
+            <p className="mt-2 text-[11px] text-white/60">
+              아래 ‘학생 응답’에서 일정 조정으로 직접 배정해 주세요.
+            </p>
           </div>
         )}
 
         <div className="relative mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
           {AI_RESULT_INIT.map((r, i) => (
-            <div key={i} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between">
+            <div
+              key={i}
+              className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between"
+            >
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{r.day}요일</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">
+                  {r.day}요일
+                </p>
                 <p className="text-[15px] font-black tabular-nums">{r.hour}</p>
               </div>
-              <span className="inline-flex items-center px-2 h-6 rounded-full bg-primary/20 text-primary text-[11px] font-extrabold">{r.name}</span>
+              <span className="inline-flex items-center px-2.5 h-7 rounded-full bg-primary/20 text-white text-[14px] font-extrabold ring-1 ring-primary/40">
+                {r.name}
+              </span>
             </div>
           ))}
         </div>
@@ -707,7 +1033,9 @@ function Schedule() {
           <div className="grid grid-cols-[36px_repeat(7,1fr)] bg-white/5 border-b border-white/10">
             <div className="p-1.5 text-[10px] text-white/50 font-bold text-center">시간</div>
             {DAYS.map((d) => (
-              <div key={d} className="p-1.5 text-center text-[11px] font-extrabold text-white/90">{d}</div>
+              <div key={d} className="p-1.5 text-center text-[11px] font-extrabold text-white/90">
+                {d}
+              </div>
             ))}
           </div>
           <div className="grid grid-cols-[36px_repeat(7,1fr)]">
@@ -716,13 +1044,20 @@ function Schedule() {
               if (!hasAny) return null;
               return (
                 <React.Fragment key={h}>
-                  <div className="border-b border-white/10 bg-white/5 grid place-items-center text-[10px] font-bold text-white/50 tabular-nums">{String(h).padStart(2, "0")}</div>
+                  <div className="border-b border-white/10 bg-white/5 grid place-items-center text-[10px] font-bold text-white/50 tabular-nums">
+                    {String(h).padStart(2, "0")}
+                  </div>
                   {DAYS.map((d) => {
                     const a = assignments.find((x) => x.day === d && x.hour === h);
                     return (
-                      <div key={`${d}-${h}`} className="h-9 border-b border-l border-white/10 grid place-items-center text-[10px] font-extrabold">
+                      <div
+                        key={`${d}-${h}`}
+                        className="h-9 border-b border-l border-white/10 grid place-items-center text-[10px] font-extrabold"
+                      >
                         {a ? (
-                          <span className="px-1.5 h-5 rounded-md bg-primary text-white whitespace-nowrap">{a.name}</span>
+                          <span className="inline-flex h-7 items-center whitespace-nowrap rounded-full bg-primary/20 px-2.5 text-[14px] font-extrabold text-white ring-1 ring-primary/40">
+                            {a.name}
+                          </span>
                         ) : null}
                       </div>
                     );
@@ -736,7 +1071,11 @@ function Schedule() {
 
       {/* SECTION 1 — Calendar */}
       <section className="mt-8">
-        <SectionHeader index="01" title="학생 선택 현황 + 안되는 시간 닫기" subtitle="셀 클릭으로 닫기/열기를 표시한 뒤, 하단 ‘시간 막기’ 버튼으로 확정해요." />
+        <SectionHeader
+          index="01"
+          title="학생 선택 현황 + 안되는 시간 닫기"
+          subtitle="셀 클릭으로 닫기/열기를 표시한 뒤, 하단 ‘시간 막기’ 버튼으로 확정해요."
+        />
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-soft">
           <div className="flex items-center gap-2">
@@ -749,12 +1088,18 @@ function Schedule() {
             <span>4+ 명</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5"><Lock className="h-3 w-3" /> 닫힌 시간</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-primary/40 ring-1 ring-primary" /> 변경 대기</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Lock className="h-3 w-3" /> 닫힌 시간
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm bg-primary/40 ring-1 ring-primary" /> 변경 대기
+            </span>
           </div>
         </div>
 
-        <div className={`mt-3 rounded-2xl border border-border overflow-hidden ${pendingClose.size > 0 ? "pb-28" : ""}`}>
+        <div
+          className={`mt-3 rounded-2xl border border-border overflow-hidden ${pendingClose.size > 0 ? "pb-28" : ""}`}
+        >
           <div className="grid grid-cols-[44px_repeat(7,1fr)] bg-surface-muted border-b border-border">
             <div className="p-2 text-[10px] text-muted-foreground font-bold text-center">시간</div>
             {DAYS.map((d) => (
@@ -790,7 +1135,7 @@ function Schedule() {
                       key={key}
                       onClick={() => toggleCellPending(key)}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
-                      className={`relative min-h-[26px] sm:min-h-[34px] overflow-hidden border-b border-l border-border transition group text-left
+                      className={`relative min-h-[56px] overflow-hidden border-b border-l border-border transition group
                         ${willBeClosed && !isPending ? "bg-muted text-muted-foreground/50" : ""}
                         ${!willBeClosed ? `heat-${lvl}` : ""}
                         ${isPending ? "ring-2 ring-ink-soft/60 ring-inset bg-ink-soft/10" : ""}
@@ -800,8 +1145,15 @@ function Schedule() {
                       {willBeClosed && !isPending ? (
                         <Lock className="absolute inset-0 m-auto h-3.5 w-3.5" />
                       ) : picks.length > 0 ? (
-                        <span className={`absolute inset-0 grid place-items-center text-[10px] font-black tabular-nums ${lvl >= 4 ? "text-white" : "text-ink"}`}>
-                          {picks.length}<span className="sr-only">명 선택</span>
+                        <span className="absolute inset-0 flex flex-wrap content-center items-center justify-center gap-1 p-1">
+                          {picks.map((name) => (
+                            <span
+                              key={name}
+                              className={`inline-flex max-w-full items-center truncate rounded-full border px-2 py-0.5 text-[12px] font-extrabold leading-tight ${lvl >= 4 ? "border-white/40 bg-white/20 text-white" : "border-black/10 bg-white/80 text-ink"}`}
+                            >
+                              {name}
+                            </span>
+                          ))}
                         </span>
                       ) : null}
                       {isPending && (
@@ -820,14 +1172,21 @@ function Schedule() {
 
       {/* SECTION 2 — Student responses */}
       <section className="mt-10">
-        <SectionHeader index="02" title="학생 응답" subtitle={`${stats.responded} / ${stats.total}명 응답 완료`} />
+        <SectionHeader
+          index="02"
+          title="학생 응답"
+          subtitle={`${stats.responded} / ${stats.total}명 응답 완료`}
+        />
 
         {/* Desktop table */}
         <div className="mt-4 rounded-2xl border border-border overflow-x-auto hidden md:block">
           <table className="w-full min-w-[760px] text-[13px]">
             <thead className="bg-surface-muted">
               <tr className="text-[11px] font-bold uppercase text-ink-soft">
-                <th className="px-4 py-3 text-left">학생 <span className="text-muted-foreground/70 normal-case font-bold">(등록일)</span></th>
+                <th className="px-4 py-3 text-left">
+                  학생{" "}
+                  <span className="text-muted-foreground/70 normal-case font-bold">(등록일)</span>
+                </th>
                 <th className="px-2 py-3 text-center">상태</th>
                 <th className="px-2 py-3 text-center">최근 PT</th>
                 <th className="px-2 py-3 text-center">남은 횟수</th>
@@ -841,24 +1200,41 @@ function Schedule() {
                 <tr key={s.name} className="border-t border-border align-middle">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
+                      <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
+                        {s.name[0]}
+                      </div>
                       <div className="min-w-0 leading-tight">
                         <p className="font-bold text-ink text-[13px]">{s.name}</p>
-                        <p className="text-[10.5px] text-muted-foreground/70 font-bold mt-0.5 tabular-nums">{s.joinedAt}</p>
+                        <p className="text-[10.5px] text-muted-foreground/70 font-bold mt-0.5 tabular-nums">
+                          {s.joinedAt}
+                        </p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 py-3 text-center"><StatusBadge s={s.status} /></td>
-                  <td className="px-2 py-3 text-center text-ink-soft tabular-nums whitespace-nowrap">{s.lastPT}</td>
+                  <td className="px-2 py-3 text-center">
+                    <StatusBadge s={s.status} />
+                  </td>
+                  <td className="px-2 py-3 text-center text-ink-soft tabular-nums whitespace-nowrap">
+                    {s.lastPT}
+                  </td>
                   <td className="px-2 py-3 text-center tabular-nums whitespace-nowrap">
-                    <span className={`font-extrabold ${s.remaining <= 5 ? "text-destructive" : "text-ink"}`}>{s.remaining}</span>
+                    <span
+                      className={`font-extrabold ${s.remaining <= 5 ? "text-destructive" : "text-ink"}`}
+                    >
+                      {s.remaining}
+                    </span>
                     <span className="text-muted-foreground"> / {s.total}회</span>
                   </td>
                   <td className="px-2 py-3 text-ink-soft">
-                    {s.picks.length === 0 ? <div className="text-center text-muted-foreground">—</div> : (
+                    {s.picks.length === 0 ? (
+                      <div className="text-center text-muted-foreground">—</div>
+                    ) : (
                       <div className="flex flex-wrap gap-1 justify-center">
                         {s.picks.map((p) => (
-                          <span key={p} className="inline-flex items-center px-2 h-6 rounded-full text-[11px] font-bold bg-muted text-ink whitespace-nowrap">
+                          <span
+                            key={p}
+                            className="inline-flex items-center px-2 h-6 rounded-full text-[11px] font-bold bg-muted text-ink whitespace-nowrap"
+                          >
                             {p}
                           </span>
                         ))}
@@ -894,29 +1270,48 @@ function Schedule() {
           {STUDENTS.map((s) => (
             <div key={s.name} className="rounded-xl border border-border bg-white p-3">
               <div className="flex items-start gap-2.5">
-                <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
+                <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
+                  {s.name[0]}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-bold text-ink text-[13.5px] truncate">{s.name}</p>
                     <StatusBadge s={s.status} />
                   </div>
-                  <p className="text-[10.5px] text-muted-foreground/80 tabular-nums mt-0.5">등록 {s.joinedAt} · 최근 PT {s.lastPT}</p>
+                  <p className="text-[10.5px] text-muted-foreground/80 tabular-nums mt-0.5">
+                    등록 {s.joinedAt} · 최근 PT {s.lastPT}
+                  </p>
                   <p className="text-[12px] tabular-nums mt-1">
-                    <span className={`font-extrabold ${s.remaining <= 5 ? "text-destructive" : "text-ink"}`}>{s.remaining}</span>
+                    <span
+                      className={`font-extrabold ${s.remaining <= 5 ? "text-destructive" : "text-ink"}`}
+                    >
+                      {s.remaining}
+                    </span>
                     <span className="text-muted-foreground"> / {s.total}회</span>
                   </p>
                   {s.picks.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {s.picks.map((p) => (
-                        <span key={p} className="inline-flex items-center px-1.5 h-5 rounded-full text-[10.5px] font-bold bg-muted text-ink whitespace-nowrap">{p}</span>
+                        <span
+                          key={p}
+                          className="inline-flex items-center px-1.5 h-5 rounded-full text-[10.5px] font-bold bg-muted text-ink whitespace-nowrap"
+                        >
+                          {p}
+                        </span>
                       ))}
                     </div>
                   )}
                   <div className="mt-2 flex items-center gap-1.5">
-                    <button onClick={() => openEdit(s)} className="flex-1 h-8 rounded-full bg-ink text-white text-[11px] font-extrabold inline-flex items-center justify-center gap-1">
+                    <button
+                      onClick={() => openEdit(s)}
+                      className="flex-1 h-8 rounded-full bg-ink text-white text-[11px] font-extrabold inline-flex items-center justify-center gap-1"
+                    >
                       <Pencil className="h-3 w-3" /> 일정 조정
                     </button>
-                    <button onClick={() => setNotifyConfirm({ name: s.name, scope: "individual" })} className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1">
+                    <button
+                      onClick={() => setNotifyConfirm({ name: s.name, scope: "individual" })}
+                      className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1"
+                    >
                       <MessageCircle className="h-3 w-3 fill-[#191600]" /> 카톡
                     </button>
                   </div>
@@ -928,13 +1323,27 @@ function Schedule() {
       </section>
 
       {/* Edit panel — right-side Sheet (notion-like) */}
-      <Sheet open={!!editing} onOpenChange={(v) => { if (!v) { setEditing(null); setActiveName(null); setPendingMove(null); } }}>
+      <Sheet
+        open={!!editing}
+        onOpenChange={(v) => {
+          if (!v) {
+            setEditing(null);
+            setActiveName(null);
+            setPendingMove(null);
+          }
+        }}
+      >
         <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
           <SheetHeader>
-            <span className="inline-flex w-fit chip bg-primary/10 text-primary"><Pencil className="h-3 w-3" /> 일정 조정</span>
-            <SheetTitle className="text-[20px] font-black leading-tight">AI 최적 시간표 · 수동 조정</SheetTitle>
+            <span className="inline-flex w-fit chip bg-primary/10 text-primary">
+              <Pencil className="h-3 w-3" /> 일정 조정
+            </span>
+            <SheetTitle className="text-[20px] font-black leading-tight">
+              AI 최적 시간표 · 수동 조정
+            </SheetTitle>
             <SheetDescription>
-              배정된 회원을 클릭한 뒤, 옮기고 싶은 칸을 누르세요. <b className="text-primary">파란색</b>은 선택된 회원이 희망한 시간이에요.
+              배정된 회원을 클릭한 뒤, 옮기고 싶은 칸을 누르세요.{" "}
+              <b className="text-primary">파란색</b>은 선택된 회원이 희망한 시간이에요.
             </SheetDescription>
           </SheetHeader>
 
@@ -945,16 +1354,23 @@ function Schedule() {
                 (active?.picks ?? [])
                   .map(parsePick)
                   .filter(Boolean)
-                  .map((p) => `${p!.day}-${p!.hour}`)
+                  .map((p) => `${p!.day}-${p!.hour}`),
               );
               const cellByKey = new Map(assignments.map((a) => [`${a.day}-${a.hour}`, a]));
               return (
                 <>
                   <div className="rounded-xl border border-border overflow-hidden">
                     <div className="grid grid-cols-[40px_repeat(7,1fr)] bg-surface-muted border-b border-border">
-                      <div className="p-1.5 text-[10px] text-muted-foreground font-bold text-center">시간</div>
+                      <div className="p-1.5 text-[10px] text-muted-foreground font-bold text-center">
+                        시간
+                      </div>
                       {DAYS.map((d) => (
-                        <div key={d} className="p-1.5 text-center text-[12px] font-extrabold text-ink">{d}</div>
+                        <div
+                          key={d}
+                          className="p-1.5 text-center text-[12px] font-extrabold text-ink"
+                        >
+                          {d}
+                        </div>
                       ))}
                     </div>
                     <div className="grid grid-cols-[40px_repeat(7,1fr)] max-h-[420px] overflow-y-auto">
@@ -985,11 +1401,16 @@ function Schedule() {
                                   ${!isClosed && !isMine ? "hover:ring-2 hover:ring-ink/30 hover:ring-inset" : ""}
                                 `}
                               >
-                                {isClosed ? <Lock className="absolute inset-0 m-auto h-3 w-3" /> : cell ? (
+                                {isClosed ? (
+                                  <Lock className="absolute inset-0 m-auto h-3 w-3" />
+                                ) : cell ? (
                                   <span
                                     role="button"
                                     tabIndex={0}
-                                    onClick={(e) => { e.stopPropagation(); setActiveName(cell.name); }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveName(cell.name);
+                                    }}
                                     className="absolute inset-0 grid place-items-center px-1 truncate cursor-pointer"
                                   >
                                     {cell.name}
@@ -1010,7 +1431,9 @@ function Schedule() {
                         key={a.name}
                         onClick={() => setActiveName(a.name)}
                         className={`inline-flex items-center px-2.5 h-7 rounded-full text-[11px] font-extrabold transition ${
-                          activeName === a.name ? "bg-primary text-white" : "bg-muted text-ink hover:bg-ink/10"
+                          activeName === a.name
+                            ? "bg-primary text-white"
+                            : "bg-muted text-ink hover:bg-ink/10"
                         }`}
                       >
                         {a.name}
@@ -1038,22 +1461,34 @@ function Schedule() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-[18px] font-black">
-              {activeName}님을 {pendingMove?.day}요일 {String(pendingMove?.hour ?? 0).padStart(2, "0")}:00로 옮길까요?
+              {activeName}님을 {pendingMove?.day}요일{" "}
+              {String(pendingMove?.hour ?? 0).padStart(2, "0")}:00로 옮길까요?
             </DialogTitle>
             <DialogDescription>
-              해당 시간에 다른 회원이 배정되어 있다면 자동으로 비웁니다. 변경 내용은 ‘확정 알림’ 전까지 학생에게 전송되지 않아요.
+              해당 시간에 다른 회원이 배정되어 있다면 자동으로 비웁니다. 변경 내용은 ‘확정 알림’
+              전까지 학생에게 전송되지 않아요.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <button onClick={() => setPendingMove(null)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
+            <button
+              onClick={() => setPendingMove(null)}
+              className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold"
+            >
+              취소
+            </button>
             <button
               onClick={() => {
                 if (!activeName || !pendingMove) return;
                 setAssignments((prev) => {
                   const filtered = prev.filter(
-                    (a) => a.name !== activeName && !(a.day === pendingMove.day && a.hour === pendingMove.hour)
+                    (a) =>
+                      a.name !== activeName &&
+                      !(a.day === pendingMove.day && a.hour === pendingMove.hour),
                   );
-                  return [...filtered, { name: activeName, day: pendingMove.day, hour: pendingMove.hour }];
+                  return [
+                    ...filtered,
+                    { name: activeName, day: pendingMove.day, hour: pendingMove.hour },
+                  ];
                 });
                 setPendingMove(null);
               }}
@@ -1069,17 +1504,31 @@ function Schedule() {
       <Sheet open={!!memoFor} onOpenChange={(v) => !v && resetMemo()}>
         <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
           <SheetHeader>
-            <span className="inline-flex w-fit chip bg-primary/10 text-primary"><Pencil className="h-3 w-3" /> 수업 메모</span>
-            <SheetTitle className="text-[20px] font-black leading-tight">{memoFor?.name}님 · {memoFor?.sessionNo}회차 메모</SheetTitle>
-            <SheetDescription>저장하면 학생의 PT 기록 테이블에 부위와 메모가 반영돼요.</SheetDescription>
+            <span className="inline-flex w-fit chip bg-primary/10 text-primary">
+              <Pencil className="h-3 w-3" /> 수업 메모
+            </span>
+            <SheetTitle className="text-[20px] font-black leading-tight">
+              {memoFor?.name}님 · {memoFor?.sessionNo}회차 메모
+            </SheetTitle>
+            <SheetDescription>
+              저장하면 학생의 PT 기록 테이블에 부위와 메모가 반영돼요.
+            </SheetDescription>
           </SheetHeader>
 
           <div className="mt-5">
-            <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">대부위</p>
+            <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">
+              대부위
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {BODY_GROUPS.map((g) => (
-                <button key={g.name} onClick={() => { setMemoGroup(g.name); setMemoExercises(new Set()); }}
-                  className={`h-10 px-4 rounded-xl text-[13px] font-extrabold transition ${memoGroup === g.name ? "bg-ink text-white" : "bg-muted text-ink hover:bg-ink/10"}`}>
+                <button
+                  key={g.name}
+                  onClick={() => {
+                    setMemoGroup(g.name);
+                    setMemoExercises(new Set());
+                  }}
+                  className={`h-10 px-4 rounded-xl text-[13px] font-extrabold transition ${memoGroup === g.name ? "bg-ink text-white" : "bg-muted text-ink hover:bg-ink/10"}`}
+                >
                   {g.name}
                 </button>
               ))}
@@ -1088,13 +1537,18 @@ function Schedule() {
 
           {memoGroup && (
             <div className="mt-5">
-              <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">{memoGroup} 세부 운동</p>
+              <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">
+                {memoGroup} 세부 운동
+              </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {BODY_GROUPS.find((g) => g.name === memoGroup)!.items.map((ex) => {
                   const on = memoExercises.has(ex);
                   return (
-                    <button key={ex} onClick={() => toggleExercise(ex)}
-                      className={`h-14 px-3 rounded-2xl text-[13px] font-extrabold border-2 transition ${on ? "bg-primary text-white border-primary shadow-pop" : "bg-white border-border text-ink hover:border-ink/40"}`}>
+                    <button
+                      key={ex}
+                      onClick={() => toggleExercise(ex)}
+                      className={`h-14 px-3 rounded-2xl text-[13px] font-extrabold border-2 transition ${on ? "bg-primary text-white border-primary shadow-pop" : "bg-white border-border text-ink hover:border-ink/40"}`}
+                    >
                       {ex}
                     </button>
                   );
@@ -1104,19 +1558,28 @@ function Schedule() {
           )}
 
           <div className="mt-5">
-            <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">간단 메모</p>
-            <textarea value={memoText} onChange={(e) => setMemoText(e.target.value)}
+            <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">
+              간단 메모
+            </p>
+            <textarea
+              value={memoText}
+              onChange={(e) => setMemoText(e.target.value)}
               placeholder="예) 스쿼트 100kg 도전 / 폼 안정 / 다음 회차 데드 예정"
-              className="w-full min-h-[120px] p-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] text-ink resize-y" />
+              className="w-full min-h-[120px] p-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] text-ink resize-y"
+            />
           </div>
 
           <div className="mt-6 sticky bottom-0 -mx-6 px-6 py-4 bg-white border-t border-border space-y-2">
-            <button onClick={() => submitMemo(false)}
-              className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop hover:brightness-110">
+            <button
+              onClick={() => submitMemo(false)}
+              className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop hover:brightness-110"
+            >
               <Check className="h-4 w-4" /> 메모 저장
             </button>
-            <button onClick={() => submitMemo(true)}
-              className="w-full text-center text-[12px] text-destructive font-bold underline hover:opacity-80">
+            <button
+              onClick={() => submitMemo(true)}
+              className="w-full text-center text-[12px] text-destructive font-bold underline hover:opacity-80"
+            >
               회원 사정으로 당일 취소
             </button>
           </div>
@@ -1128,20 +1591,28 @@ function Schedule() {
         <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
           <SheetHeader>
             <span className="inline-flex w-fit chip bg-primary/10 text-primary">
-              {panel === "invite" ? <><Send className="h-3 w-3" /> 응답 요청</> : <><Check className="h-3 w-3" /> 확정 알림</>}
+              {panel === "invite" ? (
+                <>
+                  <Send className="h-3 w-3" /> 응답 요청
+                </>
+              ) : (
+                <>
+                  <Check className="h-3 w-3" /> 확정 알림
+                </>
+              )}
             </span>
             <SheetTitle className="text-[20px] font-black leading-tight">
               {panel === "invite"
                 ? `학생들에게 ${WEEK_LABELS[panelWeek]} 가능 시간 선택을 요청할까요?`
                 : `학생들에게 ${WEEK_LABELS[panelWeek]} 확정 일정을 알릴까요?`}
             </SheetTitle>
-            <SheetDescription>
-              선택한 회원에게만 카카오톡으로 발송됩니다.
-            </SheetDescription>
+            <SheetDescription>선택한 회원에게만 카카오톡으로 발송됩니다.</SheetDescription>
           </SheetHeader>
 
           <div className="mt-5">
-            <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">대상 주차</p>
+            <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">
+              대상 주차
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {[0, 1, 2, 3, 4].map((o) => (
                 <button
@@ -1157,15 +1628,23 @@ function Schedule() {
 
           <div className="mt-5">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider">대상 회원 ({panelSelected.size}/{STUDENTS.length})</p>
+              <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider">
+                대상 회원 ({panelSelected.size}/{STUDENTS.length})
+              </p>
               <div className="flex gap-1">
                 <button
                   onClick={() => setPanelSelected(new Set(STUDENTS.map((s) => s.name)))}
-                  className="text-[11px] font-bold text-primary hover:underline">전체 선택</button>
+                  className="text-[11px] font-bold text-primary hover:underline"
+                >
+                  전체 선택
+                </button>
                 <span className="text-ink-soft">·</span>
                 <button
                   onClick={() => setPanelSelected(new Set())}
-                  className="text-[11px] font-bold text-ink-soft hover:underline">전체 해제</button>
+                  className="text-[11px] font-bold text-ink-soft hover:underline"
+                >
+                  전체 해제
+                </button>
               </div>
             </div>
             <ul className="rounded-xl border border-border divide-y divide-border max-h-[40vh] overflow-y-auto">
@@ -1177,13 +1656,23 @@ function Schedule() {
                       onClick={() => togglePanelStudent(s.name)}
                       className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left hover:bg-muted/50 ${checked ? "bg-primary/[0.04]" : ""}`}
                     >
-                      <span className={`h-5 w-5 rounded-md border-2 grid place-items-center shrink-0 transition ${checked ? "bg-primary border-primary" : "border-border bg-white"}`}>
+                      <span
+                        className={`h-5 w-5 rounded-md border-2 grid place-items-center shrink-0 transition ${checked ? "bg-primary border-primary" : "border-border bg-white"}`}
+                      >
                         {checked && <Check className="h-3 w-3 text-white" />}
                       </span>
-                      <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">{s.name[0]}</div>
+                      <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
+                        {s.name[0]}
+                      </div>
                       <div className="flex-1 min-w-0 leading-tight">
                         <p className="text-[13px] font-bold text-ink">{s.name}</p>
-                        <p className="text-[11px] text-ink-soft">최근 PT {s.lastPT} · 잔여 <span className={s.remaining <= 5 ? "text-destructive font-bold" : ""}>{s.remaining}회</span> · 등록 {s.joinedAt}</p>
+                        <p className="text-[11px] text-ink-soft">
+                          최근 PT {s.lastPT} · 잔여{" "}
+                          <span className={s.remaining <= 5 ? "text-destructive font-bold" : ""}>
+                            {s.remaining}회
+                          </span>{" "}
+                          · 등록 {s.joinedAt}
+                        </p>
                       </div>
                     </button>
                   </li>
@@ -1196,7 +1685,8 @@ function Schedule() {
             <button
               onClick={sendPanel}
               disabled={panelSelected.size === 0}
-              className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop hover:brightness-110 disabled:opacity-40">
+              className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop hover:brightness-110 disabled:opacity-40"
+            >
               <Send className="h-4 w-4" />
               {panelSelected.size === 0
                 ? "회원을 선택해주세요"
@@ -1207,6 +1697,8 @@ function Schedule() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <div className="h-32" aria-hidden="true" />
 
       {/* Floating invite bar — primary CTA, hidden when pendingClose bar overlays it */}
       {pendingClose.size === 0 && (
@@ -1221,12 +1713,21 @@ function Schedule() {
                   {WEEK_LABELS[weekOffset]} 응답 현황 · {STUDENTS.length}명에게 알림 발송됨
                 </p>
                 <p className="text-[11px] text-white/70 mt-0.5 leading-snug tabular-nums">
-                  <b className="text-white">{STUDENTS.filter(s=>s.status!=="응답대기").length}명</b> 시간 선택 완료 · <b className="text-primary">{AI_RESULT_INIT.length}명</b> 자동 배정됨 · <b className="text-white">{pendingResponders.length}명</b> 응답 대기
+                  <b className="text-white">
+                    {STUDENTS.filter((s) => s.status !== "응답대기").length}명
+                  </b>{" "}
+                  시간 선택 완료 · <b className="text-primary">{AI_RESULT_INIT.length}명</b> 자동
+                  배정됨 · <b className="text-white">{pendingResponders.length}명</b> 응답 대기
                 </p>
               </div>
               <button
-                onClick={() => { setPanel("confirm"); setPanelWeek(weekOffset); setPanelSelected(new Set(STUDENTS.map((s) => s.name))); }}
-                className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-110">
+                onClick={() => {
+                  setPanel("confirm");
+                  setPanelWeek(weekOffset);
+                  setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
+                }}
+                className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-110"
+              >
                 <Check className="h-3.5 w-3.5" /> 확정 알림 보내기
               </button>
             </div>
@@ -1236,12 +1737,18 @@ function Schedule() {
                 <MessageCircle className="h-5 w-5 fill-[#191600] text-[#191600]" />
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-extrabold leading-tight">가장 먼저 할 일 · {WEEK_LABELS[weekOffset]} 가능 시간을 학생에게 물어보세요</p>
-                <p className="text-[11px] text-white/80 mt-0.5 leading-snug">응답이 모여야 AI가 최적 시간표를 짤 수 있어요. 지금 바로 카톡으로 한 번에 요청 보내기!</p>
+                <p className="text-[13px] font-extrabold leading-tight">
+                  가장 먼저 할 일 · {WEEK_LABELS[weekOffset]} 가능 시간을 학생에게 물어보세요
+                </p>
+                <p className="text-[11px] text-white/80 mt-0.5 leading-snug">
+                  응답이 모여야 AI가 최적 시간표를 짤 수 있어요. 지금 바로 카톡으로 한 번에 요청
+                  보내기!
+                </p>
               </div>
               <button
                 onClick={() => setInviteIntent(true)}
-                className="h-11 px-4 rounded-xl bg-ink text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-125">
+                className="h-11 px-4 rounded-xl bg-ink text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-125"
+              >
                 <Send className="h-3.5 w-3.5" /> 요청 보내기
               </button>
             </div>
@@ -1256,14 +1763,21 @@ function Schedule() {
             <div className="h-10 w-10 rounded-full bg-primary/15 grid place-items-center mb-2">
               <Lock className="h-5 w-5 text-primary" />
             </div>
-            <DialogTitle className="text-[18px] font-black leading-tight">잠깐! 안되는 시간을 먼저 닫으셨나요?</DialogTitle>
+            <DialogTitle className="text-[18px] font-black leading-tight">
+              잠깐! 안되는 시간을 먼저 닫으셨나요?
+            </DialogTitle>
             <DialogDescription>
-              트레이너님이 어려운 시간을 먼저 막아두면 학생도 빈틈없이 가능 시간만 골라줘서 조율이 훨씬 빨라져요.
-              지금 바로 {WEEK_LABELS[weekOffset]} 요청을 보낼까요?
+              트레이너님이 어려운 시간을 먼저 막아두면 학생도 빈틈없이 가능 시간만 골라줘서 조율이
+              훨씬 빨라져요. 지금 바로 {WEEK_LABELS[weekOffset]} 요청을 보낼까요?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <button onClick={() => setInviteIntent(false)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">시간 먼저 닫을게요</button>
+            <button
+              onClick={() => setInviteIntent(false)}
+              className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold"
+            >
+              시간 먼저 닫을게요
+            </button>
             <button
               onClick={() => {
                 setInviteIntent(false);
@@ -1271,7 +1785,8 @@ function Schedule() {
                 setPanelWeek(weekOffset);
                 setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
               }}
-              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-extrabold inline-flex items-center gap-1.5">
+              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-extrabold inline-flex items-center gap-1.5"
+            >
               <Check className="h-4 w-4" /> 네, 요청 보낼게요
             </button>
           </DialogFooter>
@@ -1287,12 +1802,20 @@ function Schedule() {
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-extrabold">시간 변경 {pendingClose.size}개 대기 중</p>
-              <p className="text-[11px] text-white/60">‘시간 막기’를 누르면 해당 셀이 닫혀 학생이 선택할 수 없어요.</p>
+              <p className="text-[11px] text-white/60">
+                ‘시간 막기’를 누르면 해당 셀이 닫혀 학생이 선택할 수 없어요.
+              </p>
             </div>
-            <button onClick={() => setPendingClose(new Set())} className="h-11 px-3 rounded-xl bg-white/10 text-white text-[12px] font-bold inline-flex items-center gap-1 shrink-0 hover:bg-white/15">
+            <button
+              onClick={() => setPendingClose(new Set())}
+              className="h-11 px-3 rounded-xl bg-white/10 text-white text-[12px] font-bold inline-flex items-center gap-1 shrink-0 hover:bg-white/15"
+            >
               <X className="h-3.5 w-3.5" /> 취소
             </button>
-            <button onClick={applyPending} className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 hover:brightness-110">
+            <button
+              onClick={applyPending}
+              className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-bold inline-flex items-center gap-1 shrink-0 hover:brightness-110"
+            >
               <Check className="h-4 w-4" /> 시간 막기
             </button>
           </div>
@@ -1316,14 +1839,20 @@ function Schedule() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <button onClick={() => setNotifyConfirm(null)} className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold">취소</button>
+            <button
+              onClick={() => setNotifyConfirm(null)}
+              className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold"
+            >
+              취소
+            </button>
             <button
               onClick={() => {
                 const n = notifyConfirm!;
                 fireToast(`${n.name}님에게 카카오톡을 보냈어요 ✓`);
                 setNotifyConfirm(null);
               }}
-              className="h-10 px-4 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5">
+              className="h-10 px-4 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5"
+            >
               <Check className="h-4 w-4" /> 보내기
             </button>
           </DialogFooter>
@@ -1334,7 +1863,9 @@ function Schedule() {
       {sendToast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
           <div className="rounded-2xl bg-ink text-white px-4 py-3 shadow-pop flex items-center gap-2.5 min-w-[280px]">
-            <span className="h-8 w-8 rounded-full bg-primary grid place-items-center"><Check className="h-4 w-4" /></span>
+            <span className="h-8 w-8 rounded-full bg-primary grid place-items-center">
+              <Check className="h-4 w-4" />
+            </span>
             <p className="text-[13px] font-extrabold">{sendToast}</p>
           </div>
         </div>
@@ -1343,26 +1874,65 @@ function Schedule() {
   );
 }
 
-function KpiCard({ icon, label, value, suffix, detail, accent }: { icon: React.ReactNode; label: string; value: number; suffix?: string; detail?: string; accent?: boolean }) {
+function KpiCard({
+  icon,
+  label,
+  value,
+  suffix,
+  detail,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  suffix?: string;
+  detail?: string;
+  accent?: boolean;
+}) {
   return (
-    <div className={`rounded-2xl border p-4 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}>
-      <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${accent ? "text-primary" : "text-ink-soft"}`}>
-        {icon}{label}
+    <div
+      className={`rounded-2xl border p-4 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}
+    >
+      <div
+        className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${accent ? "text-primary" : "text-ink-soft"}`}
+      >
+        {icon}
+        {label}
       </div>
       <div className="mt-2 flex items-baseline gap-1">
         <span className="text-[28px] font-black tabular-nums leading-none">{value}</span>
-        {suffix && <span className={`text-[12px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}>{suffix}</span>}
-        {detail && <span className={`ml-1 text-[10px] font-semibold ${accent ? "text-white/55" : "text-muted-foreground"}`}>· {detail}</span>}
+        {suffix && (
+          <span className={`text-[12px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}>
+            {suffix}
+          </span>
+        )}
+        {detail && (
+          <span
+            className={`ml-1 text-[10px] font-semibold ${accent ? "text-white/55" : "text-muted-foreground"}`}
+          >
+            · {detail}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-function SectionHeader({ index, title, subtitle }: { index: string; title: string; subtitle?: string }) {
+function SectionHeader({
+  index,
+  title,
+  subtitle,
+}: {
+  index: string;
+  title: string;
+  subtitle?: string;
+}) {
   return (
     <div className="flex items-end justify-between gap-3 border-b border-border pb-3">
       <div className="flex items-baseline gap-3">
-        <span className="text-[11px] font-black tabular-nums text-primary tracking-widest">{index}</span>
+        <span className="text-[11px] font-black tabular-nums text-primary tracking-widest">
+          {index}
+        </span>
         <h2 className="text-[18px] sm:text-[20px] font-black text-ink leading-tight">{title}</h2>
       </div>
       {subtitle && <p className="text-[12px] text-ink-soft">{subtitle}</p>}
@@ -1378,8 +1948,11 @@ function StatusBadge({ s }: { s: Status }) {
   };
   const icon = s === "불가" ? <Ban className="h-3 w-3" /> : null;
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-bold ${map[s]}`}>
-      {icon}{s}
+    <span
+      className={`inline-flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-bold ${map[s]}`}
+    >
+      {icon}
+      {s}
     </span>
   );
 }
