@@ -39,7 +39,7 @@ export function useAuth() {
       setLoading(false);
     });
     // listen to manual virtual login changes
-    const onStorage = () => setUser((prev) => prev ?? readVirtual());
+    const onStorage = () => setUser(readVirtual());
     window.addEventListener("storage", onStorage);
     window.addEventListener("gympt-auth", onStorage);
     return () => {

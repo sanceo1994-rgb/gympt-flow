@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { DemoBanner } from "@/components/DemoBanner";
-import React, { useMemo, useState } from "react";
-import { Send, Sparkles, Check, ChevronLeft, ChevronRight, Ban, Lock, Users, MailCheck, CalendarCheck, Pencil, MessageCircle, X, Activity, ChevronUp, ChevronDown } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Send, Sparkles, Check, ChevronLeft, ChevronRight, Ban, Lock, Users, MailCheck, CalendarCheck, Pencil, MessageCircle, X, Activity, ChevronUp, ChevronDown, UserRoundSearch, Inbox } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { maximizeScheduleAssignments, type MatchingSlot } from "@/lib/maximize-schedule";
 
 export const Route = createFileRoute("/schedule")({
   head: () => ({
@@ -44,8 +47,10 @@ function heatLevel(n: number) {
 }
 
 function getWeekLabel(offset: number) {
-  const base = new Date(2026, 4, 11);
-  base.setDate(base.getDate() + offset * 7);
+  const base = new Date();
+  const mondayDistance = (base.getDay() + 6) % 7;
+  base.setHours(0, 0, 0, 0);
+  base.setDate(base.getDate() - mondayDistance + offset * 7);
   const end = new Date(base);
   end.setDate(end.getDate() + 6);
   const f = (d: Date) => `${d.getMonth() + 1}.${d.getDate()}`;
@@ -85,11 +90,6 @@ const AI_RESULT_INIT = [
   { day: "수", hour: "09:00", name: "최유나" },
   { day: "수", hour: "19:00", name: "이도현" },
   { day: "금", hour: "20:00", name: "정수민" },
-];
-
-const AI_UNASSIGNED: { name: string; reason: string }[] = [
-  { name: "김태현", reason: "선호 시간 모두 닫힘" },
-  { name: "윤서아", reason: "다른 회원과 시간 충돌" },
 ];
 
 type ActivityItem =
@@ -135,13 +135,24 @@ function parsePick(s: string): { day: string; hour: number } | null {
 type Assignment = { name: string; day: string; hour: number };
 
 function Schedule() {
+  const { user, loading: authLoading } = useAuth();
+  const [trainerName, setTrainerName] = useState("");
+  const [dbStudents, setDbStudents] = useState<Student[]>([]);
+  const [dbPicks, setDbPicks] = useState<Record<string, string[]>>({});
+  const [dbAiResult, setDbAiResult] = useState<Array<{ day: string; hour: string; name: string }>>([]);
+  const [dbUnassigned, setDbUnassigned] = useState<Array<{ name: string; reason: string }>>([]);
+  const [dbActivity, setDbActivity] = useState<ActivityItem[]>([]);
+  const [slotIds, setSlotIds] = useState<Record<string, string>>({});
+  const STUDENTS = dbStudents;
+  const PICKS = dbPicks;
+  const AI_RESULT_INIT = dbAiResult;
+  const AI_UNASSIGNED = dbUnassigned;
+  const ACTIVITY_LOG = dbActivity;
   const [weekOffset, setWeekOffset] = useState(1);
   const [closed, setClosed] = useState<Set<string>>(new Set(["일-7", "일-8", "일-9", "일-10", "일-11", "일-12", "일-13", "일-14", "일-15", "일-16", "일-17", "일-18", "일-19", "일-20", "일-21", "일-22"]));
   const [editing, setEditing] = useState<Student | null>(null);
   const [activeName, setActiveName] = useState<string | null>(null);
-  const [assignments, setAssignments] = useState<Assignment[]>(
-    AI_RESULT_INIT.map((r) => ({ name: r.name, day: r.day, hour: parseInt(r.hour, 10) }))
-  );
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [pendingMove, setPendingMove] = useState<{ day: string; hour: number } | null>(null);
   const [sendToast, setSendToast] = useState<string | null>(null);
   const [notifyConfirm, setNotifyConfirm] = useState<{ name: string; scope: "individual" | "remind" } | null>(null);
@@ -151,7 +162,7 @@ function Schedule() {
   // Right-side panel for "요청 보내기" / "확정 알림"
   const [panel, setPanel] = useState<null | "invite" | "confirm">(null);
   const [panelWeek, setPanelWeek] = useState(1);
-  const [panelSelected, setPanelSelected] = useState<Set<string>>(new Set(STUDENTS.map((s) => s.name)));
+  const [panelSelected, setPanelSelected] = useState<Set<string>>(new Set());
 
   // Pending-close cells for floating confirm bar
   const [pendingClose, setPendingClose] = useState<Set<string>>(new Set());
@@ -161,6 +172,156 @@ function Schedule() {
   const [memoGroup, setMemoGroup] = useState<string | null>(null);
   const [memoExercises, setMemoExercises] = useState<Set<string>>(new Set());
   const [memoText, setMemoText] = useState("");
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user || String(user.id).startsWith("virtual-")) {
+      setDbStudents([]);
+      setDbPicks({});
+      setDbAiResult([]);
+      setDbUnassigned([]);
+      setDbActivity([]);
+      return;
+    }
+
+    let cancelled = false;
+    const targetMonday = new Date();
+    const mondayDistance = (targetMonday.getDay() + 6) % 7;
+    targetMonday.setHours(0, 0, 0, 0);
+    targetMonday.setDate(targetMonday.getDate() - mondayDistance + weekOffset * 7);
+    const weekStart = `${targetMonday.getFullYear()}-${String(targetMonday.getMonth() + 1).padStart(2, "0")}-${String(targetMonday.getDate()).padStart(2, "0")}`;
+
+    async function loadSchedule() {
+      const [{ data: trainer }, { data: scheduleTrainer }] = await Promise.all([
+        supabase.from("trainers").select("id,name").eq("user_id", user.id).maybeSingle(),
+        supabase.from("trainer_profiles").select("id").eq("user_id", user.id).maybeSingle(),
+      ]);
+      if (trainer && !cancelled) setTrainerName(trainer.name);
+      if (!trainer || !scheduleTrainer || cancelled) return;
+
+      const [{ data: rosters }, { data: schedule }, { data: sessions }] = await Promise.all([
+        supabase.from("student_rosters").select("id,student_name,status,remaining_sessions,total_sessions,created_at").eq("trainer_id", trainer.id).order("created_at"),
+        supabase.from("weekly_schedules").select("id").eq("trainer_id", scheduleTrainer.id).eq("week_start", weekStart).maybeSingle(),
+        supabase.from("pt_sessions").select("roster_id,scheduled_at,status").eq("trainer_id", trainer.id).order("scheduled_at", { ascending: false }),
+      ]);
+
+      const latestCompleted = new Map<string, string>();
+      for (const session of sessions ?? []) {
+        if (session.status === "completed" && !latestCompleted.has(session.roster_id)) {
+          latestCompleted.set(session.roster_id, new Date(session.scheduled_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric", weekday: "short" }));
+        }
+      }
+
+      if (!schedule) {
+        if (!cancelled) {
+          setDbStudents((rosters ?? []).map((roster) => ({
+            name: roster.student_name,
+            status: "응답대기",
+            picks: [],
+            lastPT: latestCompleted.get(roster.id) || "기록 없음",
+            remaining: roster.remaining_sessions,
+            total: roster.total_sessions,
+            joinedAt: new Date(roster.created_at).toLocaleDateString("ko-KR"),
+          })));
+          setDbPicks({});
+          setDbAiResult([]);
+          setDbUnassigned([]);
+          setDbActivity([]);
+        }
+        return;
+      }
+
+      const [{ data: slots }, { data: selections }] = await Promise.all([
+        supabase.from("time_slots").select("id,day_of_week,hour,capacity,is_closed").eq("schedule_id", schedule.id),
+        supabase.from("student_selections").select("id,slot_id,student_user_id,student_name,status,created_at").eq("schedule_id", schedule.id).order("created_at", { ascending: false }),
+      ]);
+      if (cancelled) return;
+
+      const slotById = new Map((slots ?? []).map((slot) => [slot.id, slot]));
+      const ids: Record<string, string> = {};
+      const closedKeys = new Set<string>();
+      for (const slot of slots ?? []) {
+        const key = `${DAYS[slot.day_of_week]}-${slot.hour}`;
+        ids[key] = slot.id;
+        if (slot.is_closed) closedKeys.add(key);
+      }
+
+      const selectionsByName = new Map<string, typeof selections>();
+      const pickMap: Record<string, string[]> = {};
+      for (const selection of selections ?? []) {
+        const list = selectionsByName.get(selection.student_name) ?? [];
+        list.push(selection);
+        selectionsByName.set(selection.student_name, list);
+        const slot = selection.slot_id ? slotById.get(selection.slot_id) : null;
+        if (slot && selection.status !== "unavailable") {
+          const key = `${DAYS[slot.day_of_week]}-${slot.hour}`;
+          pickMap[key] = [...(pickMap[key] ?? []), selection.student_name];
+        }
+      }
+
+      const students = (rosters ?? []).map((roster) => {
+        const own = selectionsByName.get(roster.student_name) ?? [];
+        const unavailable = own.some((selection) => selection.status === "unavailable");
+        const picks = own.flatMap((selection) => {
+          const slot = selection.slot_id ? slotById.get(selection.slot_id) : null;
+          return slot ? [`${DAYS[slot.day_of_week]} ${String(slot.hour).padStart(2, "0")}시`] : [];
+        });
+        return {
+          name: roster.student_name,
+          status: unavailable ? "불가" as const : picks.length ? "응답완료" as const : "응답대기" as const,
+          picks,
+          lastPT: latestCompleted.get(roster.id) || "기록 없음",
+          remaining: roster.remaining_sessions,
+          total: roster.total_sessions,
+          joinedAt: new Date(roster.created_at).toLocaleDateString("ko-KR"),
+        };
+      });
+
+      const matchingSlots: MatchingSlot[] = (slots ?? []).map((slot) => ({
+        id: `${DAYS[slot.day_of_week]}-${slot.hour}`,
+        day: DAYS[slot.day_of_week],
+        hour: slot.hour,
+        capacity: slot.capacity,
+        isClosed: slot.is_closed,
+      }));
+      const matching = maximizeScheduleAssignments(
+        students
+          .filter((student) => student.status === "응답완료")
+          .map((student) => ({
+            id: student.name,
+            name: student.name,
+            preferredSlotIds: student.picks.flatMap((pick) => {
+              const parsed = parsePick(pick);
+              return parsed ? [`${parsed.day}-${parsed.hour}`] : [];
+            }),
+          })),
+        matchingSlots,
+      );
+      const result: typeof AI_RESULT_INIT = matching.assignments.map((assignment) => ({
+        day: assignment.day,
+        hour: `${String(assignment.hour).padStart(2, "0")}:00`,
+        name: assignment.studentName,
+      }));
+
+      setSlotIds(ids);
+      setClosed(closedKeys);
+      setDbStudents(students);
+      setDbPicks(pickMap);
+      setDbAiResult(result);
+      setDbUnassigned(matching.unassigned.map((student) => ({ name: student.studentName, reason: student.reason })));
+      setAssignments(result.map((item) => ({ name: item.name, day: item.day, hour: parseInt(item.hour, 10) })));
+      setPanelSelected(new Set(students.map((student) => student.name)));
+      setDbActivity((selections ?? []).slice(0, 12).map((selection) => ({
+        kind: "edit" as const,
+        who: selection.student_name,
+        what: selection.status === "unavailable" ? "이번 주 PT 불가로 응답" : "가능 시간을 선택",
+        when: new Date(selection.created_at).toLocaleString("ko-KR"),
+      })));
+    }
+
+    void loadSchedule();
+    return () => { cancelled = true; };
+  }, [authLoading, user?.id, weekOffset]);
 
   const resetMemo = () => { setMemoFor(null); setMemoGroup(null); setMemoExercises(new Set()); setMemoText(""); };
   const toggleExercise = (e: string) => setMemoExercises((p) => { const n = new Set(p); n.has(e) ? n.delete(e) : n.add(e); return n; });
@@ -223,7 +384,7 @@ function Schedule() {
     });
   };
 
-  const applyPending = () => {
+  const applyPending = async () => {
     let toClose = 0, toOpen = 0;
     setClosed((prev) => {
       const n = new Set(prev);
@@ -234,6 +395,11 @@ function Schedule() {
       return n;
     });
     setPendingClose(new Set());
+    await Promise.all(Array.from(pendingClose).map((key) => {
+      const slotId = slotIds[key];
+      if (!slotId) return Promise.resolve();
+      return supabase.from("time_slots").update({ is_closed: !closed.has(key) }).eq("id", slotId);
+    }));
     const parts: string[] = [];
     if (toClose) parts.push(`${toClose}개 시간을 닫았어요`);
     if (toOpen) parts.push(`${toOpen}개 시간을 다시 열었어요`);
@@ -243,9 +409,10 @@ function Schedule() {
   const stats = useMemo(() => {
     const total = STUDENTS.length;
     const responded = STUDENTS.filter((s) => s.status !== "응답대기").length;
+    const unavailable = STUDENTS.filter((s) => s.status === "불가").length;
     const assignable = AI_RESULT_INIT.length;
-    return { total, responded, assignable };
-  }, []);
+    return { total, responded, unavailable, assignable };
+  }, [STUDENTS, AI_RESULT_INIT]);
 
   const togglePanelStudent = (name: string) => {
     setPanelSelected((p) => {
@@ -269,8 +436,15 @@ function Schedule() {
 
   const pendingResponders = STUDENTS.filter((s) => s.status === "응답대기");
   const halfPending = pendingResponders;
+  const respondedCount = STUDENTS.filter((student) => student.status === "응답완료").length;
+  const assignmentRate = respondedCount > 0 ? Math.round((AI_RESULT_INIT.length / respondedCount) * 100) : 0;
 
   const activitySlice = ACTIVITY_LOG.slice(actPage * ACT_PAGE, actPage * ACT_PAGE + ACT_PAGE);
+  const accountName = (user?.user_metadata as { name?: string; full_name?: string } | undefined)?.name
+    || (user?.user_metadata as { full_name?: string } | undefined)?.full_name
+    || user?.email?.split("@")[0]
+    || "담당";
+  const displayTrainerName = trainerName || accountName;
 
   return (
     <AppShell>
@@ -280,7 +454,7 @@ function Schedule() {
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">트레이너 일정 조율</p>
           <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-[1.15] tracking-tight">
-            박재현 트레이너님!<br />저희가 시간을 조율해드릴게요
+            {displayTrainerName} 트레이너님!<br />저희가 시간을 조율해드릴게요
           </h1>
         </div>
       </div>
@@ -288,7 +462,7 @@ function Schedule() {
       {/* DASHBOARD */}
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <KpiCard icon={<Users className="h-4 w-4" />} label="관리 회원" value={stats.total} suffix="명" />
-        <KpiCard icon={<MailCheck className="h-4 w-4" />} label="응답 완료" value={stats.responded} suffix={`/${stats.total}명`} accent />
+        <KpiCard icon={<MailCheck className="h-4 w-4" />} label="응답 완료" value={stats.responded} suffix={`/${stats.total}명`} detail={`이번 주 불가 ${stats.unavailable}명`} accent />
         <KpiCard icon={<CalendarCheck className="h-4 w-4" />} label="배정 가능" value={stats.assignable} suffix="명 (겹침 없음)" />
       </div>
 
@@ -331,7 +505,8 @@ function Schedule() {
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="rounded-2xl border border-border bg-white overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-border bg-surface-muted">
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-center gap-2">
+              <UserRoundSearch className="h-4 w-4 shrink-0 text-ink" />
               <span className="text-[13px] font-black text-ink">아직 응답하지 않은 회원</span>
               <span className="text-[12px] font-bold text-destructive tabular-nums">{halfPending.length}명</span>
             </div>
@@ -359,7 +534,9 @@ function Schedule() {
               </li>
             ))}
             {halfPending.length === 0 && (
-              <li className="px-5 py-6 text-center text-[12px] text-ink-soft">모든 회원이 응답을 완료했어요 ✓</li>
+              <li className="px-5 py-7 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
+                <UserRoundSearch className="h-4 w-4 text-muted-foreground" /> 응답 대기 중인 회원이 없습니다.
+              </li>
             )}
           </ul>
         </div>
@@ -414,6 +591,11 @@ function Schedule() {
                 )}
               </li>
             ))}
+            {activitySlice.length === 0 && (
+              <li className="px-5 py-7 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
+                <Inbox className="h-4 w-4 text-muted-foreground" /> 아직 표시할 최근 활동이 없습니다.
+              </li>
+            )}
           </ul>
         </div>
       </div>
@@ -425,9 +607,9 @@ function Schedule() {
           <div>
             <span className="chip bg-white/10 text-white"><Sparkles className="h-3 w-3" /> AI 최적 시간표</span>
             <h3 className="mt-2 text-[20px] sm:text-[22px] font-black leading-tight">
-              학생 {STUDENTS.filter(s => s.status === "응답완료").length}명 중{" "}
+              학생 {respondedCount}명 중{" "}
               <span className="text-primary">{AI_RESULT_INIT.length}명 자동 배정</span>
-              <span className="text-white/60 font-bold text-[14px]"> · 선호 만족 94%</span>
+              <span className="text-white/60 font-bold text-[14px]"> · 배정률 {assignmentRate}%</span>
             </h3>
           </div>
           <div className="flex gap-2">
@@ -557,7 +739,7 @@ function Schedule() {
                       key={key}
                       onClick={() => toggleCellPending(key)}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
-                      className={`relative min-h-[52px] sm:min-h-[68px] border-b border-l border-border transition group text-left p-1 sm:p-1.5
+                      className={`relative min-h-[26px] sm:min-h-[34px] overflow-hidden border-b border-l border-border transition group text-left
                         ${willBeClosed && !isPending ? "bg-muted text-muted-foreground/50" : ""}
                         ${!willBeClosed ? `heat-${lvl}` : ""}
                         ${isPending ? "ring-2 ring-ink-soft/60 ring-inset bg-ink-soft/10" : ""}
@@ -567,20 +749,9 @@ function Schedule() {
                       {willBeClosed && !isPending ? (
                         <Lock className="absolute inset-0 m-auto h-3.5 w-3.5" />
                       ) : picks.length > 0 ? (
-                        <>
-                          <span className={`absolute top-1 left-1.5 text-[10px] font-black tabular-nums leading-none ${lvl >= 4 ? "text-white" : "text-ink"}`}>{picks.length}</span>
-                          <div className="mt-3.5 flex flex-wrap gap-[3px] justify-center">
-                            {picks.map((n) => (
-                              <span
-                                key={n}
-                                className={`px-1 py-[1px] rounded-[4px] text-[9px] font-extrabold leading-tight whitespace-nowrap
-                                  ${lvl >= 4 ? "bg-white/25 text-white" : "bg-white/80 text-ink ring-1 ring-black/5"}`}
-                              >
-                                {n}
-                              </span>
-                            ))}
-                          </div>
-                        </>
+                        <span className={`absolute inset-0 grid place-items-center text-[10px] font-black tabular-nums ${lvl >= 4 ? "text-white" : "text-ink"}`}>
+                          {picks.length}<span className="sr-only">명 선택</span>
+                        </span>
                       ) : null}
                       {isPending && (
                         <span className="absolute top-1 right-1 h-4 px-1 rounded bg-ink-soft text-white text-[8px] font-extrabold grid place-items-center">
@@ -1121,7 +1292,7 @@ function Schedule() {
   );
 }
 
-function KpiCard({ icon, label, value, suffix, accent }: { icon: React.ReactNode; label: string; value: number; suffix?: string; accent?: boolean }) {
+function KpiCard({ icon, label, value, suffix, detail, accent }: { icon: React.ReactNode; label: string; value: number; suffix?: string; detail?: string; accent?: boolean }) {
   return (
     <div className={`rounded-2xl border p-4 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}>
       <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${accent ? "text-primary" : "text-ink-soft"}`}>
@@ -1130,6 +1301,7 @@ function KpiCard({ icon, label, value, suffix, accent }: { icon: React.ReactNode
       <div className="mt-2 flex items-baseline gap-1">
         <span className="text-[28px] font-black tabular-nums leading-none">{value}</span>
         {suffix && <span className={`text-[12px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}>{suffix}</span>}
+        {detail && <span className={`ml-1 text-[10px] font-semibold ${accent ? "text-white/55" : "text-muted-foreground"}`}>· {detail}</span>}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test:scheduling": "node --experimental-strip-types scripts/test-scheduling.mjs",
     "format": "prettier --write ."
   },
   "dependencies": {

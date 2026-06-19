@@ -67,7 +67,6 @@ function Login() {
     }
   };
 
-  // Detect existing user vs new signup from a tiny localStorage "users" registry
   const submitEmail = async () => {
     setEmailErr(null);
     if (!emailPw.email || !emailPw.password) {
@@ -102,32 +101,7 @@ function Login() {
       setEmailBusy(false);
     }
 
-    setEmailErr("등록된 계정이 아니거나 비밀번호가 맞지 않습니다. 신규 가입은 회원가입 화면에서 진행해주세요.");
-    setEmailMode("login");
-    return;
-
-    let users: Array<{ email: string; password: string; name: string; role: Role; avatar?: string }> = [];
-    try {
-      users = JSON.parse(localStorage.getItem("gympt-users") || "[]");
-    } catch {}
-    const existing = users.find((u) => u.email.toLowerCase() === emailPw.email.toLowerCase());
-    if (existing) {
-      // Login branch
-      if (existing.password !== emailPw.password) {
-        setEmailErr("비밀번호가 일치하지 않아요");
-        setEmailMode("login");
-        return;
-      }
-      const user = { name: existing.name, email: existing.email, avatar: existing.avatar || "", role: existing.role };
-      try {
-        localStorage.setItem("gympt-user", JSON.stringify(user));
-        window.dispatchEvent(new Event("gympt-auth"));
-      } catch {}
-      setWelcome(existing.name + " (로그인)");
-      setTimeout(() => { setWelcome(null); navigate({ to: "/profile" }); }, 1200);
-      return;
-    }
-    // Signup branch — continue onboarding
+    // No matching credentials: continue into signup onboarding.
     setEmailMode("signup");
     setProfile({ name: "", email: emailPw.email, avatar: "" });
     setEmailPw((p) => ({ ...p, confirm: "" }));
@@ -139,21 +113,43 @@ function Login() {
     setStep("role");
   };
 
-  const completeSignup = () => {
-    const user = { ...profile, role };
-    try {
-      localStorage.setItem("gympt-user", JSON.stringify(user));
-      // Append to registry so this email can log in next time
-      if (method === "email" && emailPw.email && emailPw.password) {
-        let users: Array<{ email: string; password: string; name: string; role: Role; avatar?: string }> = [];
-        try { users = JSON.parse(localStorage.getItem("gympt-users") || "[]"); } catch {}
-        if (!users.find((u) => u.email.toLowerCase() === emailPw.email.toLowerCase())) {
-          users.push({ email: profile.email, password: emailPw.password, name: profile.name, role: role as Role, avatar: profile.avatar });
-          localStorage.setItem("gympt-users", JSON.stringify(users));
-        }
+  const completeSignup = async () => {
+    if (!role) return;
+    setEmailErr(null);
+    setEmailBusy(true);
+
+    if (method === "email") {
+      const selectedPalette = PALETTES.find((item) => item.id === palette) ?? PALETTES[0];
+      const { error } = await supabase.auth.signUp({
+        email: profile.email,
+        password: emailPw.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/profile`,
+          data: {
+            name: profile.name,
+            role,
+            avatar_url: profile.avatar || null,
+            gym: role === "trainer" ? trainerGym : null,
+            intro: role === "trainer" ? trainerIntro : null,
+            specs: role === "trainer" ? trainerSpecs : [],
+            theme_from: selectedPalette.from,
+            theme_to: selectedPalette.to,
+          },
+        },
+      });
+
+      if (error) {
+        setEmailBusy(false);
+        setEmailErr(error.message);
+        setStep("confirm");
+        return;
       }
+    } else {
+      localStorage.setItem("gympt-user", JSON.stringify({ ...profile, role }));
       window.dispatchEvent(new Event("gympt-auth"));
-    } catch {}
+    }
+
+    setEmailBusy(false);
     setWelcome(profile.name || "회원");
     setTimeout(() => {
       setWelcome(null);

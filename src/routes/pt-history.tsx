@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Calendar, Award, TrendingUp, Flame, CalendarClock, AlertTriangle, X, Check } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/pt-history")({
   head: () => ({ meta: [{ title: "내 PT 내역 — 픽짐피티" }] }),
@@ -11,27 +13,47 @@ export const Route = createFileRoute("/pt-history")({
 });
 
 type Status = "완료" | "취소" | "예정";
-type Row = { date: string; time: string; trainer: string; gym: string; status: Status; note: string; daysFromToday?: number };
+type Row = { id: string; date: string; time: string; trainer: string; gym: string; status: Status; note: string; daysFromToday: number };
 
 // "today" is mocked as 2026-05-20 to align with the daysFromToday metadata.
-const HISTORY: Row[] = [
-  { date: "26.05.27 (수)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "예정", note: "상체 (가슴/등)", daysFromToday: 7 },
-  { date: "26.05.23 (토)", time: "11:00", trainer: "박재현", gym: "하이엔드 강남점", status: "예정", note: "하체 + 코어", daysFromToday: 3 },
-  { date: "26.05.20 (수)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "예정", note: "유산소 + 복근", daysFromToday: 0 },
-  { date: "26.05.12 (화)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "하체 + 코어" },
-  { date: "26.05.09 (토)", time: "11:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "상체 (어깨/팔)" },
-  { date: "26.05.07 (목)", time: "07:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "유산소 + 복근" },
-  { date: "26.05.05 (화)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "취소", note: "회원 사정" },
-  { date: "26.05.02 (토)", time: "10:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "데드리프트 폼 교정" },
-  { date: "26.04.30 (목)", time: "19:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "하체 + 코어" },
-  { date: "26.04.27 (월)", time: "20:00", trainer: "박재현", gym: "하이엔드 강남점", status: "완료", note: "상체 (가슴/등)" },
-];
-
 const SLOTS = ["월 19:00", "월 20:00", "화 07:00", "화 19:00", "수 19:00", "수 20:00", "목 07:00", "목 19:00", "금 19:00", "금 20:00", "토 09:00", "토 11:00"];
 
+const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+
+function historyRow(session: {
+  id: string;
+  scheduled_at: string;
+  status: string;
+  note: string | null;
+  trainers: { name: string; gym: string | null } | { name: string; gym: string | null }[] | null;
+}): Row {
+  const scheduled = new Date(session.scheduled_at);
+  const trainer = Array.isArray(session.trainers) ? session.trainers[0] : session.trainers;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(scheduled);
+  target.setHours(0, 0, 0, 0);
+  const daysFromToday = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+  const status: Status = session.status === "completed" ? "완료" : session.status === "cancelled" ? "취소" : "예정";
+  return {
+    id: session.id,
+    date: `${String(scheduled.getFullYear()).slice(2)}.${String(scheduled.getMonth() + 1).padStart(2, "0")}.${String(scheduled.getDate()).padStart(2, "0")} (${DAY_NAMES[scheduled.getDay()]})`,
+    time: `${String(scheduled.getHours()).padStart(2, "0")}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
+    trainer: trainer?.name || "트레이너",
+    gym: trainer?.gym || "소속 센터",
+    status,
+    note: session.note || "수업 메모 없음",
+    daysFromToday,
+  };
+}
+
 function PTHistory() {
-  const completed = HISTORY.filter((h) => h.status === "완료").length;
-  const upcoming = useMemo(() => HISTORY.filter((h) => h.status === "예정" && (h.daysFromToday ?? 999) >= 0).sort((a, b) => (a.daysFromToday ?? 0) - (b.daysFromToday ?? 0))[0], []);
+  const { user, loading: authLoading } = useAuth();
+  const [history, setHistory] = useState<Row[]>([]);
+  const [remaining, setRemaining] = useState({ current: 0, total: 0 });
+  const [loading, setLoading] = useState(true);
+  const completed = history.filter((h) => h.status === "완료").length;
+  const upcoming = useMemo(() => history.filter((h) => h.status === "예정" && h.daysFromToday >= 0).sort((a, b) => a.daysFromToday - b.daysFromToday)[0], [history]);
   const isToday = upcoming?.daysFromToday === 0;
 
   const [reschedOpen, setReschedOpen] = useState(false);
@@ -39,6 +61,39 @@ function PTHistory() {
   const [cancelReason, setCancelReason] = useState("");
   const [pickedSlot, setPickedSlot] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user || String(user.id).startsWith("virtual-")) {
+      setHistory([]);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadHistory() {
+      setLoading(true);
+      const [{ data: sessions }, { data: roster }] = await Promise.all([
+        supabase
+          .from("pt_sessions")
+          .select("id,scheduled_at,status,note,trainers(name,gym)")
+          .eq("student_user_id", user.id)
+          .order("scheduled_at", { ascending: false }),
+        supabase
+          .from("student_rosters")
+          .select("remaining_sessions,total_sessions")
+          .eq("student_user_id", user.id)
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      if (cancelled) return;
+      setHistory((sessions ?? []).map((session) => historyRow(session as Parameters<typeof historyRow>[0])));
+      setRemaining({ current: roster?.remaining_sessions ?? 0, total: roster?.total_sessions ?? 0 });
+      setLoading(false);
+    }
+    void loadHistory();
+    return () => { cancelled = true; };
+  }, [authLoading, user?.id]);
 
 
   const fireToast = (t: string) => {
@@ -55,9 +110,9 @@ function PTHistory() {
       </div>
 
       <div className="mt-6 grid grid-cols-3 gap-3">
-        <Kpi icon={<Calendar className="h-4 w-4" />} label="총 수업" value={HISTORY.length} suffix="회" />
+        <Kpi icon={<Calendar className="h-4 w-4" />} label="총 수업" value={history.length} suffix="회" />
         <Kpi icon={<Award className="h-4 w-4" />} label="완료" value={completed} suffix="회" accent />
-        <Kpi icon={<TrendingUp className="h-4 w-4" />} label="잔여 횟수" value={14} suffix="/30회" />
+        <Kpi icon={<TrendingUp className="h-4 w-4" />} label="잔여 횟수" value={remaining.current} suffix={`/${remaining.total}회`} />
       </div>
 
       <div className="mt-6 rounded-2xl border border-border bg-white overflow-hidden">
@@ -71,11 +126,11 @@ function PTHistory() {
             </tr>
           </thead>
           <tbody>
-            {HISTORY.map((h, i) => {
+            {history.map((h) => {
               const isUpcoming = h.status === "예정";
               return (
                 <tr
-                  key={i}
+                  key={h.id}
                   className={`border-t border-border ${isUpcoming ? "bg-primary/[0.04] ring-2 ring-primary/60 ring-inset" : ""}`}
                 >
                   <td className="px-4 py-3">
@@ -97,6 +152,9 @@ function PTHistory() {
                 </tr>
               );
             })}
+            {!loading && history.length === 0 && (
+              <tr><td colSpan={4} className="px-4 py-12 text-center text-[13px] text-ink-soft">등록된 PT 내역이 없습니다.</td></tr>
+            )}
           </tbody>
         </table>
       </div>

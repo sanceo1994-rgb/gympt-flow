@@ -70,6 +70,57 @@ export type Database = {
         }
         Relationships: []
       }
+      pt_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          roster_id: string
+          scheduled_at: string
+          status: string
+          student_user_id: string | null
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          roster_id: string
+          scheduled_at: string
+          status?: string
+          student_user_id?: string | null
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          roster_id?: string
+          scheduled_at?: string
+          status?: string
+          student_user_id?: string | null
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pt_sessions_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "student_rosters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pt_sessions_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -230,6 +281,48 @@ export type Database = {
           },
         ]
       }
+      trainer_profiles: {
+        Row: {
+          avatar_url: string | null
+          branch_name: string | null
+          created_at: string
+          display_name: string
+          gym_name: string | null
+          id: string
+          instagram_url: string | null
+          intro: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          branch_name?: string | null
+          created_at?: string
+          display_name: string
+          gym_name?: string | null
+          id?: string
+          instagram_url?: string | null
+          intro?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          branch_name?: string | null
+          created_at?: string
+          display_name?: string
+          gym_name?: string | null
+          id?: string
+          instagram_url?: string | null
+          intro?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trainers: {
         Row: {
           avatar_url: string | null
@@ -239,6 +332,8 @@ export type Database = {
           instagram_url: string | null
           intro: string | null
           name: string
+          theme_from: string
+          theme_to: string
           updated_at: string
           user_id: string
         }
@@ -250,6 +345,8 @@ export type Database = {
           instagram_url?: string | null
           intro?: string | null
           name: string
+          theme_from?: string
+          theme_to?: string
           updated_at?: string
           user_id: string
         }
@@ -261,6 +358,8 @@ export type Database = {
           instagram_url?: string | null
           intro?: string | null
           name?: string
+          theme_from?: string
+          theme_to?: string
           updated_at?: string
           user_id?: string
         }

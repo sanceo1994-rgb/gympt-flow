@@ -1,26 +1,61 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { MapPin, Trophy, Megaphone, ChevronRight, LogOut, Calendar, Users, User, CalendarHeart, Copy, Check, Share2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { MapPin, Trophy, Megaphone, ChevronRight, LogOut, Calendar, Users, User, CalendarHeart, Copy, Check, Share2, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export function RightRail() {
-  const { user } = useAuth();
-  const role = (user?.user_metadata as { role?: string } | undefined)?.role as "trainer" | "student" | undefined;
-  const name = (user?.user_metadata as { name?: string } | undefined)?.name ?? user?.email?.split("@")[0] ?? "회원";
+  const { user, loading: authLoading } = useAuth();
+  const metaRole = (user?.user_metadata as { role?: string } | undefined)?.role as "trainer" | "student" | undefined;
+  const [dbRole, setDbRole] = useState<"trainer" | "student" | undefined>();
+  const [dbName, setDbName] = useState<string | undefined>();
+  const [roleResolved, setRoleResolved] = useState(false);
+  const role = dbRole ?? metaRole;
+  const name = dbName ?? (user?.user_metadata as { name?: string } | undefined)?.name ?? user?.email?.split("@")[0] ?? "회원";
   const avatar = (user?.user_metadata as { avatar_url?: string } | undefined)?.avatar_url;
 
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user || String(user.id).startsWith("virtual-")) {
+      setDbRole(undefined);
+      setDbName(undefined);
+      setRoleResolved(true);
+      return;
+    }
+
+    let cancelled = false;
+    setRoleResolved(false);
+    Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", user.id),
+      supabase.from("trainers").select("id,name").eq("user_id", user.id).maybeSingle(),
+    ]).then(([rolesResult, trainerResult]) => {
+      if (cancelled) return;
+      const roles = rolesResult.data ?? [];
+      setDbName(trainerResult.data?.name ?? undefined);
+      if (trainerResult.data || roles.some((row) => row.role === "trainer")) setDbRole("trainer");
+      else if (roles.some((row) => row.role === "student")) setDbRole("student");
+      else setDbRole(metaRole);
+      setRoleResolved(true);
+    }).catch(() => {
+      if (!cancelled) setRoleResolved(true);
+    });
+
+    return () => { cancelled = true; };
+  }, [user?.id, metaRole]);
   const fireToast = (t: string) => {
     setToast(t);
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut({ scope: "local" });
     try {
       localStorage.removeItem("gympt-user");
+      localStorage.removeItem("gympt-users");
       window.dispatchEvent(new Event("gympt-auth"));
     } catch {}
-    window.location.href = "/";
+    window.location.replace("/");
   };
 
   const copyInvite = async () => {
@@ -52,7 +87,18 @@ export function RightRail() {
       )}
 
       {/* User card */}
-      {user ? (
+      {authLoading || (!!user && !roleResolved) ? (
+        <div className="rounded-2xl bg-white border border-border p-3.5" aria-label="회원 정보를 불러오는 중">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 animate-pulse rounded-full bg-surface-muted" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-3/4 animate-pulse rounded bg-surface-muted" />
+              <div className="h-3 w-1/3 animate-pulse rounded bg-surface-muted" />
+            </div>
+          </div>
+          <div className="mt-3 h-9 animate-pulse rounded-xl bg-surface-muted" />
+        </div>
+      ) : user ? (
         <div className="rounded-2xl bg-white border border-border p-3.5">
           <div className="flex items-center gap-3">
             {avatar ? (
@@ -77,15 +123,23 @@ export function RightRail() {
                 <Link to="/booking" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
                   <CalendarHeart className="h-3.5 w-3.5 text-primary" /> 내 예약화면
                 </Link>
+                <Link to="/schedule" className="rounded-xl bg-primary hover:brightness-110 px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-white shadow-sm">
+                  <Zap className="h-3.5 w-3.5 text-white" /> 빠른 일정조율
+                </Link>
+                <Link to="/profile" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
+                  <User className="h-3.5 w-3.5 text-ink-soft" /> 내 정보
+                </Link>
               </>
             ) : (
-              <Link to="/pt-history" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
-                <Calendar className="h-3.5 w-3.5 text-primary" /> PT 내역
-              </Link>
+              <>
+                <Link to="/pt-history" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
+                  <Calendar className="h-3.5 w-3.5 text-primary" /> PT 내역
+                </Link>
+                <Link to="/profile" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
+                  <User className="h-3.5 w-3.5 text-ink-soft" /> 내 정보
+                </Link>
+              </>
             )}
-            <Link to="/profile" className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink">
-              <User className="h-3.5 w-3.5 text-ink-soft" /> 내 정보
-            </Link>
           </div>
         </div>
       ) : (
