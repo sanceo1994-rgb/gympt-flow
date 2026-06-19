@@ -185,6 +185,7 @@ function Schedule() {
     }
 
     let cancelled = false;
+    const userId = user.id;
     const targetMonday = new Date();
     const mondayDistance = (targetMonday.getDay() + 6) % 7;
     targetMonday.setHours(0, 0, 0, 0);
@@ -192,18 +193,15 @@ function Schedule() {
     const weekStart = `${targetMonday.getFullYear()}-${String(targetMonday.getMonth() + 1).padStart(2, "0")}-${String(targetMonday.getDate()).padStart(2, "0")}`;
 
     async function loadSchedule() {
-      const [{ data: trainer }, { data: scheduleTrainer }] = await Promise.all([
-        supabase.from("trainers").select("id,name").eq("user_id", user.id).maybeSingle(),
-        supabase.from("trainer_profiles").select("id").eq("user_id", user.id).maybeSingle(),
-      ]);
+      const { data: trainer } = await supabase.from("trainers").select("id,name,gym,intro,avatar_url,instagram_url").eq("user_id", userId).maybeSingle();
       if (trainer && !cancelled) setTrainerName(trainer.name);
-      if (!trainer || !scheduleTrainer || cancelled) return;
+      if (!trainer || cancelled) return;
 
-      const [{ data: rosters }, { data: schedule }, { data: sessions }] = await Promise.all([
+      const [{ data: rosters }, { data: sessions }] = await Promise.all([
         supabase.from("student_rosters").select("id,student_name,status,remaining_sessions,total_sessions,created_at").eq("trainer_id", trainer.id).order("created_at"),
-        supabase.from("weekly_schedules").select("id").eq("trainer_id", scheduleTrainer.id).eq("week_start", weekStart).maybeSingle(),
         supabase.from("pt_sessions").select("roster_id,scheduled_at,status").eq("trainer_id", trainer.id).order("scheduled_at", { ascending: false }),
       ]);
+      const activeRosters = (rosters ?? []).filter((roster) => roster.remaining_sessions > 0);
 
       const latestCompleted = new Map<string, string>();
       for (const session of sessions ?? []) {
@@ -212,24 +210,68 @@ function Schedule() {
         }
       }
 
+      // weekly_schedules.trainer_id actually references trainer_profiles(id), a
+      // separate per-trainer mirror row that most trainers don't have yet — not
+      // trainers(id). Create it on first visit, then lazily create the week's
+      // schedule + its full time-slot grid too, since nothing else in the app does.
+      let { data: scheduleTrainer } = await supabase.from("trainer_profiles").select("id").eq("user_id", userId).maybeSingle();
+      if (!scheduleTrainer) {
+        const { data: createdProfile } = await supabase
+          .from("trainer_profiles")
+          .upsert({
+            user_id: userId,
+            display_name: trainer.name,
+            gym_name: trainer.gym,
+            intro: trainer.intro,
+            avatar_url: trainer.avatar_url,
+            instagram_url: trainer.instagram_url,
+          }, { onConflict: "user_id" })
+          .select("id")
+          .maybeSingle();
+        scheduleTrainer = createdProfile ?? null;
+      }
+      if (cancelled) return;
+      if (!scheduleTrainer) return;
+
+      let schedule = (
+        await supabase.from("weekly_schedules").select("id").eq("trainer_id", scheduleTrainer.id).eq("week_start", weekStart).maybeSingle()
+      ).data;
       if (!schedule) {
-        if (!cancelled) {
-          setDbStudents((rosters ?? []).map((roster) => ({
-            name: roster.student_name,
-            status: "응답대기",
-            picks: [],
-            lastPT: latestCompleted.get(roster.id) || "기록 없음",
-            remaining: roster.remaining_sessions,
-            total: roster.total_sessions,
-            joinedAt: new Date(roster.created_at).toLocaleDateString("ko-KR"),
-          })));
-          setDbPicks({});
-          setDbAiResult([]);
-          setDbUnassigned([]);
-          setDbActivity([]);
-        }
+        const { data: created } = await supabase
+          .from("weekly_schedules")
+          .upsert({ trainer_id: scheduleTrainer.id, week_start: weekStart }, { onConflict: "trainer_id,week_start" })
+          .select("id")
+          .maybeSingle();
+        schedule = created ?? null;
+      }
+      if (cancelled) return;
+
+      if (!schedule) {
+        setDbStudents(activeRosters.map((roster) => ({
+          name: roster.student_name,
+          status: "응답대기",
+          picks: [],
+          lastPT: latestCompleted.get(roster.id) || "기록 없음",
+          remaining: roster.remaining_sessions,
+          total: roster.total_sessions,
+          joinedAt: new Date(roster.created_at).toLocaleDateString("ko-KR"),
+        })));
+        setDbPicks({});
+        setDbAiResult([]);
+        setDbUnassigned([]);
+        setDbActivity([]);
         return;
       }
+
+      const { data: existingSlots } = await supabase.from("time_slots").select("id").eq("schedule_id", schedule.id).limit(1);
+      if (!existingSlots || existingSlots.length === 0) {
+        const grid = [];
+        for (let day = 0; day < 7; day++) {
+          for (const hour of HOURS) grid.push({ schedule_id: schedule.id, day_of_week: day, hour, capacity: 1, is_closed: day === 6 });
+        }
+        await supabase.from("time_slots").upsert(grid, { onConflict: "schedule_id,day_of_week,hour", ignoreDuplicates: true });
+      }
+      if (cancelled) return;
 
       const [{ data: slots }, { data: selections }] = await Promise.all([
         supabase.from("time_slots").select("id,day_of_week,hour,capacity,is_closed").eq("schedule_id", schedule.id),
@@ -259,7 +301,7 @@ function Schedule() {
         }
       }
 
-      const students = (rosters ?? []).map((roster) => {
+      const students = activeRosters.map((roster) => {
         const own = selectionsByName.get(roster.student_name) ?? [];
         const unavailable = own.some((selection) => selection.status === "unavailable");
         const picks = own.flatMap((selection) => {
@@ -385,12 +427,21 @@ function Schedule() {
   };
 
   const applyPending = async () => {
+    // Count from a plain read of `closed`/`pendingClose` rather than inside the
+    // setClosed updater — React may invoke that updater more than once (e.g.
+    // StrictMode), which silently double-counted toClose/toOpen while the
+    // resulting Set itself stayed correct, so only the toast number was wrong.
     let toClose = 0, toOpen = 0;
+    pendingClose.forEach((k) => {
+      if (closed.has(k)) toOpen++;
+      else toClose++;
+    });
+
     setClosed((prev) => {
       const n = new Set(prev);
       pendingClose.forEach((k) => {
-        if (n.has(k)) { n.delete(k); toOpen++; }
-        else { n.add(k); toClose++; }
+        if (n.has(k)) n.delete(k);
+        else n.add(k);
       });
       return n;
     });

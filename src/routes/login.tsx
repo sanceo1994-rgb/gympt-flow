@@ -7,6 +7,7 @@ import studentImg from "@/assets/role-student.png";
 import { OTTER_PRESETS, otterDataUrl } from "@/components/OtterPicker";
 import { useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhoneNumber } from "@/lib/phone";
 
 
 
@@ -21,6 +22,7 @@ type Role = "trainer" | "student";
 const KAKAO_MOCK = {
   name: "박재현",
   email: "jaehyun.park@kakao.com",
+  phone: "",
   avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jaehyun&backgroundColor=ffd5dc",
 };
 
@@ -39,7 +41,7 @@ function Login() {
   const [method, setMethod] = useState<"kakao" | "email">("kakao");
   const [agree, setAgree] = useState({ tos: false, priv: false, age: false });
   const [role, setRole] = useState<Role | null>(null);
-  const [profile, setProfile] = useState({ name: "", email: "", avatar: "" });
+  const [profile, setProfile] = useState({ name: "", email: "", phone: "", avatar: "" });
   const [emailPw, setEmailPw] = useState({ email: "", password: "", confirm: "" });
   const [inviteCode, setInviteCode] = useState("");
   // Trainer mini-hompy customization
@@ -103,7 +105,7 @@ function Login() {
 
     // No matching credentials: continue into signup onboarding.
     setEmailMode("signup");
-    setProfile({ name: "", email: emailPw.email, avatar: "" });
+    setProfile({ name: "", email: emailPw.email, phone: "", avatar: "" });
     setEmailPw((p) => ({ ...p, confirm: "" }));
     setStep("consent");
   };
@@ -127,6 +129,7 @@ function Login() {
           emailRedirectTo: `${window.location.origin}/profile`,
           data: {
             name: profile.name,
+            phone: formatPhoneNumber(profile.phone),
             role,
             avatar_url: profile.avatar || null,
             gym: role === "trainer" ? trainerGym : null,
@@ -391,6 +394,7 @@ function Login() {
                 <div className="mt-5 grid gap-3">
                   <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" hint="실명을 입력하면 트레이너/회원이 더 원활하게 알아볼 수 있어요" />
                   <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
+                  <Field label="전화번호" type="tel" value={profile.phone} onChange={(v) => setProfile((p) => ({ ...p, phone: formatPhoneNumber(v) }))} placeholder="010-0000-0000" />
                   {method === "email" && (
                     <>
                       <div>
@@ -519,7 +523,7 @@ function Login() {
 
                 <button
                   onClick={() => role === "trainer" ? setStep("preview") : completeSignup()}
-                  disabled={!profile.name || !profile.email || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
+                  disabled={!profile.name || !profile.email || profile.phone.replace(/\D/g, "").length !== 11 || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
                   {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
