@@ -25,7 +25,7 @@ function readVirtual(): User | null {
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(() => readVirtual());
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,7 +39,12 @@ export function useAuth() {
       setLoading(false);
     });
     // listen to manual virtual login changes
-    const onStorage = () => setUser((prev) => prev ?? readVirtual());
+    const onStorage = () => {
+      supabase.auth.getSession().then(({ data }) => {
+        setSession(data.session);
+        setUser(data.session?.user ?? readVirtual());
+      });
+    };
     window.addEventListener("storage", onStorage);
     window.addEventListener("gympt-auth", onStorage);
     return () => {
