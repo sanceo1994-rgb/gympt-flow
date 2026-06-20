@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Sparkles, X } from "lucide-react";
 
+// Only rendered by the dedicated /demo/* pages themselves — never by the real
+// (DB-backed) /booking or /schedule pages. It used to be gated by a
+// sessionStorage flag that lingered across navigation: leaving a demo page for
+// a real page (e.g. clicking a trainer in the sidebar ranking) kept showing
+// "체험 모드" on a real page. Tying visibility to the component's own mount
+// instead of a cross-page flag means it disappears the instant you navigate away.
 export function DemoBanner({ role }: { role: "student" | "trainer" }) {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem("pgpt-demo") === role) setShow(true);
-    } catch {}
-  }, [role]);
+  const [show, setShow] = useState(true);
   if (!show) return null;
   const label = role === "student" ? "회원" : "트레이너";
   return (
@@ -25,7 +26,7 @@ export function DemoBanner({ role }: { role: "student" | "trainer" }) {
           가입하고 진짜 쓰기
         </Link>
         <button
-          onClick={() => { try { sessionStorage.removeItem("pgpt-demo"); } catch {}; setShow(false); }}
+          onClick={() => setShow(false)}
           className="h-7 w-7 grid place-items-center rounded-full hover:bg-white/15"
           aria-label="체험 모드 닫기"
         >

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Camera } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
@@ -8,6 +8,7 @@ import { OTTER_PRESETS, otterDataUrl } from "@/components/OtterPicker";
 import { useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhoneNumber } from "@/lib/phone";
+import { needsDisplayNameRepair, pickDisplayName } from "@/lib/display-name";
 
 
 
@@ -18,13 +19,6 @@ export const Route = createFileRoute("/login")({
 
 type Step = "method" | "email" | "consent" | "role" | "confirm" | "preview" | "done";
 type Role = "trainer" | "student";
-
-const KAKAO_MOCK = {
-  name: "박재현",
-  email: "jaehyun.park@kakao.com",
-  phone: "",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jaehyun&backgroundColor=ffd5dc",
-};
 
 const PALETTES: { id: string; label: string; from: string; to: string }[] = [
   { id: "pink", label: "픽짐 핑크", from: "#FF4E97", to: "#FF6FB1" },
@@ -58,14 +52,40 @@ function Login() {
   const allOk = agree.tos && agree.priv && agree.age;
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
 
-  const startMethod = (m: "kakao" | "email") => {
+  useEffect(() => {
+    const pending = sessionStorage.getItem("gympt-kakao-onboarding");
+    if (!pending) return;
+    try {
+      const kakaoProfile = JSON.parse(pending) as typeof profile;
+      setMethod("kakao");
+      setProfile(kakaoProfile);
+      setStep("consent");
+    } catch {
+      setEmailErr("카카오 프로필을 불러오지 못했습니다. 다시 로그인해주세요.");
+    } finally {
+      sessionStorage.removeItem("gympt-kakao-onboarding");
+    }
+  }, []);
+
+  const startMethod = async (m: "kakao" | "email") => {
     setMethod(m);
     setEmailErr(null);
     if (m === "email") {
       setEmailMode(null);
       setStep("email");
     } else {
-      setStep("consent");
+      setEmailBusy(true);
+      sessionStorage.removeItem("gympt-kakao-onboarding");
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "kakao",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        setEmailBusy(false);
+        setEmailErr(error.message);
+      }
     }
   };
 
@@ -82,11 +102,33 @@ function Login() {
         password: emailPw.password,
       });
       if (!error && data.user) {
+        const [trainerResult, profileResult] = await Promise.all([
+          supabase.from("trainers").select("name").eq("user_id", data.user.id).maybeSingle(),
+          supabase.from("profiles").select("display_name").eq("id", data.user.id).maybeSingle(),
+        ]);
+        const metadataName = data.user.user_metadata?.name;
+        const metadataFullName = data.user.user_metadata?.full_name;
+        const trainerName = trainerResult.data?.name;
+        const profileName = profileResult.data?.display_name;
         const displayName =
-          (data.user.user_metadata?.name as string | undefined) ||
-          (data.user.user_metadata?.full_name as string | undefined) ||
-          data.user.email?.split("@")[0] ||
-          "회원";
+          pickDisplayName(
+            trainerName,
+            profileName,
+            metadataName,
+            metadataFullName,
+            data.user.email?.split("@")[0],
+          ) ?? "회원";
+
+        const hasRepairableValue = [trainerName, profileName, metadataName, metadataFullName].some(
+          (value) => needsDisplayNameRepair(value, displayName),
+        );
+        if (hasRepairableValue) {
+          await Promise.allSettled([
+            supabase.auth.updateUser({ data: { name: displayName, full_name: displayName } }),
+            supabase.from("trainers").update({ name: displayName }).eq("user_id", data.user.id),
+            supabase.from("profiles").update({ display_name: displayName }).eq("id", data.user.id),
+          ]);
+        }
         try {
           localStorage.removeItem("gympt-user");
           localStorage.removeItem("gympt-users");
@@ -111,7 +153,6 @@ function Login() {
   };
 
   const afterConsent = () => {
-    if (method === "kakao") setProfile(KAKAO_MOCK);
     setStep("role");
   };
 
@@ -148,8 +189,73 @@ function Login() {
         return;
       }
     } else {
-      localStorage.setItem("gympt-user", JSON.stringify({ ...profile, role }));
-      window.dispatchEvent(new Event("gympt-auth"));
+      const selectedPalette = PALETTES.find((item) => item.id === palette) ?? PALETTES[0];
+      const { data: userResult, error: userError } = await supabase.auth.getUser();
+      const kakaoUser = userResult.user;
+      if (userError || !kakaoUser) {
+        setEmailBusy(false);
+        setEmailErr("카카오 로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+        setStep("method");
+        return;
+      }
+
+      const normalizedPhone = formatPhoneNumber(profile.phone);
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          name: profile.name,
+          full_name: profile.name,
+          phone: normalizedPhone,
+          role,
+          avatar_url: profile.avatar || null,
+          gym: role === "trainer" ? trainerGym : null,
+          intro: role === "trainer" ? trainerIntro : null,
+          theme_from: selectedPalette.from,
+          theme_to: selectedPalette.to,
+        },
+      });
+      if (metadataError) {
+        setEmailBusy(false);
+        setEmailErr(metadataError.message);
+        setStep("confirm");
+        return;
+      }
+
+      const writes = [
+        supabase.from("profiles").upsert({
+          id: kakaoUser.id,
+          display_name: profile.name,
+          email: profile.email || kakaoUser.email || null,
+          avatar_url: profile.avatar || null,
+        }),
+        supabase.from("user_roles").upsert(
+          { user_id: kakaoUser.id, role },
+          { onConflict: "user_id,role", ignoreDuplicates: true },
+        ),
+      ];
+      if (role === "trainer") {
+        writes.push(
+          supabase.from("trainers").upsert(
+            {
+              user_id: kakaoUser.id,
+              name: profile.name,
+              gym: trainerGym || null,
+              intro: trainerIntro || null,
+              avatar_url: profile.avatar || null,
+              theme_from: selectedPalette.from,
+              theme_to: selectedPalette.to,
+            },
+            { onConflict: "user_id" },
+          ),
+        );
+      }
+      const writeResults = await Promise.all(writes);
+      const writeError = writeResults.find((result) => result.error)?.error;
+      if (writeError) {
+        setEmailBusy(false);
+        setEmailErr(writeError.message);
+        setStep("confirm");
+        return;
+      }
     }
 
     setEmailBusy(false);
@@ -222,10 +328,14 @@ function Login() {
 
                 <button
                   onClick={() => startMethod("kakao")}
-                  className="mt-6 h-14 w-full rounded-2xl bg-[#FEE500] text-[#191600] text-[15px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95"
+                  disabled={emailBusy}
+                  className="mt-6 h-14 w-full rounded-2xl bg-[#FEE500] text-[#191600] text-[15px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
-                  <MessageCircle className="h-4 w-4 fill-[#191600]" /> 카카오로 시작하기
+                  <MessageCircle className="h-4 w-4 fill-[#191600]" />
+                  {emailBusy ? "카카오로 이동 중..." : "카카오로 시작하기"}
                 </button>
+
+                {emailErr && <p className="mt-3 text-[12px] font-bold text-destructive">{emailErr}</p>}
 
                 <div className="mt-5 flex items-center gap-3">
                   <div className="h-px flex-1 bg-border" />
@@ -528,7 +638,7 @@ function Login() {
                 >
                   {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
                 </button>
-                <p className="mt-3 text-center text-[11px] text-ink-soft">DB 연결은 추후 적용됩니다 — 지금은 가상 회원가입으로 진행돼요.</p>
+                <p className="mt-3 text-center text-[11px] text-ink-soft">가입 정보는 안전하게 계정에 저장됩니다.</p>
               </div>
             )}
 

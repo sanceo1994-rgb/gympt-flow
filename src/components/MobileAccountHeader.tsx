@@ -6,22 +6,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { RightRail } from "@/components/sidebars/RightRail";
 import logo from "@/assets/pickgympt-logo.png";
+import { pickDisplayName } from "@/lib/display-name";
+import { TrainerRankBadge } from "@/components/TrainerRankBadge";
+import { useTrainerRank } from "@/hooks/use-trainer-rank";
 
 export function MobileAccountHeader() {
   const { user, loading } = useAuth();
   const metadata = user?.user_metadata as { name?: string; avatar_url?: string } | undefined;
   const [name, setName] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [trainerId, setTrainerId] = useState<string | null>(null);
+  const trainerRank = useTrainerRank(trainerId);
 
   useEffect(() => {
     if (!user || String(user.id).startsWith("virtual-")) {
       setName(null);
       setAvatar(null);
+      setTrainerId(null);
       return;
     }
     let cancelled = false;
     Promise.all([
-      supabase.from("trainers").select("name,avatar_url").eq("user_id", user.id).maybeSingle(),
+      supabase.from("trainers").select("id,name,avatar_url").eq("user_id", user.id).maybeSingle(),
       supabase
         .from("profiles")
         .select("display_name,avatar_url")
@@ -31,11 +37,12 @@ export function MobileAccountHeader() {
       .then(([trainerResult, profileResult]) => {
         if (cancelled) return;
         setName(
-          trainerResult.data?.name ??
-            profileResult.data?.display_name ??
-            metadata?.name ??
-            user.email?.split("@")[0] ??
-            "회원",
+          pickDisplayName(
+            trainerResult.data?.name,
+            profileResult.data?.display_name,
+            metadata?.name,
+            user.email?.split("@")[0],
+          ) ?? "회원",
         );
         setAvatar(
           trainerResult.data?.avatar_url ??
@@ -43,9 +50,10 @@ export function MobileAccountHeader() {
             metadata?.avatar_url ??
             null,
         );
+        setTrainerId(trainerResult.data?.id ?? null);
       })
       .catch(() => {
-        if (!cancelled) setName(metadata?.name ?? user.email?.split("@")[0] ?? "회원");
+        if (!cancelled) setName(pickDisplayName(metadata?.name, user.email?.split("@")[0]) ?? "회원");
       });
     return () => {
       cancelled = true;
@@ -66,13 +74,18 @@ export function MobileAccountHeader() {
               className="h-10 pl-1 pr-2 rounded-full border border-border bg-white inline-flex items-center gap-2 shadow-sm"
               aria-label="내 메뉴 열기"
             >
-              {avatar ? (
-                <img src={avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
-              ) : (
-                <span className="h-8 w-8 rounded-full bg-primary/15 grid place-items-center text-[12px] font-black text-primary">
-                  {(name ?? "회")[0]}
-                </span>
-              )}
+              <span className="relative shrink-0">
+                {avatar ? (
+                  <img src={avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span className="h-8 w-8 rounded-full bg-primary/15 grid place-items-center text-[12px] font-black text-primary">
+                    {(name ?? "회")[0]}
+                  </span>
+                )}
+                {trainerRank && (
+                  <TrainerRankBadge rank={trainerRank} className="!-left-1 !-top-1" size={15} />
+                )}
+              </span>
               <span className="max-w-20 truncate text-[12px] font-extrabold text-ink">
                 {name ?? "회원"}
               </span>

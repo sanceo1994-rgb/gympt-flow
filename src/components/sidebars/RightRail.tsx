@@ -17,6 +17,10 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { pickDisplayName } from "@/lib/display-name";
+import { TrainerRankBadge } from "@/components/TrainerRankBadge";
+import { rankTrainerRows } from "@/lib/trainer-ranking";
+import { useTrainerRank } from "@/hooks/use-trainer-rank";
 
 type PopularTrainer = {
   id: string;
@@ -24,9 +28,8 @@ type PopularTrainer = {
   gym: string | null;
   avatar_url: string | null;
   theme_from: string | null;
+  created_at: string;
 };
-
-const FEATURED_TRAINER_ID = "0b8781ee-55af-489c-9737-a4b081f596f9";
 
 export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
   const { user, loading: authLoading } = useAuth();
@@ -36,13 +39,17 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
     | undefined;
   const [dbRole, setDbRole] = useState<"trainer" | "student" | undefined>();
   const [dbName, setDbName] = useState<string | undefined>();
+  const [dbTrainerId, setDbTrainerId] = useState<string | null>(null);
+  const ownTrainerRank = useTrainerRank(dbTrainerId);
   const [roleResolved, setRoleResolved] = useState(false);
   const role = dbRole ?? metaRole;
   const name =
-    dbName ??
-    (user?.user_metadata as { name?: string } | undefined)?.name ??
-    user?.email?.split("@")[0] ??
-    "회원";
+    pickDisplayName(
+      dbName,
+      (user?.user_metadata as { name?: string; full_name?: string } | undefined)?.name,
+      (user?.user_metadata as { full_name?: string } | undefined)?.full_name,
+      user?.email?.split("@")[0],
+    ) ?? "회원";
   const avatar = (user?.user_metadata as { avatar_url?: string } | undefined)?.avatar_url;
 
   const [toast, setToast] = useState<string | null>(null);
@@ -52,6 +59,7 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
     if (!user || String(user.id).startsWith("virtual-")) {
       setDbRole(undefined);
       setDbName(undefined);
+      setDbTrainerId(null);
       setRoleResolved(true);
       return;
     }
@@ -66,6 +74,7 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
         if (cancelled) return;
         const roles = rolesResult.data ?? [];
         setDbName(trainerResult.data?.name ?? undefined);
+        setDbTrainerId(trainerResult.data?.id ?? null);
         if (trainerResult.data || roles.some((row) => row.role === "trainer")) setDbRole("trainer");
         else if (roles.some((row) => row.role === "student")) setDbRole("student");
         else setDbRole(metaRole);
@@ -85,17 +94,16 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
     let cancelled = false;
     supabase
       .from("trainers")
-      .select("id,name,gym,avatar_url,theme_from")
+      .select("id,name,gym,avatar_url,theme_from,created_at")
       .order("created_at", { ascending: false })
       .limit(8)
       .then(({ data }) => {
         if (cancelled) return;
-        const rows = ((data ?? []) as PopularTrainer[]).filter(
-          (trainer) => trainer.name && !trainer.name.includes("?"),
-        );
-        const featured = rows.find((trainer) => trainer.id === FEATURED_TRAINER_ID);
-        const rest = rows.filter((trainer) => trainer.id !== FEATURED_TRAINER_ID);
-        setPopularTrainers([...(featured ? [featured] : []), ...rest].slice(0, 5));
+        const rows = ((data ?? []) as PopularTrainer[]).flatMap((trainer) => {
+          const name = pickDisplayName(trainer.name);
+          return name ? [{ ...trainer, name }] : [];
+        });
+        setPopularTrainers(rankTrainerRows(rows).slice(0, 5));
       });
     return () => {
       cancelled = true;
@@ -163,21 +171,26 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
       ) : user ? (
         <div className="rounded-2xl bg-white border border-border p-3.5">
           <div className="flex items-center gap-3">
-            {avatar ? (
-              <img
-                src={avatar}
-                alt=""
-                className="h-12 w-12 rounded-full object-cover ring-2 ring-border"
-              />
-            ) : (
-              <div className="h-12 w-12 rounded-full bg-primary/15 grid place-items-center text-[16px] font-black text-primary">
-                {name[0]}
-              </div>
-            )}
+            <div className="relative shrink-0">
+              {avatar ? (
+                <img
+                  src={avatar}
+                  alt=""
+                  className="h-12 w-12 rounded-full object-cover ring-2 ring-border"
+                />
+              ) : (
+                <div className="h-12 w-12 rounded-full bg-primary/15 grid place-items-center text-[16px] font-black text-primary">
+                  {name[0]}
+                </div>
+              )}
+              {role === "trainer" && ownTrainerRank && (
+                <TrainerRankBadge rank={ownTrainerRank} className="!-left-1 !-top-1" size={19} />
+              )}
+            </div>
             <div className="min-w-0 flex-1">
               <p className="text-[14px] font-extrabold text-ink truncate">{name}님 안녕하세요!</p>
               <p className="text-[11px] font-bold text-ink-soft mt-0.5">
-                {role === "trainer" ? "트레이너" : "학생/회원"}
+                {role === "trainer" ? "트레이너" : "회원"}
               </p>
             </div>
             <button
@@ -273,20 +286,25 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
                   >
                     {index + 1}
                   </span>
-                  {trainer.avatar_url ? (
-                    <img
-                      src={trainer.avatar_url}
-                      alt=""
-                      className="h-9 w-9 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span
-                      className="grid h-9 w-9 place-items-center rounded-full text-[12px] font-black text-white"
-                      style={{ backgroundColor: trainer.theme_from || "#FF008C" }}
-                    >
-                      {trainer.name[0]}
-                    </span>
-                  )}
+                  <span className="relative shrink-0">
+                    {trainer.avatar_url ? (
+                      <img
+                        src={trainer.avatar_url}
+                        alt=""
+                        className="h-9 w-9 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span
+                        className="grid h-9 w-9 place-items-center rounded-full text-[12px] font-black text-white"
+                        style={{ backgroundColor: trainer.theme_from || "#FF008C" }}
+                      >
+                        {trainer.name[0]}
+                      </span>
+                    )}
+                    {index < 3 && (
+                      <TrainerRankBadge rank={(index + 1) as 1 | 2 | 3} className="!-left-1 !-top-1" size={17} />
+                    )}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-extrabold text-ink">
                       {trainer.name} 트레이너

@@ -1,7 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { DemoBanner } from "@/components/DemoBanner";
 import {
   Check,
   Ban,
@@ -27,6 +26,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { awardPoints, getMyWeekPoints } from "@/lib/points.functions";
+import { pickDisplayName } from "@/lib/display-name";
+import { TrainerRankBadge } from "@/components/TrainerRankBadge";
+import { useTrainerRank } from "@/hooks/use-trainer-rank";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -76,7 +78,7 @@ type StudentRosterMatch = {
   id: string;
   trainer_id: string;
   student_name: string;
-  student_email: string;
+  student_email: string | null;
   student_phone: string | null;
   status?: string | null;
 };
@@ -97,17 +99,24 @@ function requestedTrainerId() {
   return new URLSearchParams(window.location.search).get("trainer") || DEFAULT_TRAINER_ID;
 }
 
+function requestedWeekStart() {
+  if (typeof window === "undefined") return nextWeekStart();
+  const fromUrl = new URLSearchParams(window.location.search).get("week");
+  return fromUrl && /^\d{4}-\d{2}-\d{2}$/.test(fromUrl) ? fromUrl : nextWeekStart();
+}
+
 function cachedTrainer(): BookingTrainer | null {
   if (typeof window === "undefined") return null;
   try {
     const value = JSON.parse(
       sessionStorage.getItem("gympt-selected-trainer") || "null",
     ) as Partial<BookingTrainer> | null;
-    if (!value?.id || value.id !== requestedTrainerId() || !value.name) return null;
+    const cachedName = pickDisplayName(value?.name);
+    if (!value?.id || value.id !== requestedTrainerId() || !cachedName) return null;
     return {
       id: value.id,
       user_id: value.user_id || "",
-      name: value.name,
+      name: cachedName,
       gym: value.gym || null,
       intro: value.intro || null,
       instagram_url: value.instagram_url || null,
@@ -134,9 +143,10 @@ type BookingSchedule = {
   closedKeys: Set<string>;
 };
 
-async function ensureBookingSchedule(trainerUserId: string): Promise<BookingSchedule | null> {
-  const weekStart = nextWeekStart();
-
+async function ensureBookingSchedule(
+  trainerUserId: string,
+  weekStart: string,
+): Promise<BookingSchedule | null> {
   // weekly_schedules.trainer_id references trainer_profiles(id), a separate
   // per-trainer mirror row keyed by the trainer's auth user id. A student can't
   // create that row (only the trainer can, on their own /schedule visit), so if
@@ -221,6 +231,13 @@ async function ensureBookingSchedule(trainerUserId: string): Promise<BookingSche
   return { id: schedule.id, slotIds, slotKeyById, closedKeys };
 }
 
+// Saturday (index 5) is blue, Sunday (index 6) is red, weekdays use the default ink color.
+function dayHeaderColor(i: number) {
+  if (i === 5) return "text-blue-600";
+  if (i === 6) return "text-red-600";
+  return "";
+}
+
 function heatLevel(n: number, isMine: boolean) {
   if (isMine) return 5;
   if (n <= 0) return 0;
@@ -263,7 +280,17 @@ function Booking() {
   const [demand, setDemand] = useState<Record<string, number>>({});
   const [trainerRecord, setTrainerRecord] = useState<BookingTrainer | null>(() => cachedTrainer());
   const [pageTrainerId, setPageTrainerId] = useState<string>(() => requestedTrainerId());
+  const trainerRank = useTrainerRank(pageTrainerId);
   const [matchError, setMatchError] = useState<string | null>(null);
+  const locationSearch = useLocation({ select: (loc) => loc.searchStr });
+  const weekDates = useMemo(() => {
+    const monday = new Date(`${requestedWeekStart()}T00:00:00`);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  }, [locationSearch]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -315,25 +342,37 @@ function Booking() {
           : null;
       }
 
-      if (!cancelled) setTrainerRecord(pageTrainer);
+      if (!cancelled) {
+        setTrainerRecord(
+          pageTrainer
+            ? { ...pageTrainer, name: pickDisplayName(pageTrainer.name) ?? "트레이너" }
+            : null,
+        );
+      }
 
       if (!user || String(user.id).startsWith("virtual-")) {
         setRosterLoading(false);
         return;
       }
 
-      const email = user.email?.toLowerCase();
-      if (!email) {
-        setRosterLoading(false);
-        return;
-      }
-
-      const { data: roster, error: rosterError } = await supabase
+      const rosterSelect = "id,trainer_id,student_name,student_email,student_phone,status";
+      let rosterResult = await supabase
         .from("student_rosters" as never)
-        .select("id,trainer_id,student_name,student_email,student_phone,status")
-        .eq("student_email", email)
+        .select(rosterSelect)
+        .eq("student_user_id", user.id)
         .eq("trainer_id", currentTrainerId)
         .maybeSingle();
+
+      if (!rosterResult.data && user.email) {
+        rosterResult = await supabase
+          .from("student_rosters" as never)
+          .select(rosterSelect)
+          .eq("student_email", user.email.toLowerCase())
+          .eq("trainer_id", currentTrainerId)
+          .maybeSingle();
+      }
+
+      const { data: roster, error: rosterError } = rosterResult;
 
       if (cancelled) return;
 
@@ -348,7 +387,7 @@ function Booking() {
 
       const isOwner = isTrainerRole && pageTrainer?.user_id === user.id;
       if ((matchedRoster || isOwner) && pageTrainer?.user_id) {
-        const ensured = await ensureBookingSchedule(pageTrainer.user_id);
+        const ensured = await ensureBookingSchedule(pageTrainer.user_id, requestedWeekStart());
         if (cancelled) return;
         setBookingSchedule(ensured);
 
@@ -407,7 +446,7 @@ function Booking() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user?.id, user?.email, isTrainerRole]);
+  }, [authLoading, user?.id, user?.email, isTrainerRole, locationSearch]);
 
   // Determine gate state based on auth + roster
   const isOwnerTrainer = isTrainerRole && !!user && trainerRecord?.user_id === user.id;
@@ -592,7 +631,6 @@ function Booking() {
 
   return (
     <AppShell>
-      <DemoBanner role="student" />
       {/* Trainer profile — restructured, no overlap */}
       <section className="rounded-2xl border border-border overflow-hidden bg-white">
         <div
@@ -607,6 +645,9 @@ function Booking() {
               <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">
                 {displayTrainerInitial}
               </div>
+              {trainerRank && (
+                <TrainerRankBadge rank={trainerRank} className="!-left-2 !-top-2" size={27} />
+              )}
               <VerifiedBadge size={44} className="!-bottom-[11px] !-right-[11px]" />
             </div>
             <a
@@ -794,12 +835,14 @@ function Booking() {
                 <div className="p-1.5 sm:p-2 text-[10px] text-muted-foreground font-bold text-center">
                   시간
                 </div>
-                {DAYS.map((d) => (
-                  <div
-                    key={d}
-                    className="p-2 text-center text-[13px] sm:text-[13px] font-extrabold text-ink"
-                  >
-                    {d}
+                {DAYS.map((d, i) => (
+                  <div key={d} className="p-2 text-center text-[13px] sm:text-[13px] leading-tight">
+                    <p className={`font-extrabold ${dayHeaderColor(i)}`}>{d}</p>
+                    <p
+                      className={`text-[9px] font-bold opacity-70 tabular-nums ${dayHeaderColor(i) || "text-ink-soft"}`}
+                    >
+                      {weekDates[i].getMonth() + 1}/{weekDates[i].getDate()}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -1035,9 +1078,9 @@ function Booking() {
 
       {/* Trainer announcement editor */}
       <Dialog open={annOpen} onOpenChange={setAnnOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[520px]">
           <DialogHeader>
-            <DialogTitle className="text-[18px] font-black flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2">
               <Megaphone className="h-5 w-5 text-primary" /> 트레이너 공지 등록
             </DialogTitle>
             <DialogDescription className="text-[12.5px] text-ink-soft leading-relaxed">
@@ -1077,9 +1120,9 @@ function Booking() {
 
       {/* Login redirect modal */}
       <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[520px]">
           <DialogHeader>
-            <DialogTitle className="text-[20px] font-black">
+            <DialogTitle>
               로그인하고 시간을 선택하세요
             </DialogTitle>
             <DialogDescription>1초 카카오 로그인 또는 이메일로 시작할 수 있어요.</DialogDescription>
@@ -1095,12 +1138,12 @@ function Booking() {
 
       {/* Unavailable confirm */}
       <Dialog open={confirmUnavail} onOpenChange={setConfirmUnavail}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[520px]">
           <DialogHeader>
-            <div className="h-10 w-10 rounded-full bg-destructive/15 text-destructive grid place-items-center mb-2">
+            <div className="mb-3 grid h-28 w-28 place-items-center rounded-[28px] bg-destructive/10 text-destructive [&>svg]:h-10 [&>svg]:w-10">
               <Ban className="h-5 w-5" />
             </div>
-            <DialogTitle className="text-[18px] font-black">
+            <DialogTitle>
               이번 주 PT 불가로 표시할까요?
             </DialogTitle>
             <DialogDescription>
@@ -1126,12 +1169,12 @@ function Booking() {
 
       {/* Edit (modify submission) confirm */}
       <Dialog open={editConfirm} onOpenChange={setEditConfirm}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[520px]">
           <DialogHeader>
-            <div className="h-10 w-10 rounded-full bg-primary/15 text-primary grid place-items-center mb-2">
+            <div className="mb-3 grid h-28 w-28 place-items-center rounded-[28px] bg-primary/10 text-primary [&>svg]:h-10 [&>svg]:w-10">
               <Check className="h-5 w-5" />
             </div>
-            <DialogTitle className="text-[18px] font-black">시간을 수정하시겠어요?</DialogTitle>
+            <DialogTitle>시간을 수정하시겠어요?</DialogTitle>
             <DialogDescription className="leading-relaxed">
               {unavailable ? (
                 <>
@@ -1168,6 +1211,10 @@ function Booking() {
             </button>
             <button
               onClick={() => {
+                if (unavailable) {
+                  setUnavailable(false);
+                  setSelected(new Set());
+                }
                 setSubmitted(false);
                 setEditConfirm(false);
               }}

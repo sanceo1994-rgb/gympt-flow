@@ -10,6 +10,9 @@ import {
   Copy,
   Sparkles,
   CalendarClock,
+  CalendarDays,
+  Clock3,
+  UsersRound,
   MessageSquare,
   Receipt,
   Zap,
@@ -24,11 +27,43 @@ import {
 } from "@/components/ui/dialog";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeDisplayName, pickDisplayName } from "@/lib/display-name";
+import { TrainerRankBadge } from "@/components/TrainerRankBadge";
+import { useTrainerRank } from "@/hooks/use-trainer-rank";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "내 정보 — 픽짐피티" }] }),
   component: ProfilePage,
 });
+
+type WeeklySession = {
+  id: string;
+  scheduledAt: string;
+  status: string;
+  counterpart: string;
+  gym?: string | null;
+  note?: string | null;
+};
+
+type TrainerSessionRow = {
+  id: string;
+  scheduled_at: string;
+  status: string;
+  note: string | null;
+  student_rosters: { student_name: string } | { student_name: string }[] | null;
+};
+
+type StudentSessionRow = {
+  id: string;
+  scheduled_at: string;
+  status: string;
+  note: string | null;
+  trainers: { name: string; gym: string | null } | { name: string; gym: string | null }[] | null;
+};
+
+function relationOne<T>(value: T | T[] | null): T | null {
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
 
 function ProfilePage() {
   const { user } = useAuth();
@@ -41,6 +76,8 @@ function ProfilePage() {
   const [role, setRole] = useState<"trainer" | "student">(
     (meta.role as "trainer" | "student" | undefined) ?? "student",
   );
+  const [trainerId, setTrainerId] = useState<string | null>(null);
+  const trainerRank = useTrainerRank(trainerId);
   const isVerified = meta.verified !== false; // default true (first 100 trainers)
 
   const [editMode, setEditMode] = useState(false);
@@ -58,6 +95,12 @@ function ProfilePage() {
     name: string;
     gym: string | null;
   } | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<
+    { scheduleId: string; weekStart: string; responded: boolean }[]
+  >([]);
+  const [weeklySessions, setWeeklySessions] = useState<WeeklySession[]>([]);
+  const [recentSession, setRecentSession] = useState<WeeklySession | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
 
   // Trainer-only mock state
   const inviteCode = "PGPT-" + (name || "JAEHYUN").slice(0, 4).toUpperCase() + "-7K2";
@@ -123,6 +166,13 @@ function ProfilePage() {
     let cancelled = false;
 
     async function loadProfile() {
+      setSessionsLoading(true);
+      const weekStart = new Date();
+      const mondayDistance = (weekStart.getDay() + 6) % 7;
+      weekStart.setHours(0, 0, 0, 0);
+      weekStart.setDate(weekStart.getDate() - mondayDistance);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
       const { data: roleRow } = await supabase
         .from("user_roles")
         .select("role")
@@ -140,23 +190,44 @@ function ProfilePage() {
         .maybeSingle();
 
       if (!cancelled && profileRow) {
-        setName(profileRow.display_name ?? meta.name ?? "");
+        setName(pickDisplayName(profileRow.display_name, meta.name, user.email?.split("@")[0]) ?? "");
         setEmail(profileRow.email ?? user.email ?? "");
       }
 
       const { data: trainerRow } = await supabase
         .from("trainers")
-        .select("name,gym,intro")
+        .select("id,name,gym,intro")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (!cancelled && trainerRow) {
+        setTrainerId(trainerRow.id);
         setRole("trainer");
         setAssignedTrainer(null);
-        setName(trainerRow.name ?? meta.name ?? "");
+        setName(pickDisplayName(trainerRow.name, meta.name, user.email?.split("@")[0]) ?? "");
         setPhone("");
         setGym(trainerRow.gym ?? "");
         setIntro(trainerRow.intro ?? "");
+        setRecentSession(null);
+        const { data: sessions } = await supabase
+          .from("pt_sessions")
+          .select("id,scheduled_at,status,note,student_rosters(student_name)")
+          .eq("trainer_id", trainerRow.id)
+          .gte("scheduled_at", weekStart.toISOString())
+          .lt("scheduled_at", weekEnd.toISOString())
+          .order("scheduled_at", { ascending: true });
+        if (!cancelled) {
+          setWeeklySessions(
+            ((sessions ?? []) as TrainerSessionRow[]).map((session) => ({
+              id: session.id,
+              scheduledAt: session.scheduled_at,
+              status: session.status,
+              counterpart:
+                relationOne(session.student_rosters)?.student_name ?? "학생 이름 확인 필요",
+              note: session.note,
+            })),
+          );
+        }
       } else {
         let roster = (
           await supabase
@@ -181,14 +252,106 @@ function ProfilePage() {
         if (roster) {
           const { data: assigned } = await supabase
             .from("trainers")
-            .select("id,name,gym")
+            .select("id,name,gym,user_id")
             .eq("id", roster.trainer_id)
             .maybeSingle();
-          if (!cancelled) setAssignedTrainer(assigned ?? null);
+          if (!cancelled) {
+            setAssignedTrainer(
+              assigned
+                ? { ...assigned, name: pickDisplayName(assigned.name) ?? "트레이너" }
+                : null,
+            );
+          }
+
+          if (assigned?.user_id) {
+            const { data: trainerProfile } = await supabase
+              .from("trainer_profiles")
+              .select("id")
+              .eq("user_id", assigned.user_id)
+              .maybeSingle();
+            if (trainerProfile?.id) {
+              const thisWeekMonday = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
+              const { data: requestedSchedules } = await supabase
+                .from("weekly_schedules")
+                .select("id,week_start")
+                .eq("trainer_id", trainerProfile.id)
+                .not("request_sent_at", "is", null)
+                .gte("week_start", thisWeekMonday)
+                .order("week_start", { ascending: true });
+              const scheduleIds = (requestedSchedules ?? []).map((s) => s.id);
+              const { data: ownSelections } = scheduleIds.length
+                ? await supabase
+                    .from("student_selections")
+                    .select("schedule_id")
+                    .eq("student_user_id", user.id)
+                    .in("schedule_id", scheduleIds)
+                : { data: [] as { schedule_id: string }[] };
+              const respondedIds = new Set((ownSelections ?? []).map((s) => s.schedule_id));
+              if (!cancelled) {
+                setPendingRequests(
+                  (requestedSchedules ?? []).map((s) => ({
+                    scheduleId: s.id,
+                    weekStart: s.week_start,
+                    responded: respondedIds.has(s.id),
+                  })),
+                );
+              }
+            }
+          }
         } else if (!cancelled) {
           setAssignedTrainer(null);
+          setPendingRequests([]);
+        }
+
+        const [{ data: sessions }, { data: recent }] = await Promise.all([
+          supabase
+            .from("pt_sessions")
+            .select("id,scheduled_at,status,note,trainers(name,gym)")
+            .eq("student_user_id", user.id)
+            .eq("status", "scheduled")
+            .gte("scheduled_at", new Date().toISOString())
+            .order("scheduled_at", { ascending: true }),
+          supabase
+            .from("pt_sessions")
+            .select("id,scheduled_at,status,note,trainers(name,gym)")
+            .eq("student_user_id", user.id)
+            .eq("status", "completed")
+            .lte("scheduled_at", new Date().toISOString())
+            .order("scheduled_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        if (!cancelled) {
+          setWeeklySessions(
+            ((sessions ?? []) as StudentSessionRow[]).map((session) => {
+              const trainer = relationOne(session.trainers);
+              return {
+                id: session.id,
+                scheduledAt: session.scheduled_at,
+                status: session.status,
+                counterpart: pickDisplayName(trainer?.name) ?? "트레이너",
+                gym: trainer?.gym ?? null,
+                note: session.note,
+              };
+            }),
+          );
+          const recentRow = recent as StudentSessionRow | null;
+          const recentTrainer = relationOne(recentRow?.trainers ?? null);
+          setRecentSession(
+            recentRow
+              ? {
+                  id: recentRow.id,
+                  scheduledAt: recentRow.scheduled_at,
+                  status: recentRow.status,
+                  counterpart: pickDisplayName(recentTrainer?.name) ?? "트레이너",
+                  gym: recentTrainer?.gym ?? null,
+                  note: recentRow.note,
+                }
+              : null,
+          );
         }
       }
+      if (!cancelled) setSessionsLoading(false);
     }
 
     loadProfile();
@@ -198,10 +361,16 @@ function ProfilePage() {
   }, [user?.id]);
 
   const save = async () => {
+    const normalizedName = normalizeDisplayName(name);
+    if (!normalizedName) {
+      setHistoryToast("이름에 손상된 문자가 포함되어 있어요. 이름을 다시 입력해주세요.");
+      setTimeout(() => setHistoryToast(null), 3000);
+      return;
+    }
     try {
       if (user) {
-        await supabase.auth.updateUser({ data: { name, full_name: name } });
-        await supabase.from("profiles").update({ display_name: name, email }).eq("id", user.id);
+        await supabase.auth.updateUser({ data: { name: normalizedName, full_name: normalizedName } });
+        await supabase.from("profiles").update({ display_name: normalizedName, email }).eq("id", user.id);
 
         if (role === "trainer") {
           await supabase
@@ -209,7 +378,7 @@ function ProfilePage() {
             .upsert(
               {
                 user_id: user.id,
-                name: name || "트레이너",
+                name: normalizedName,
                 gym: gym || null,
                 intro: intro || null,
               },
@@ -218,9 +387,10 @@ function ProfilePage() {
         }
       } else {
         const cur = JSON.parse(localStorage.getItem("gympt-user") ?? "{}");
-        localStorage.setItem("gympt-user", JSON.stringify({ ...cur, name, email }));
+        localStorage.setItem("gympt-user", JSON.stringify({ ...cur, name: normalizedName, email }));
+        window.dispatchEvent(new Event("gympt-auth"));
       }
-      window.dispatchEvent(new Event("gympt-auth"));
+      setName(normalizedName);
     } catch {}
     setSaved(true);
     setEditMode(false);
@@ -275,10 +445,13 @@ function ProfilePage() {
             {role === "trainer" && isVerified && (
               <VerifiedBadge size={48} className="!-bottom-[12px] !-right-[12px]" />
             )}
+            {role === "trainer" && trainerRank && (
+              <TrainerRankBadge rank={trainerRank} className="!-left-2 !-top-2" size={30} />
+            )}
           </div>
           <p className="mt-3 text-[15px] font-extrabold text-ink">{name || "이름 없음"}</p>
           <span className="mt-1 inline-flex items-center px-2.5 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-extrabold">
-            {role === "trainer" ? "트레이너" : "학생/회원"}
+            {role === "trainer" ? "트레이너" : "회원"}
           </span>
           {editMode && (
             <button className="mt-4 w-full h-10 rounded-xl bg-white border border-border-strong text-[12px] font-bold text-ink hover:bg-muted">
@@ -339,20 +512,57 @@ function ProfilePage() {
               </div>
             )}
           </div>
-          <div className="mt-4">
+          {role === "student" && pendingRequests.length > 0 && (
+            <div className="mt-4">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
+                트레이너가 보낸 시간 선택 요청
+              </span>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {pendingRequests.map((req) => {
+                  const d = new Date(`${req.weekStart}T00:00:00`);
+                  const end = new Date(d);
+                  end.setDate(end.getDate() + 6);
+                  const fmt = (x: Date) => `${x.getMonth() + 1}.${x.getDate()}`;
+                  return (
+                    <Link
+                      key={req.scheduleId}
+                      to="/booking"
+                      search={{ trainer: assignedTrainer?.id, week: req.weekStart }}
+                      className="flex items-center gap-2.5 rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 hover:border-primary/40 hover:bg-primary/[0.04] transition"
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white ring-1 ring-border">
+                        <CalendarDays className="h-4 w-4 text-primary" />
+                      </span>
+                      <div className="leading-tight">
+                        <p className="text-[12.5px] font-extrabold text-ink">
+                          {fmt(d)} – {fmt(end)}
+                        </p>
+                        <span
+                          className={`mt-0.5 inline-flex items-center px-2 h-5 rounded-full text-[10px] font-extrabold ${
+                            req.responded
+                              ? "bg-primary/10 text-primary"
+                              : "bg-destructive/10 text-destructive"
+                          }`}
+                        >
+                          {req.responded ? "응답 완료" : "응답 필요"}
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {role === "trainer" && <div className="mt-4">
             <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
-              {role === "trainer" ? "트레이너 소개" : "한 줄 소개"}
+              트레이너 소개
             </span>
             {editMode ? (
               <textarea
                 value={intro}
                 onChange={(e) => setIntro(e.target.value)}
                 rows={4}
-                placeholder={
-                  role === "trainer"
-                    ? "전문 분야, 자격증, 운영 시간 등을 자유롭게 소개해주세요."
-                    : "운동 목표, 선호 시간 등을 적어주세요."
-                }
+                placeholder="전문 분야, 자격증, 운영 시간 등을 자유롭게 소개해주세요."
                 className="mt-1.5 w-full px-3.5 py-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink resize-none"
               />
             ) : (
@@ -360,7 +570,7 @@ function ProfilePage() {
                 {intro || <span className="text-ink-soft">소개가 아직 없어요.</span>}
               </p>
             )}
-          </div>
+          </div>}
           {editMode && (
             <div className="mt-6 flex items-center gap-2">
               <button
@@ -380,6 +590,13 @@ function ProfilePage() {
           )}
         </div>
       </div>
+
+      <WeeklyScheduleSummary
+        role={role}
+        sessions={weeklySessions}
+        recentSession={recentSession}
+        loading={sessionsLoading}
+      />
 
       {/* Trainer-only sections */}
       {role === "trainer" && (
@@ -569,6 +786,15 @@ function ProfilePage() {
         </div>
       )}
 
+      <div className="flex justify-center pb-4 pt-10">
+        <Link
+          to="/account/delete"
+          className="text-[10.5px] font-medium text-muted-foreground/70 underline underline-offset-4 hover:text-destructive"
+        >
+          회원 탈퇴
+        </Link>
+      </div>
+
       {/* Change plan dialog */}
       <Dialog open={planOpen} onOpenChange={setPlanOpen}>
         <DialogContent className="max-w-2xl">
@@ -673,6 +899,262 @@ function ProfilePage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+function WeeklyScheduleSummary({
+  role,
+  sessions,
+  recentSession,
+  loading,
+}: {
+  role: "trainer" | "student";
+  sessions: WeeklySession[];
+  recentSession: WeeklySession | null;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <section className="mt-4 rounded-2xl border border-border bg-white p-5 sm:p-6">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="h-24 animate-pulse rounded-xl bg-surface-muted" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  return role === "trainer" ? (
+    <TrainerWeeklySchedule sessions={sessions} />
+  ) : (
+    <StudentWeeklyInsight sessions={sessions} recentSession={recentSession} />
+  );
+}
+
+function TrainerWeeklySchedule({ sessions }: { sessions: WeeklySession[] }) {
+  const activeSessions = sessions.filter((session) => session.status !== "cancelled");
+  const completedCount = activeSessions.filter((session) => session.status === "completed").length;
+  const upcomingCount = activeSessions.filter((session) => session.status === "scheduled").length;
+  const dayKeys = ["월", "화", "수", "목", "금", "토", "일"];
+  const sessionByCell = new Map<string, WeeklySession[]>();
+  const times = new Set<string>();
+
+  activeSessions.forEach((session) => {
+    const date = new Date(session.scheduledAt);
+    const day = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+    const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    times.add(time);
+    const key = `${day}-${time}`;
+    sessionByCell.set(key, [...(sessionByCell.get(key) ?? []), session]);
+  });
+
+  const sortedTimes = [...times].sort();
+
+  const now = Date.now();
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <CalendarDays className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">이번 주</p>
+            <h2 className="text-[16px] font-black text-ink">수업 운영 요약</h2>
+          </div>
+        </div>
+        <Link
+          to="/schedule"
+          className="inline-flex h-9 items-center rounded-full border border-border-strong px-3.5 text-[11.5px] font-extrabold text-ink hover:bg-muted"
+        >
+          전체 일정 보기
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 p-5 sm:p-6">
+        <ScheduleMetric label="확정" value={`${activeSessions.length}회`} icon={<CalendarClock className="h-3.5 w-3.5" />} />
+        <ScheduleMetric label="완료" value={`${completedCount}회`} icon={<Check className="h-3.5 w-3.5" />} />
+        <ScheduleMetric label="예정" value={`${upcomingCount}회`} icon={<Clock3 className="h-3.5 w-3.5" />} accent />
+      </div>
+
+      <div className="border-t border-border px-5 pb-6 pt-4 sm:px-6">
+        <div className="mb-3 flex items-center gap-2">
+          <UsersRound className="h-4 w-4 text-ink" />
+          <h3 className="text-[13px] font-black text-ink">확정된 이번 주 타임테이블</h3>
+        </div>
+        {sortedTimes.length ? (
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <div className="min-w-[680px]">
+              <div className="grid grid-cols-[64px_repeat(7,minmax(76px,1fr))] bg-surface-muted">
+                <div className="px-2 py-2.5 text-center text-[10px] font-bold text-ink-soft">시간</div>
+                {dayKeys.map((day) => (
+                  <div key={day} className="border-l border-border px-2 py-2.5 text-center text-[11px] font-black text-ink">{day}</div>
+                ))}
+              </div>
+              {sortedTimes.map((time) => (
+                <div key={time} className="grid min-h-14 grid-cols-[64px_repeat(7,minmax(76px,1fr))] border-t border-border">
+                  <div className="grid place-items-center bg-surface-muted/60 text-[10.5px] font-bold text-ink-soft">{time}</div>
+                  {dayKeys.map((day) => {
+                    const cellSessions = sessionByCell.get(`${day}-${time}`) ?? [];
+                    return (
+                      <div key={day} className="flex flex-col justify-center gap-1 border-l border-border p-1.5">
+                        {cellSessions.map((session) => (
+                          <span
+                            key={session.id}
+                            className={`truncate rounded-md px-1.5 py-1 text-center text-[10.5px] font-extrabold ${new Date(session.scheduledAt).getTime() < now ? "bg-muted text-ink-soft" : "bg-primary/10 text-primary"}`}
+                            title={`${session.counterpart} 회원`}
+                          >
+                            {session.counterpart}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-24 items-center justify-center gap-2 rounded-xl bg-surface-muted px-4 text-[12px] font-semibold text-ink-soft">
+            <CalendarClock className="h-4 w-4" /> 이번 주에 확정된 수업이 없습니다.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function StudentWeeklyInsight({
+  sessions,
+  recentSession,
+}: {
+  sessions: WeeklySession[];
+  recentSession: WeeklySession | null;
+}) {
+  const now = Date.now();
+  const upcoming = sessions
+    .filter((session) => session.status === "scheduled" && new Date(session.scheduledAt).getTime() >= now)
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+  const nextSession = upcoming[0] ?? null;
+  const nextDate = nextSession ? new Date(nextSession.scheduledAt) : null;
+  const recentDate = recentSession ? new Date(recentSession.scheduledAt) : null;
+  const daysUntil = nextDate ? Math.max(0, Math.ceil((nextDate.getTime() - now) / 86_400_000)) : null;
+  const intervalDays = nextDate && recentDate
+    ? Math.max(0, Math.round((nextDate.getTime() - recentDate.getTime()) / 86_400_000))
+    : null;
+  const formatLong = (date: Date) =>
+    new Intl.DateTimeFormat("ko-KR", {
+      month: "long",
+      day: "numeric",
+      weekday: "long",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-white">
+      <div className="relative overflow-hidden bg-ink px-5 py-6 text-white sm:px-7">
+        <div className="absolute right-0 top-0 h-full w-40 bg-primary/20 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10.5px] font-bold text-white/80">
+              <CalendarDays className="h-3.5 w-3.5 text-primary" /> 다음 PT 일정
+            </span>
+            {nextDate ? (
+              <>
+                <h2 className="mt-3 max-w-xl text-[20px] font-black leading-snug sm:text-[23px]">
+                  다음 PT는 <span className="text-primary">{formatLong(nextDate)}</span>에<br className="hidden sm:block" /> 예정되어 있어요.
+                </h2>
+                <p className="mt-2 text-[12.5px] text-white/65">
+                  {nextSession?.counterpart} 트레이너{nextSession?.gym ? ` · ${nextSession.gym}` : ""}
+                </p>
+              </>
+            ) : (
+              <h2 className="mt-3 text-[20px] font-black">예정된 PT가 없어요.</h2>
+            )}
+          </div>
+          {daysUntil !== null && (
+            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-primary text-center text-[17px] font-black shadow-pop">
+              D-{daysUntil}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
+        <div className="rounded-xl bg-surface-muted p-4">
+          <div className="flex items-center gap-2 text-[11px] font-bold text-ink-soft">
+            <Clock3 className="h-4 w-4" /> 최근 PT
+          </div>
+          {recentDate ? (
+            <>
+              <p className="mt-2 text-[15px] font-black text-ink">{formatLong(recentDate)}</p>
+              {intervalDays !== null && nextDate && (
+                <p className="mt-1 text-[12px] font-extrabold text-primary">{intervalDays}일 만에 다시 PT를 해요!</p>
+              )}
+            </>
+          ) : (
+            <p className="mt-2 text-[13px] font-bold text-ink-soft">아직 완료된 PT 기록이 없습니다.</p>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-4">
+          <div className="flex items-center gap-2 text-[11px] font-bold text-primary">
+            <Sparkles className="h-4 w-4" /> 최근 운동 기록
+          </div>
+          {recentSession?.note?.trim() ? (
+            <p className="mt-2 line-clamp-3 text-[13px] font-semibold leading-relaxed text-ink">
+              {recentSession.note}
+            </p>
+          ) : (
+            <p className="mt-2 text-[13px] font-semibold leading-relaxed text-ink-soft">
+              트레이너가 운동 기록을 남기면 여기에 표시됩니다.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {upcoming.length > 1 && (
+        <div className="border-t border-border px-5 py-4 sm:px-6">
+          <p className="text-[11px] font-bold text-ink-soft">다른 예정된 일정</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {upcoming.slice(1).map((session) => (
+              <span key={session.id} className="rounded-full bg-surface-muted px-3 py-1.5 text-[11.5px] font-bold text-ink">
+                {formatLong(new Date(session.scheduledAt))}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="border-t border-border px-5 py-4 text-right sm:px-6">
+        <Link to="/pt-history" className="text-[11.5px] font-extrabold text-primary hover:underline">
+          전체 PT 내역 보기
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function ScheduleMetric({
+  label,
+  value,
+  icon,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  accent?: boolean;
+}) {
+  return (
+    <div className={`rounded-xl px-3 py-3 ${accent ? "bg-primary text-white" : "bg-surface-muted text-ink"}`}>
+      <div className={`flex items-center gap-1 text-[10.5px] font-bold ${accent ? "text-white/80" : "text-ink-soft"}`}>
+        {icon} {label}
+      </div>
+      <p className="mt-1 text-[18px] font-black tabular-nums">{value}</p>
+    </div>
   );
 }
 

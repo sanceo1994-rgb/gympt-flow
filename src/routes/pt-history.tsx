@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { pickDisplayName } from "@/lib/display-name";
 
 export const Route = createFileRoute("/pt-history")({
   head: () => ({ meta: [{ title: "내 PT 내역 — 픽짐피티" }] }),
@@ -39,7 +40,7 @@ function historyRow(session: {
     id: session.id,
     date: `${String(scheduled.getFullYear()).slice(2)}.${String(scheduled.getMonth() + 1).padStart(2, "0")}.${String(scheduled.getDate()).padStart(2, "0")} (${DAY_NAMES[scheduled.getDay()]})`,
     time: `${String(scheduled.getHours()).padStart(2, "0")}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
-    trainer: trainer?.name || "트레이너",
+    trainer: pickDisplayName(trainer?.name) ?? "트레이너",
     gym: trainer?.gym || "소속 센터",
     status,
     note: session.note || "수업 메모 없음",
@@ -200,7 +201,7 @@ function PTHistory() {
 
       {/* Day-of cancel dialog */}
       <Dialog open={cancelOpen} onOpenChange={(v) => { setCancelOpen(v); if (!v) setCancelReason(""); }}>
-        <DialogContent className="max-w-sm rounded-2xl">
+        <DialogContent className="max-w-[520px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-ink">
               <AlertTriangle className="h-5 w-5 text-destructive" /> PT 당일 취소

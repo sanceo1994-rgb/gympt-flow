@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { pickDisplayName } from "@/lib/display-name";
 import { formatPhoneNumber } from "@/lib/phone";
 import { matchesKoreanSearch } from "@/lib/koreanSearch";
 
@@ -58,10 +59,9 @@ type Student = {
   memo: string;
 };
 
-type SortKey = keyof Pick<Student, "name" | "email" | "phone" | "remaining" | "status">;
+type SortKey = keyof Pick<Student, "name" | "phone" | "remaining" | "status">;
 type DraftRow = {
   name: string;
-  email: string;
   phone: string;
   remaining: string;
   total: string;
@@ -70,7 +70,6 @@ type DraftRow = {
 
 const emptyRow = (): DraftRow => ({
   name: "",
-  email: "",
   phone: "",
   remaining: "10",
   total: "10",
@@ -87,7 +86,7 @@ function normalizeRosterRow(row: Record<string, unknown>): Student {
   const signedUp = row.student_user_id != null;
   return {
     id: String(row.id),
-    name: String(row.student_name ?? ""),
+    name: pickDisplayName(row.student_name) ?? "이름 확인 필요",
     email: String(row.student_email ?? ""),
     phone: formatPhoneNumber(String(row.student_phone ?? "")),
     joinedAt: String(row.created_at ?? "")
@@ -182,7 +181,9 @@ function StudentsPage() {
     });
   }, [students, sortKey, sortDir, q]);
 
-  const validRows = rows.filter((r) => r.name.trim() && r.email.trim());
+  const validRows = rows.filter(
+    (r) => r.name.trim() && r.phone.replace(/\D/g, "").length === 11,
+  );
   const validCount = validRows.length;
 
   const onSort = (k: SortKey) => {
@@ -196,7 +197,7 @@ function StudentsPage() {
   const updateRow = (i: number, patch: Partial<DraftRow>) => {
     setRows((prev) => {
       const next = prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
-      if (i === next.length - 1 && (patch.name || patch.email || patch.phone))
+      if (i === next.length - 1 && (patch.name || patch.phone))
         next.push(emptyRow());
       return next;
     });
@@ -208,7 +209,7 @@ function StudentsPage() {
     const payload = validRows.map((r) => ({
       trainer_id: trainerId,
       student_name: r.name.trim(),
-      student_email: r.email.trim().toLowerCase(),
+      student_email: null,
       student_phone: formatPhoneNumber(r.phone),
       remaining_sessions: Number(r.remaining) || 0,
       total_sessions: Number(r.total) || 0,
@@ -282,7 +283,6 @@ function StudentsPage() {
     setEditingStudent(student);
     setEditDraft({
       name: student.name,
-      email: student.email,
       phone: student.phone,
       remaining: String(student.remaining),
       total: String(student.total),
@@ -291,10 +291,9 @@ function StudentsPage() {
   };
 
   const saveEdit = async () => {
-    if (!editingStudent || !editDraft.name.trim() || !editDraft.email.trim()) return;
+    if (!editingStudent || !editDraft.name.trim()) return;
     const patch = {
       student_name: editDraft.name.trim(),
-      student_email: editDraft.email.trim().toLowerCase(),
       student_phone: formatPhoneNumber(editDraft.phone),
       remaining_sessions: Number(editDraft.remaining) || 0,
       total_sessions: Number(editDraft.total) || 0,
@@ -315,7 +314,6 @@ function StudentsPage() {
               ...student,
               ...patch,
               name: patch.student_name,
-              email: patch.student_email,
               phone: patch.student_phone,
               remaining: patch.remaining_sessions,
               total: patch.total_sessions,
@@ -520,25 +518,20 @@ function StudentsPage() {
             <SheetTitle className="text-[20px] font-black leading-tight">
               학생을 한 번에 등록하세요
             </SheetTitle>
-            <SheetDescription>이메일은 학생 로그인 계정과 매칭되는 핵심 값입니다.</SheetDescription>
+            <SheetDescription>
+              이름과 휴대폰 번호를 등록합니다. 계정 권한은 인증된 회원만 연결됩니다.
+            </SheetDescription>
           </SheetHeader>
 
           <div className="mt-5 grid gap-3">
             {rows.map((r, i) => (
               <div key={i} className="rounded-2xl border border-border p-3 bg-white">
-                <div className="grid md:grid-cols-[1fr_1.4fr_1fr_80px_80px_1.2fr_32px] gap-2 items-end">
+                <div className="grid md:grid-cols-[1fr_1.15fr_80px_80px_1.4fr_32px] gap-2 items-end">
                   <Field label="이름">
                     <Cell
                       value={r.name}
                       onChange={(v) => updateRow(i, { name: v })}
                       placeholder="김학생"
-                    />
-                  </Field>
-                  <Field label="이메일">
-                    <Cell
-                      value={r.email}
-                      onChange={(v) => updateRow(i, { email: v })}
-                      placeholder="student@example.com"
                     />
                   </Field>
                   <Field label="전화번호">
@@ -584,7 +577,7 @@ function StudentsPage() {
             >
               <Plus className="h-3.5 w-3.5" /> 줄 추가
             </button>
-            <p className="text-[11px] text-ink-soft">이름과 이메일이 있는 줄만 등록됩니다.</p>
+            <p className="text-[11px] text-ink-soft">이름과 11자리 휴대폰 번호가 있는 줄만 등록됩니다.</p>
           </div>
 
           <div className="mt-6 sticky bottom-0 -mx-6 px-6 py-4 bg-white border-t border-border">
@@ -594,7 +587,7 @@ function StudentsPage() {
               className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop hover:brightness-110 disabled:opacity-40"
             >
               <Check className="h-4 w-4" />
-              {validCount === 0 ? "이름과 이메일을 입력해주세요" : `${validCount}명 등록하기`}
+              {validCount === 0 ? "이름과 휴대폰 번호를 입력해주세요" : `${validCount}명 등록하기`}
             </button>
           </div>
         </SheetContent>
@@ -619,12 +612,6 @@ function StudentsPage() {
               <Cell
                 value={editDraft.name}
                 onChange={(v) => setEditDraft((draft) => ({ ...draft, name: v }))}
-              />
-            </Field>
-            <Field label="이메일">
-              <Cell
-                value={editDraft.email}
-                onChange={(v) => setEditDraft((draft) => ({ ...draft, email: v }))}
               />
             </Field>
             <Field label="전화번호">
@@ -664,7 +651,7 @@ function StudentsPage() {
           <div className="mt-8 sticky bottom-0 -mx-6 px-6 py-4 bg-white border-t border-border">
             <button
               onClick={() => void saveEdit()}
-              disabled={!editDraft.name.trim() || !editDraft.email.trim()}
+              disabled={!editDraft.name.trim()}
               className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop disabled:opacity-40"
             >
               <Check className="h-4 w-4" /> 변경사항 저장
@@ -677,7 +664,7 @@ function StudentsPage() {
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
       >
-        <AlertDialogContent className="max-w-md rounded-2xl">
+        <AlertDialogContent className="max-w-[520px]">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-black">학생을 삭제할까요?</AlertDialogTitle>
             <AlertDialogDescription>

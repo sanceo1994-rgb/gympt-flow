@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { DemoBanner } from "@/components/DemoBanner";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Send,
@@ -21,6 +20,7 @@ import {
   ChevronDown,
   UserRoundSearch,
   Inbox,
+  OctagonAlert,
 } from "lucide-react";
 import {
   Dialog,
@@ -40,6 +40,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { maximizeScheduleAssignments, type MatchingSlot } from "@/lib/maximize-schedule";
+import { pickDisplayName } from "@/lib/display-name";
 
 export const Route = createFileRoute("/schedule")({
   head: () => ({
@@ -93,6 +94,48 @@ function getWeekLabel(offset: number) {
   return `${f(base)} – ${f(end)}`;
 }
 
+function getWeekDates(offset: number) {
+  const monday = new Date();
+  const mondayDistance = (monday.getDay() + 6) % 7;
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - mondayDistance + offset * 7);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+}
+
+// Saturday (index 5) is blue, Sunday (index 6) is red, weekdays use the default ink color.
+function dayHeaderColor(i: number, dark?: boolean) {
+  if (i === 5) return dark ? "text-blue-300" : "text-blue-600";
+  if (i === 6) return dark ? "text-red-300" : "text-red-600";
+  return "";
+}
+
+function DayHeaderLabel({
+  day,
+  date,
+  i,
+  dark,
+  className,
+}: {
+  day: string;
+  date: Date;
+  i: number;
+  dark?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`text-center leading-tight ${dayHeaderColor(i, dark)} ${className ?? ""}`}>
+      <p className="font-extrabold">{day}</p>
+      <p className="text-[9px] font-bold opacity-70 tabular-nums">
+        {date.getMonth() + 1}/{date.getDate()}
+      </p>
+    </div>
+  );
+}
+
 const WEEK_LABELS = ["이번 주", "다음 주", "다다음 주", "3주 뒤", "4주 뒤"];
 
 type Status = "응답완료" | "응답대기" | "불가";
@@ -104,6 +147,8 @@ type Student = {
   remaining: number;
   total: number;
   joinedAt: string;
+  studentUserId?: string | null;
+  rosterId?: string;
 };
 
 const STUDENTS: Student[] = [
@@ -251,10 +296,11 @@ function parsePick(s: string): { day: string; hour: number } | null {
   return { day: m[1], hour: parseInt(m[2], 10) };
 }
 
-type Assignment = { name: string; day: string; hour: number };
+type Assignment = { name: string; day: string; hour: number; method: "auto" | "manual" };
 
 function Schedule() {
   const { user, loading: authLoading } = useAuth();
+  const [accessState, setAccessState] = useState<"checking" | "allowed" | "student" | "signed-out" | "error">("checking");
   const [trainerName, setTrainerName] = useState("");
   const [dbStudents, setDbStudents] = useState<Student[]>([]);
   const [dbPicks, setDbPicks] = useState<Record<string, string[]>>({});
@@ -300,7 +346,14 @@ function Schedule() {
     scope: "individual" | "remind";
   } | null>(null);
   const [inviteIntent, setInviteIntent] = useState(false);
-  const [requestSentWeek, setRequestSentWeek] = useState<number | null>(null);
+  const [scheduleId, setScheduleId] = useState<string | null>(null);
+  const [requestSentAt, setRequestSentAt] = useState<string | null>(null);
+  const [confirmedAt, setConfirmedAt] = useState<string | null>(null);
+  const [confirmedSummary, setConfirmedSummary] = useState<{
+    count: number;
+    responded: number;
+    total: number;
+  } | null>(null);
 
   // Right-side panel for "요청 보내기" / "확정 알림"
   const [panel, setPanel] = useState<null | "invite" | "confirm">(null);
@@ -309,6 +362,8 @@ function Schedule() {
 
   // Pending-close cells for floating confirm bar
   const [pendingClose, setPendingClose] = useState<Set<string>>(new Set());
+  const [closeEditMode, setCloseEditMode] = useState(false);
+  const [slotDetail, setSlotDetail] = useState<{ label: string; names: string[] } | null>(null);
 
   // Memo panel state
   const [memoFor, setMemoFor] = useState<{ name: string; sessionNo: number } | null>(null);
@@ -318,16 +373,28 @@ function Schedule() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user || String(user.id).startsWith("virtual-")) {
+    if (!user) {
+      setAccessState("signed-out");
       setDbStudents([]);
       setDbPicks({});
       setDbAiResult([]);
       setDbUnassigned([]);
       setDbActivity([]);
+      setScheduleId(null);
+      setRequestSentAt(null);
+      setConfirmedAt(null);
+      setConfirmedSummary(null);
+      return;
+    }
+
+    if (String(user.id).startsWith("virtual-")) {
+      const virtualRole = (user.user_metadata as { role?: string } | undefined)?.role;
+      setAccessState(virtualRole === "trainer" ? "allowed" : "student");
       return;
     }
 
     let cancelled = false;
+    setAccessState("checking");
     const userId = user.id;
     const targetMonday = new Date();
     const mondayDistance = (targetMonday.getDay() + 6) % 7;
@@ -336,18 +403,27 @@ function Schedule() {
     const weekStart = `${targetMonday.getFullYear()}-${String(targetMonday.getMonth() + 1).padStart(2, "0")}-${String(targetMonday.getDate()).padStart(2, "0")}`;
 
     async function loadSchedule() {
-      const { data: trainer } = await supabase
+      const { data: trainer, error: trainerError } = await supabase
         .from("trainers")
         .select("id,name,gym,intro,avatar_url,instagram_url")
         .eq("user_id", userId)
         .maybeSingle();
-      if (trainer && !cancelled) setTrainerName(trainer.name);
-      if (!trainer || cancelled) return;
+      if (trainerError) {
+        if (!cancelled) setAccessState("error");
+        return;
+      }
+      if (!trainer) {
+        if (!cancelled) setAccessState("student");
+        return;
+      }
+      if (!cancelled) setAccessState("allowed");
+      if (trainer && !cancelled) setTrainerName(pickDisplayName(trainer.name) ?? "");
+      if (cancelled) return;
 
       const [{ data: rosters }, { data: sessions }] = await Promise.all([
         supabase
           .from("student_rosters")
-          .select("id,student_name,status,remaining_sessions,total_sessions,created_at")
+          .select("id,student_name,status,remaining_sessions,total_sessions,created_at,student_user_id")
           .eq("trainer_id", trainer.id)
           .order("created_at"),
         supabase
@@ -405,7 +481,7 @@ function Schedule() {
       let schedule = (
         await supabase
           .from("weekly_schedules")
-          .select("id")
+          .select("id,request_sent_at,confirmed_at")
           .eq("trainer_id", scheduleTrainer.id)
           .eq("week_start", weekStart)
           .maybeSingle()
@@ -417,11 +493,15 @@ function Schedule() {
             { trainer_id: scheduleTrainer.id, week_start: weekStart },
             { onConflict: "trainer_id,week_start" },
           )
-          .select("id")
+          .select("id,request_sent_at,confirmed_at")
           .maybeSingle();
         schedule = created ?? null;
       }
       if (cancelled) return;
+      setScheduleId(schedule?.id ?? null);
+      setRequestSentAt(schedule?.request_sent_at ?? null);
+      setConfirmedAt(schedule?.confirmed_at ?? null);
+      setConfirmedSummary(null);
 
       if (!schedule) {
         setDbStudents(
@@ -433,6 +513,8 @@ function Schedule() {
             remaining: roster.remaining_sessions,
             total: roster.total_sessions,
             joinedAt: new Date(roster.created_at).toLocaleDateString("ko-KR"),
+            studentUserId: roster.student_user_id,
+            rosterId: roster.id,
           })),
         );
         setDbPicks({});
@@ -519,6 +601,8 @@ function Schedule() {
           remaining: roster.remaining_sessions,
           total: roster.total_sessions,
           joinedAt: new Date(roster.created_at).toLocaleDateString("ko-KR"),
+          studentUserId: roster.student_user_id,
+          rosterId: roster.id,
         };
       });
 
@@ -560,7 +644,12 @@ function Schedule() {
         })),
       );
       setAssignments(
-        result.map((item) => ({ name: item.name, day: item.day, hour: parseInt(item.hour, 10) })),
+        result.map((item) => ({
+          name: item.name,
+          day: item.day,
+          hour: parseInt(item.hour, 10),
+          method: "auto" as const,
+        })),
       );
       setPanelSelected(new Set(students.map((student) => student.name)));
       setDbActivity(
@@ -620,6 +709,7 @@ function Schedule() {
 
   // Cell click toggles pending-close membership (XOR with current closed)
   const toggleCellPending = (key: string) => {
+    if (requestSentAt != null && !closeEditMode) return;
     setPendingClose((p) => {
       const n = new Set(p);
       if (n.has(key)) n.delete(key);
@@ -629,6 +719,7 @@ function Schedule() {
   };
 
   const closeDay = (d: string) => {
+    if (requestSentAt != null && !closeEditMode) return;
     setPendingClose((p) => {
       const n = new Set(p);
       HOURS.forEach((h) => {
@@ -641,6 +732,7 @@ function Schedule() {
   };
 
   const closeHour = (h: number) => {
+    if (requestSentAt != null && !closeEditMode) return;
     setPendingClose((p) => {
       const n = new Set(p);
       DAYS.forEach((d) => {
@@ -673,6 +765,7 @@ function Schedule() {
       return n;
     });
     setPendingClose(new Set());
+    if (requestSentAt != null) setCloseEditMode(false);
     await Promise.all(
       Array.from(pendingClose).map((key) => {
         const slotId = slotIds[key];
@@ -688,6 +781,8 @@ function Schedule() {
     if (toOpen) parts.push(`${toOpen}개 시간을 다시 열었어요`);
     fireToast(parts.join(" · ") || "변경사항 저장됨");
   };
+
+  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
 
   const stats = useMemo(() => {
     const total = STUDENTS.length;
@@ -706,20 +801,74 @@ function Schedule() {
     });
   };
 
-  const sendPanel = () => {
+  const sendRequest = async () => {
     const count = panelSelected.size;
     const all = count === STUDENTS.length;
-    if (panel === "invite") {
-      fireToast(
-        all
-          ? `전원에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`
-          : `${count}명에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`,
-      );
-      setRequestSentWeek(panelWeek);
-    } else {
-      fireToast(all ? `전원에게 확정 알림 발송 ✓` : `${count}명에게 확정 알림 발송 ✓`);
-    }
     setPanel(null);
+    if (!scheduleId) {
+      fireToast("일정을 불러오는 중이에요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    const { error } = await supabase.rpc("mark_schedule_requested", {
+      p_schedule_id: scheduleId,
+    });
+    if (error) {
+      fireToast("요청 발송에 실패했어요. 다시 시도해주세요.");
+      return;
+    }
+    setRequestSentAt((prev) => prev ?? new Date().toISOString());
+    fireToast(
+      all
+        ? `전원에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`
+        : `${count}명에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`,
+    );
+  };
+
+  const sendConfirm = async () => {
+    setPanel(null);
+    if (!scheduleId) {
+      fireToast("일정을 불러오는 중이에요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    const studentByName = new Map(STUDENTS.map((s) => [s.name, s]));
+    const payload = assignments
+      .filter((a) => panelSelected.has(a.name))
+      .map((a) => {
+        const slotId = slotIds[`${a.day}-${a.hour}`];
+        const studentUserId = studentByName.get(a.name)?.studentUserId;
+        if (!slotId || !studentUserId) return null;
+        return { slot_id: slotId, student_user_id: studentUserId, student_name: a.name };
+      })
+      .filter((row): row is { slot_id: string; student_user_id: string; student_name: string } => !!row);
+
+    if (payload.length === 0) {
+      fireToast("확정할 배정이 없어요. 학생 응답을 먼저 확인해주세요.");
+      return;
+    }
+
+    const { error } = await supabase.rpc("confirm_weekly_schedule", {
+      p_schedule_id: scheduleId,
+      p_assignments: payload,
+    });
+    if (error) {
+      console.error("confirm_weekly_schedule failed", error);
+      fireToast("확정에 실패했어요. 다시 시도해주세요.");
+      return;
+    }
+    setConfirmedAt(new Date().toISOString());
+    setConfirmedSummary({ count: payload.length, responded: stats.responded, total: stats.total });
+    setDbActivity((prev) => [
+      {
+        kind: "edit",
+        who: "트레이너",
+        what: `${WEEK_LABELS[weekOffset]} 일정을 확정해 ${payload.length}명에게 알림 발송`,
+        when: "방금",
+      },
+      ...prev,
+    ]);
+    fireToast(
+      `${stats.responded}/${stats.total}명 응답 완료 · 확정했어요! 픽짐피티로 약 ${stats.responded * 4}분을 아꼈어요 🎉`,
+    );
   };
 
   const pendingResponders = STUDENTS.filter((s) => s.status === "응답대기");
@@ -730,15 +879,55 @@ function Schedule() {
 
   const activitySlice = ACTIVITY_LOG.slice(actPage * ACT_PAGE, actPage * ACT_PAGE + ACT_PAGE);
   const accountName =
-    (user?.user_metadata as { name?: string; full_name?: string } | undefined)?.name ||
-    (user?.user_metadata as { full_name?: string } | undefined)?.full_name ||
-    user?.email?.split("@")[0] ||
-    "담당";
+    pickDisplayName(
+      (user?.user_metadata as { name?: string; full_name?: string } | undefined)?.name,
+      (user?.user_metadata as { full_name?: string } | undefined)?.full_name,
+      user?.email?.split("@")[0],
+    ) ?? "담당";
   const displayTrainerName = trainerName || accountName;
+
+  if (authLoading || accessState === "checking") {
+    return (
+      <AppShell>
+        <div className="grid min-h-[70vh] place-items-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (accessState !== "allowed") {
+    const isStudent = accessState === "student";
+    return (
+      <AppShell>
+        <div className="mx-auto flex min-h-[75vh] max-w-lg flex-col items-center justify-center px-4 text-center">
+          <img
+            src="/schedule-access-error.png"
+            alt="요청한 페이지를 찾지 못해 난감해하는 픽짐피티 캐릭터"
+            className="h-auto w-full max-w-[320px] object-contain"
+          />
+          <h1 className="mt-2 text-[22px] font-black leading-tight text-ink sm:text-[26px]">
+            {isStudent ? "학생은 별도의 예약 페이지가 없습니다!" : accessState === "signed-out" ? "로그인이 필요한 페이지입니다!" : "페이지를 불러오지 못했습니다!"}
+          </h1>
+          <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
+            {isStudent ? "담당 트레이너의 예약 화면에서 가능한 시간을 선택해주세요." : "이전 화면으로 돌아가 다시 시도해주세요."}
+          </p>
+          <button
+            onClick={() => {
+              if (window.history.length > 1) window.history.back();
+              else window.location.href = "/profile";
+            }}
+            className="mt-6 inline-flex h-12 min-w-36 items-center justify-center rounded-full bg-primary px-6 text-[13px] font-extrabold text-white shadow-pop hover:brightness-105"
+          >
+            돌아가기
+          </button>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
-      <DemoBanner role="trainer" />
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -817,57 +1006,77 @@ function Schedule() {
       {/* Pending responses (left half) + Activity feed (right half) */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="rounded-2xl border border-border bg-white overflow-hidden">
-          <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-border bg-surface-muted">
-            <div className="flex items-center gap-2">
-              <UserRoundSearch className="h-4 w-4 shrink-0 text-ink" />
-              <span className="text-[13px] font-black text-ink">아직 응답하지 않은 회원</span>
-              <span className="text-[12px] font-bold text-destructive tabular-nums">
-                {halfPending.length}명
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                setPanel("invite");
-                setPanelWeek(weekOffset);
-                setPanelSelected(new Set(halfPending.map((s) => s.name)));
-              }}
-              className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95"
-            >
-              <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" /> 전체 카톡 재알림
-            </button>
-          </div>
-          <ul className="divide-y divide-border">
-            {halfPending.map((s) => (
-              <li key={s.name} className="flex items-center justify-between gap-3 px-5 py-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
-                    {s.name[0]}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-ink">{s.name}</p>
-                    <p className="text-[11px] text-ink-soft">
-                      최근 PT {s.lastPT} · 잔여{" "}
-                      <span className={s.remaining <= 5 ? "text-destructive font-bold" : ""}>
-                        {s.remaining}회
-                      </span>
-                    </p>
-                  </div>
+          {requestSentAt == null ? (
+            <>
+              <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border bg-surface-muted">
+                <UserRoundSearch className="h-4 w-4 shrink-0 text-ink" />
+                <span className="text-[13px] font-black text-ink">아직 응답하지 않은 회원</span>
+              </div>
+              <div className="px-5 py-8 flex flex-col items-center justify-center gap-1.5 text-center">
+                <p className="text-[12px] text-muted-foreground leading-relaxed inline-flex items-start gap-1.5 justify-center">
+                  <OctagonAlert className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
+                  <span>
+                    아직 요청을 보내지 않았어요.
+                    <br />먼저 요청을 보내야 학생들의 응답 현황을 볼 수 있어요.
+                  </span>
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-border bg-surface-muted">
+                <div className="flex items-center gap-2">
+                  <UserRoundSearch className="h-4 w-4 shrink-0 text-ink" />
+                  <span className="text-[13px] font-black text-ink">아직 응답하지 않은 회원</span>
+                  <span className="text-[12px] font-bold text-destructive tabular-nums">
+                    {halfPending.length}명
+                  </span>
                 </div>
                 <button
-                  onClick={() => setNotifyConfirm({ name: s.name, scope: "remind" })}
-                  className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0"
+                  onClick={() => {
+                    setPanel("invite");
+                    setPanelWeek(weekOffset);
+                    setPanelSelected(new Set(halfPending.map((s) => s.name)));
+                  }}
+                  className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95"
                 >
-                  <MessageCircle className="h-3 w-3 fill-[#191600]" /> 재알림
+                  <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" /> 전체 카톡 재알림
                 </button>
-              </li>
-            ))}
-            {halfPending.length === 0 && (
-              <li className="px-5 py-7 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
-                <UserRoundSearch className="h-4 w-4 text-muted-foreground" /> 응답 대기 중인 회원이
-                없습니다.
-              </li>
-            )}
-          </ul>
+              </div>
+              <ul className="divide-y divide-border">
+                {halfPending.map((s) => (
+                  <li key={s.name} className="flex items-center justify-between gap-3 px-5 py-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
+                        {s.name[0]}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-ink">{s.name}</p>
+                        <p className="text-[11px] text-ink-soft">
+                          최근 PT {s.lastPT} · 잔여{" "}
+                          <span className={s.remaining <= 5 ? "text-destructive font-bold" : ""}>
+                            {s.remaining}회
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setNotifyConfirm({ name: s.name, scope: "remind" })}
+                      className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0"
+                    >
+                      <MessageCircle className="h-3 w-3 fill-[#191600]" /> 재알림
+                    </button>
+                  </li>
+                ))}
+                {halfPending.length === 0 && (
+                  <li className="px-5 py-7 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
+                    <UserRoundSearch className="h-4 w-4 text-muted-foreground" /> 응답 대기 중인
+                    회원이 없습니다.
+                  </li>
+                )}
+              </ul>
+            </>
+          )}
         </div>
 
         {/* Activity feed (paginated) */}
@@ -951,13 +1160,13 @@ function Schedule() {
         </div>
       </div>
 
-      {/* AI 최적 시간표 */}
+      {/* PickGymPT recommended schedule */}
       <div className="mt-4 rounded-2xl bg-ink text-white p-5 sm:p-6 relative overflow-hidden">
         <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-primary/40 blur-3xl" />
         <div className="relative flex items-start justify-between gap-3 flex-wrap">
           <div>
             <span className="chip bg-white/10 text-white">
-              <Sparkles className="h-3 w-3" /> AI 최적 시간표
+              <Sparkles className="h-3 w-3" /> 픽짐피티 추천 최적 시간표
             </span>
             <h3 className="mt-2 text-[20px] sm:text-[22px] font-black leading-tight">
               학생 {respondedCount}명 중{" "}
@@ -967,18 +1176,6 @@ function Schedule() {
                 · 배정률 {assignmentRate}%
               </span>
             </h3>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setPanel("confirm");
-                setPanelWeek(weekOffset);
-                setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
-              }}
-              className="h-9 px-3.5 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1"
-            >
-              <Check className="h-3.5 w-3.5" /> 확정 알림
-            </button>
           </div>
         </div>
 
@@ -1032,9 +1229,9 @@ function Schedule() {
         <div className="relative mt-3 rounded-xl border border-white/10 overflow-hidden bg-white/[0.03]">
           <div className="grid grid-cols-[36px_repeat(7,1fr)] bg-white/5 border-b border-white/10">
             <div className="p-1.5 text-[10px] text-white/50 font-bold text-center">시간</div>
-            {DAYS.map((d) => (
-              <div key={d} className="p-1.5 text-center text-[11px] font-extrabold text-white/90">
-                {d}
+            {DAYS.map((d, i) => (
+              <div key={d} className="p-1.5 text-[11px] text-white/90">
+                <DayHeaderLabel day={d} date={weekDates[i]} i={i} dark />
               </div>
             ))}
           </div>
@@ -1067,14 +1264,44 @@ function Schedule() {
             })}
           </div>
         </div>
+
+        {stats.unavailable > 0 && (
+          <div className="relative mt-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Ban className="h-3.5 w-3.5 text-[#FFB4B4] shrink-0" />
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#FFB4B4]">
+                이번 주 불가 · {stats.unavailable}명
+              </p>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {STUDENTS.filter((student) => student.status === "불가").map((student) => (
+                <span
+                  key={student.name}
+                  className="inline-flex items-center gap-1.5 pl-1 pr-2.5 h-7 rounded-full bg-white/10 text-white text-[11px] font-bold"
+                >
+                  <span className="h-5 w-5 rounded-full bg-white/20 grid place-items-center text-[10px]">
+                    {student.name[0]}
+                  </span>
+                  {student.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* SECTION 1 — Calendar */}
-      <section className="mt-8">
+      <section id="schedule-demand-grid" className="mt-8">
         <SectionHeader
           index="01"
           title="학생 선택 현황 + 안되는 시간 닫기"
-          subtitle="셀 클릭으로 닫기/열기를 표시한 뒤, 하단 ‘시간 막기’ 버튼으로 확정해요."
+          subtitle={
+            requestSentAt == null
+              ? "요청 전에는 셀을 눌러 안되는 시간을 자유롭게 닫을 수 있어요."
+              : closeEditMode
+                ? "시간 막기 모드입니다. 변경할 셀을 고른 뒤 하단에서 저장하세요."
+                : "학생 이름이 모인 셀을 누르면 선택한 회원 전체를 확인할 수 있어요."
+          }
         />
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-soft">
@@ -1102,14 +1329,15 @@ function Schedule() {
         >
           <div className="grid grid-cols-[44px_repeat(7,1fr)] bg-surface-muted border-b border-border">
             <div className="p-2 text-[10px] text-muted-foreground font-bold text-center">시간</div>
-            {DAYS.map((d) => (
+            {DAYS.map((d, i) => (
               <button
                 key={d}
                 onClick={() => closeDay(d)}
-                className="p-2 text-center text-[13px] font-extrabold text-ink hover:bg-white transition"
+                disabled={requestSentAt != null && !closeEditMode}
+                className="p-2 text-[13px] transition enabled:hover:bg-white disabled:cursor-default"
                 title="이 요일 전체 닫기/열기 토글"
               >
-                {d}
+                <DayHeaderLabel day={d} date={weekDates[i]} i={i} />
               </button>
             ))}
           </div>
@@ -1118,7 +1346,8 @@ function Schedule() {
               <React.Fragment key={h}>
                 <button
                   onClick={() => closeHour(h)}
-                  className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums hover:bg-white transition"
+                  disabled={requestSentAt != null && !closeEditMode}
+                  className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums transition enabled:hover:bg-white disabled:cursor-default"
                   title="이 시간 전체 닫기/열기 토글"
                 >
                   {String(h).padStart(2, "0")}
@@ -1133,20 +1362,26 @@ function Schedule() {
                   return (
                     <button
                       key={key}
-                      onClick={() => toggleCellPending(key)}
+                      onClick={() => {
+                        if (requestSentAt != null && !closeEditMode) {
+                          if (picks.length > 0) setSlotDetail({ label: `${d}요일 ${String(h).padStart(2, "0")}시`, names: picks });
+                          return;
+                        }
+                        toggleCellPending(key);
+                      }}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
                       className={`relative min-h-[56px] overflow-hidden border-b border-l border-border transition group
                         ${willBeClosed && !isPending ? "bg-muted text-muted-foreground/50" : ""}
                         ${!willBeClosed ? `heat-${lvl}` : ""}
                         ${isPending ? "ring-2 ring-ink-soft/60 ring-inset bg-ink-soft/10" : ""}
-                        hover:ring-2 hover:ring-ink/40 hover:ring-inset
+                        ${(requestSentAt == null || closeEditMode) ? "hover:ring-2 hover:ring-ink/40 hover:ring-inset" : picks.length > 0 ? "cursor-pointer hover:brightness-[0.98]" : "cursor-default"}
                       `}
                     >
                       {willBeClosed && !isPending ? (
                         <Lock className="absolute inset-0 m-auto h-3.5 w-3.5" />
                       ) : picks.length > 0 ? (
                         <span className="absolute inset-0 flex flex-wrap content-center items-center justify-center gap-1 p-1">
-                          {picks.map((name) => (
+                          {picks.slice(0, 2).map((name) => (
                             <span
                               key={name}
                               className={`inline-flex max-w-full items-center truncate rounded-full border px-2 py-0.5 text-[12px] font-extrabold leading-tight ${lvl >= 4 ? "border-white/40 bg-white/20 text-white" : "border-black/10 bg-white/80 text-ink"}`}
@@ -1154,6 +1389,13 @@ function Schedule() {
                               {name}
                             </span>
                           ))}
+                          {picks.length > 2 && (
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-extrabold leading-tight ${lvl >= 4 ? "border-white/50 bg-black/15 text-white" : "border-black/10 bg-white/90 text-ink"}`}
+                            >
+                              ...+{picks.length - 2}명
+                            </span>
+                          )}
                         </span>
                       ) : null}
                       {isPending && (
@@ -1187,12 +1429,15 @@ function Schedule() {
                   학생{" "}
                   <span className="text-muted-foreground/70 normal-case font-bold">(등록일)</span>
                 </th>
-                <th className="px-2 py-3 text-center">상태</th>
                 <th className="px-2 py-3 text-center">최근 PT</th>
                 <th className="px-2 py-3 text-center">남은 횟수</th>
+                <th className="px-2 py-3 text-center">상태</th>
                 <th className="px-2 py-3 text-center">선택한 시간</th>
+                <th className="px-2 py-3 text-center whitespace-nowrap">
+                  최종 확정 시간 / 확정 방식
+                </th>
+                <th className="px-2 py-3 text-center whitespace-nowrap">확정 메시지 발송 시간</th>
                 <th className="px-2 py-3 text-center whitespace-nowrap">수동 일정 조정</th>
-                <th className="px-2 py-3 text-center">개별 통지</th>
               </tr>
             </thead>
             <tbody>
@@ -1211,9 +1456,6 @@ function Schedule() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 py-3 text-center">
-                    <StatusBadge s={s.status} />
-                  </td>
                   <td className="px-2 py-3 text-center text-ink-soft tabular-nums whitespace-nowrap">
                     {s.lastPT}
                   </td>
@@ -1224,6 +1466,9 @@ function Schedule() {
                       {s.remaining}
                     </span>
                     <span className="text-muted-foreground"> / {s.total}회</span>
+                  </td>
+                  <td className="px-2 py-3 text-center">
+                    <StatusBadge s={s.status} />
                   </td>
                   <td className="px-2 py-3 text-ink-soft">
                     {s.picks.length === 0 ? (
@@ -1241,6 +1486,36 @@ function Schedule() {
                       </div>
                     )}
                   </td>
+                  <td className="px-2 py-3 text-center whitespace-nowrap">
+                    {(() => {
+                      const a = assignments.find((x) => x.name === s.name);
+                      if (!a) return <span className="text-muted-foreground">—</span>;
+                      return (
+                        <div className="inline-flex flex-col items-center gap-1">
+                          <span className="font-extrabold text-ink text-[12px] tabular-nums">
+                            {a.day} {String(a.hour).padStart(2, "0")}:00
+                          </span>
+                          <span
+                            className={`chip text-[10px] ${a.method === "manual" ? "bg-primary/10 text-primary" : "bg-muted text-ink-soft"}`}
+                          >
+                            {a.method === "manual" ? "수동" : "자동"}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-2 py-3 text-center text-ink-soft tabular-nums whitespace-nowrap">
+                    {(() => {
+                      const a = assignments.find((x) => x.name === s.name);
+                      if (!a || !confirmedAt) return <span className="text-muted-foreground">—</span>;
+                      return new Date(confirmedAt).toLocaleString("ko-KR", {
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      });
+                    })()}
+                  </td>
                   <td className="px-2 py-3 text-center">
                     <button
                       onClick={() => openEdit(s)}
@@ -1248,15 +1523,6 @@ function Schedule() {
                       title="수동 일정 조정"
                     >
                       <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
-                  <td className="px-2 py-3 text-center">
-                    <button
-                      onClick={() => setNotifyConfirm({ name: s.name, scope: "individual" })}
-                      className="h-8 w-8 rounded-full bg-[#FEE500] text-[#191600] inline-flex items-center justify-center hover:brightness-95"
-                      title="카카오톡 개별 알림"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" />
                     </button>
                   </td>
                 </tr>
@@ -1301,6 +1567,20 @@ function Schedule() {
                       ))}
                     </div>
                   )}
+                  {(() => {
+                    const a = assignments.find((x) => x.name === s.name);
+                    if (!a) return null;
+                    return (
+                      <p className="mt-1.5 text-[11px] font-bold text-ink-soft">
+                        최종 확정 {a.day} {String(a.hour).padStart(2, "0")}:00{" "}
+                        <span
+                          className={`chip text-[10px] ml-1 ${a.method === "manual" ? "bg-primary/10 text-primary" : "bg-muted text-ink-soft"}`}
+                        >
+                          {a.method === "manual" ? "수동" : "자동"}
+                        </span>
+                      </p>
+                    );
+                  })()}
                   <div className="mt-2 flex items-center gap-1.5">
                     <button
                       onClick={() => openEdit(s)}
@@ -1339,7 +1619,7 @@ function Schedule() {
               <Pencil className="h-3 w-3" /> 일정 조정
             </span>
             <SheetTitle className="text-[20px] font-black leading-tight">
-              AI 최적 시간표 · 수동 조정
+              픽짐피티 추천 최적 시간표 · 수동 조정
             </SheetTitle>
             <SheetDescription>
               배정된 회원을 클릭한 뒤, 옮기고 싶은 칸을 누르세요.{" "}
@@ -1364,12 +1644,9 @@ function Schedule() {
                       <div className="p-1.5 text-[10px] text-muted-foreground font-bold text-center">
                         시간
                       </div>
-                      {DAYS.map((d) => (
-                        <div
-                          key={d}
-                          className="p-1.5 text-center text-[12px] font-extrabold text-ink"
-                        >
-                          {d}
+                      {DAYS.map((d, i) => (
+                        <div key={d} className="p-1.5 text-[12px] text-ink">
+                          <DayHeaderLabel day={d} date={weekDates[i]} i={i} />
                         </div>
                       ))}
                     </div>
@@ -1458,15 +1735,15 @@ function Schedule() {
 
       {/* Confirm move */}
       <Dialog open={!!pendingMove} onOpenChange={(v) => !v && setPendingMove(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[520px]">
           <DialogHeader>
-            <DialogTitle className="text-[18px] font-black">
+            <DialogTitle>
               {activeName}님을 {pendingMove?.day}요일{" "}
               {String(pendingMove?.hour ?? 0).padStart(2, "0")}:00로 옮길까요?
             </DialogTitle>
             <DialogDescription>
-              해당 시간에 다른 회원이 배정되어 있다면 자동으로 비웁니다. 변경 내용은 ‘확정 알림’
-              전까지 학생에게 전송되지 않아요.
+              해당 시간에 다른 회원이 배정되어 있다면 자동으로 비웁니다. 확정하면 즉시 학생에게
+              카카오톡 알림이 발송돼요.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1479,22 +1756,26 @@ function Schedule() {
             <button
               onClick={() => {
                 if (!activeName || !pendingMove) return;
+                const movedName = activeName;
+                const movedDay = pendingMove.day;
+                const movedHour = pendingMove.hour;
                 setAssignments((prev) => {
                   const filtered = prev.filter(
-                    (a) =>
-                      a.name !== activeName &&
-                      !(a.day === pendingMove.day && a.hour === pendingMove.hour),
+                    (a) => a.name !== movedName && !(a.day === movedDay && a.hour === movedHour),
                   );
                   return [
                     ...filtered,
-                    { name: activeName, day: pendingMove.day, hour: pendingMove.hour },
+                    { name: movedName, day: movedDay, hour: movedHour, method: "manual" as const },
                   ];
                 });
                 setPendingMove(null);
+                fireToast(
+                  `${movedName}님께 ${movedDay}요일 ${movedHour}시 PT 확정 알림을 보냈습니다`,
+                );
               }}
-              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-bold"
+              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-bold inline-flex items-center gap-1.5"
             >
-              이 시간으로 설정
+              시간 확정 및 <MessageCircle className="h-3.5 w-3.5 fill-white" /> 알림 보내기
             </button>
           </DialogFooter>
         </DialogContent>
@@ -1683,7 +1964,7 @@ function Schedule() {
 
           <div className="mt-6 sticky bottom-0 -mx-6 px-6 py-4 bg-white border-t border-border">
             <button
-              onClick={sendPanel}
+              onClick={() => void (panel === "invite" ? sendRequest() : sendConfirm())}
               disabled={panelSelected.size === 0}
               className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-1.5 shadow-pop hover:brightness-110 disabled:opacity-40"
             >
@@ -1703,10 +1984,31 @@ function Schedule() {
       {/* Floating invite bar — primary CTA, hidden when pendingClose bar overlays it */}
       {pendingClose.size === 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[min(720px,calc(100vw-24px))]">
-          {requestSentWeek === weekOffset ? (
-            <div className="rounded-2xl bg-ink text-white shadow-pop p-3 flex items-center gap-2.5">
-              <span className="h-11 w-11 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
-                <Sparkles className="h-5 w-5" />
+          {confirmedAt != null ? (
+            <div className="rounded-2xl bg-ink text-white shadow-pop p-3 flex flex-wrap items-center gap-2.5">
+              <span className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
+                <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-extrabold leading-tight">
+                  {WEEK_LABELS[weekOffset]} 확정 완료 ·{" "}
+                  {confirmedSummary?.count ?? AI_RESULT_INIT.length}명 PT 일정 확정
+                  <span className="ml-2 font-bold text-white/70 tabular-nums">
+                    {confirmedSummary?.responded ?? stats.responded}/
+                    {confirmedSummary?.total ?? stats.total}명 응답 완료 · 약{" "}
+                    {(confirmedSummary?.responded ?? stats.responded) * 4}분을 아꼈어요 🎉
+                  </span>
+                </p>
+                <p className="mt-0.5 text-[10px] text-white/45 leading-snug">
+                  확정 후 새롭게 변경된 사항은 ‘02 학생 응답’에서 수동 일정 조정 후 개별 통지로
+                  직접 안내해주세요.
+                </p>
+              </div>
+            </div>
+          ) : requestSentAt != null ? (
+            <div className="rounded-2xl bg-ink text-white shadow-pop p-3 flex flex-wrap items-center gap-2.5">
+              <span className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-extrabold leading-tight">
@@ -1720,34 +2022,59 @@ function Schedule() {
                   배정됨 · <b className="text-white">{pendingResponders.length}명</b> 응답 대기
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  setPanel("confirm");
-                  setPanelWeek(weekOffset);
-                  setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
-                }}
-                className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-110"
-              >
-                <Check className="h-3.5 w-3.5" /> 확정 알림 보내기
-              </button>
+              <div className="flex w-full sm:w-auto gap-2">
+                <button
+                  onClick={() => {
+                    if (closeEditMode) {
+                      setPendingClose(new Set());
+                      setCloseEditMode(false);
+                      return;
+                    }
+                    setCloseEditMode(true);
+                    requestAnimationFrame(() =>
+                      document.getElementById("schedule-demand-grid")?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      }),
+                    );
+                  }}
+                  className={`flex-1 sm:flex-initial h-11 px-4 rounded-xl text-[13px] font-extrabold inline-flex items-center justify-center gap-1 shrink-0 ${closeEditMode ? "bg-white/10 text-white" : "bg-white text-ink"}`}
+                >
+                  <Lock className="h-3.5 w-3.5" /> {closeEditMode ? "막기 종료" : "시간 막기"}
+                </button>
+                <button
+                  onClick={() => {
+                    setPanel("confirm");
+                    setPanelWeek(weekOffset);
+                    setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
+                  }}
+                  className="flex-1 sm:flex-initial h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-1 shrink-0 hover:brightness-110"
+                >
+                  <Check className="h-3.5 w-3.5" /> 확정 알림 보내기
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-primary text-white shadow-pop p-3 flex items-center gap-2.5">
-              <span className="h-11 w-11 rounded-xl bg-[#FEE500] grid place-items-center shrink-0">
-                <MessageCircle className="h-5 w-5 fill-[#191600] text-[#191600]" />
+            <div className="rounded-2xl bg-primary text-white shadow-pop p-3 flex flex-wrap items-center gap-2.5">
+              <span className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-white grid place-items-center shrink-0">
+                <OctagonAlert
+                  className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 drop-shadow-[0_2px_3px_rgba(220,38,38,0.55)] -rotate-6 scale-110"
+                  strokeWidth={2.5}
+                />
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-extrabold leading-tight">
-                  가장 먼저 할 일 · {WEEK_LABELS[weekOffset]} 가능 시간을 학생에게 물어보세요
+                  !가장 먼저 할 일! {WEEK_LABELS[weekOffset]}의 안되는 시간을 먼저 닫고 가능 시간을
+                  학생에게 물어보세요
                 </p>
                 <p className="text-[11px] text-white/80 mt-0.5 leading-snug">
-                  응답이 모여야 AI가 최적 시간표를 짤 수 있어요. 지금 바로 카톡으로 한 번에 요청
+                  응답이 모이면 픽짐피티가 최적 시간표를 추천해요. 지금 바로 카톡으로 한 번에 요청
                   보내기!
                 </p>
               </div>
               <button
                 onClick={() => setInviteIntent(true)}
-                className="h-11 px-4 rounded-xl bg-ink text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-125"
+                className="w-full sm:w-auto h-11 px-4 rounded-xl bg-ink text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-1 shrink-0 hover:brightness-125"
               >
                 <Send className="h-3.5 w-3.5" /> 요청 보내기
               </button>
@@ -1758,12 +2085,12 @@ function Schedule() {
 
       {/* Pre-send check: did the trainer close unavailable times first? */}
       <Dialog open={inviteIntent} onOpenChange={(v) => !v && setInviteIntent(false)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[520px]">
           <DialogHeader>
-            <div className="h-10 w-10 rounded-full bg-primary/15 grid place-items-center mb-2">
+            <div className="mb-3 grid h-28 w-28 place-items-center rounded-[28px] bg-primary/10 [&>svg]:h-10 [&>svg]:w-10">
               <Lock className="h-5 w-5 text-primary" />
             </div>
-            <DialogTitle className="text-[18px] font-black leading-tight">
+            <DialogTitle>
               잠깐! 안되는 시간을 먼저 닫으셨나요?
             </DialogTitle>
             <DialogDescription>
@@ -1807,7 +2134,10 @@ function Schedule() {
               </p>
             </div>
             <button
-              onClick={() => setPendingClose(new Set())}
+              onClick={() => {
+                setPendingClose(new Set());
+                if (requestSentAt != null) setCloseEditMode(false);
+              }}
               className="h-11 px-3 rounded-xl bg-white/10 text-white text-[12px] font-bold inline-flex items-center gap-1 shrink-0 hover:bg-white/15"
             >
               <X className="h-3.5 w-3.5" /> 취소
@@ -1822,14 +2152,41 @@ function Schedule() {
         </div>
       )}
 
+      <Dialog open={!!slotDetail} onOpenChange={(open) => !open && setSlotDetail(null)}>
+        <DialogContent className="max-w-[520px]">
+          <DialogHeader>
+            <div className="mb-3 grid h-28 w-28 place-items-center rounded-[28px] bg-primary/10 text-primary [&>svg]:h-10 [&>svg]:w-10">
+              <Users />
+            </div>
+            <DialogTitle>{slotDetail?.label} 선택 회원</DialogTitle>
+            <DialogDescription>
+              이 시간에 가능하다고 응답한 회원은 {slotDetail?.names.length ?? 0}명입니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {slotDetail?.names.map((name) => (
+              <div
+                key={name}
+                className="flex min-h-12 items-center gap-2 rounded-2xl bg-surface-muted px-3 text-left"
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-[12px] font-black text-primary ring-1 ring-border">
+                  {name[0]}
+                </span>
+                <span className="truncate text-[14px] font-extrabold text-ink">{name}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Notify confirmation */}
       <Dialog open={!!notifyConfirm} onOpenChange={(v) => !v && setNotifyConfirm(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[520px]">
           <DialogHeader>
-            <div className="h-10 w-10 rounded-full bg-[#FEE500] grid place-items-center mb-2">
+            <div className="mb-3 grid h-28 w-28 place-items-center rounded-[28px] bg-[#FEE500]/25 [&>svg]:h-10 [&>svg]:w-10">
               <MessageCircle className="h-5 w-5 fill-[#191600] text-[#191600]" />
             </div>
-            <DialogTitle className="text-[18px] font-black">
+            <DialogTitle>
               {notifyConfirm?.name}님께 카카오톡을 보낼까요?
             </DialogTitle>
             <DialogDescription>
@@ -1942,7 +2299,7 @@ function SectionHeader({
 
 function StatusBadge({ s }: { s: Status }) {
   const map: Record<Status, string> = {
-    응답완료: "bg-primary/15 text-primary",
+    응답완료: "bg-emerald-50 text-emerald-700",
     응답대기: "bg-muted text-ink-soft",
     불가: "bg-destructive/15 text-destructive",
   };

@@ -16,7 +16,8 @@ another agent's changes just because they are uncommitted.
 
 - Linked Supabase project: `symnrjcgtltcgizwbaax`
 - Remote migration history currently contains `20260617092000`,
-  `20260619100000`, `20260619110000`, and `20260619120000`.
+  `20260619100000` through `20260619140000`, `20260620124907`,
+  `20260620130114`, `20260620132111`, and `20260620132655`.
 - Core tables exist remotely even though the initial four local migration
   versions are not recorded.
 - `20260618113000` is not recorded, but trainer theme columns exist remotely.
@@ -39,6 +40,12 @@ another agent's changes just because they are uncommitted.
   without the holdout technique above) until each of these is audited
   statement-by-statement against the live schema.
 - `20260619130000_fix_student_schedule_bootstrap_join.sql` is also applied.
+- `20260620132111_roster_phone_identity.sql` is applied through the CLI holdout
+  procedure. New roster rows may omit email.
+- `20260620132655_link_existing_student_on_roster_insert.sql` is applied. Phone
+  matching may grant roster access only when the number comes from Supabase
+  Auth's verified `auth.users.phone`; manually entered user metadata is never
+  used as an authorization signal. UUID and existing email linkage remain.
 
 ## Important: weekly_schedules/time_slots schema has drifted beyond any migration file
 

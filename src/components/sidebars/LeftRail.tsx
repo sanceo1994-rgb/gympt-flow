@@ -1,12 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, CalendarHeart, ChevronDown, Medal, Trophy } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarHeart, ChevronDown, Trophy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import logo from "@/assets/pickgympt-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useAuth } from "@/hooks/use-auth";
+import { pickDisplayName } from "@/lib/display-name";
+import { TrainerRankBadge } from "@/components/TrainerRankBadge";
+import { rankTrainerRows } from "@/lib/trainer-ranking";
 
-const KIMTEU_TRAINER_ID = "0b8781ee-55af-489c-9737-a4b081f596f9";
 const FALLBACK_COLORS = ["#E23A8A", "#2563EB", "#16A34A", "#F59E0B", "#7C3AED"];
 const LEGACY_THEME_BY_ID: Record<string, { theme_from: string; theme_to: string }> = {
   "0b8781ee-55af-489c-9737-a4b081f596f9": { theme_from: "#E23A8A", theme_to: "#FF8AC2" },
@@ -60,23 +62,6 @@ function TrainerAvatar({
   );
 }
 
-function RankMedal({ rank, ringClass = "ring-white" }: { rank: 1 | 2 | 3; ringClass?: string }) {
-  const style =
-    rank === 1
-      ? "bg-amber-400 text-amber-950"
-      : rank === 2
-        ? "bg-slate-300 text-slate-700"
-        : "bg-orange-300 text-orange-900";
-  return (
-    <span
-      className={`grid h-5 w-5 place-items-center rounded-full ${style} ${ringClass} ring-2`}
-      title={`${rank}위`}
-    >
-      <Medal className="h-3 w-3" strokeWidth={2.5} />
-    </span>
-  );
-}
-
 export function LeftRail() {
   const { user } = useAuth();
   const [bizOpen, setBizOpen] = useState(false);
@@ -91,9 +76,10 @@ export function LeftRail() {
 
     if (!error) {
       setTrainers(
-        (data ?? []).filter(
-          (trainer) => trainer.name && !trainer.name.includes("?"),
-        ) as SidebarTrainer[],
+        (data ?? []).flatMap((trainer) => {
+          const name = pickDisplayName(trainer.name);
+          return name ? [{ ...trainer, name }] : [];
+        }) as SidebarTrainer[],
       );
       return;
     }
@@ -107,9 +93,10 @@ export function LeftRail() {
       ...LEGACY_THEME_BY_ID[trainer.id],
     }));
     setTrainers(
-      compatibleRows.filter(
-        (trainer) => trainer.name && !trainer.name.includes("?"),
-      ) as SidebarTrainer[],
+      compatibleRows.flatMap((trainer) => {
+        const name = pickDisplayName(trainer.name);
+        return name ? [{ ...trainer, name }] : [];
+      }) as SidebarTrainer[],
     );
   }, []);
 
@@ -177,11 +164,11 @@ export function LeftRail() {
   }, [trainers, user]);
 
   const newest = useMemo(() => trainers.slice(0, 3), [trainers]);
-  const ranked = useMemo(() => {
-    const kimteu = trainers.find((trainer) => trainer.id === KIMTEU_TRAINER_ID);
-    const rest = trainers.filter((trainer) => trainer.id !== KIMTEU_TRAINER_ID).slice(0, 4);
-    return [...(kimteu ? [kimteu] : []), ...rest].slice(0, 5);
-  }, [trainers]);
+  const ranked = useMemo(() => rankTrainerRows(trainers).slice(0, 5), [trainers]);
+  const rankById = useMemo(
+    () => new Map(ranked.slice(0, 3).map((trainer, index) => [trainer.id, (index + 1) as 1 | 2 | 3])),
+    [ranked],
+  );
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pr-1">
@@ -249,6 +236,13 @@ export function LeftRail() {
                         index={0}
                         className="h-12 w-12 rounded-full ring-2 ring-white"
                       />
+                      {rankById.get(myTrainer.id) && (
+                        <TrainerRankBadge
+                          rank={rankById.get(myTrainer.id)!}
+                          className="!-left-1.5 !-top-1.5"
+                          size={20}
+                        />
+                      )}
                       <VerifiedBadge size={16} className="!-bottom-0.5 !-right-0.5" />
                     </div>
                     <div className="min-w-0">
@@ -287,6 +281,13 @@ export function LeftRail() {
                         <span className="absolute -left-1 -top-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[7px] font-black text-amber-800 ring-2 ring-[#F7F7F9]">
                           NEW
                         </span>
+                        {rankById.get(trainer.id) && (
+                          <TrainerRankBadge
+                            rank={rankById.get(trainer.id)!}
+                            className="!-right-1 !-top-1"
+                            size={17}
+                          />
+                        )}
                         {index === 0 && (
                           <VerifiedBadge size={15} className="!-bottom-0.5 !-right-0.5" />
                         )}
@@ -328,7 +329,7 @@ export function LeftRail() {
                         className="h-10 w-10 rounded-full ring-2 ring-white"
                       />
                       <span className="absolute -left-1.5 -top-1.5">
-                        <RankMedal rank={1} ringClass="ring-[#FFF1F8]" />
+                        <TrainerRankBadge rank={1} className="static ring-[#FFF1F8]" size={20} />
                       </span>
                       <VerifiedBadge size={15} className="!-bottom-0.5 !-right-0.5" />
                     </div>
@@ -370,7 +371,11 @@ export function LeftRail() {
                               />
                               {index < 2 && (
                                 <span className="absolute -left-1.5 -top-1.5">
-                                  <RankMedal rank={(index + 2) as 2 | 3} ringClass="ring-white" />
+                                  <TrainerRankBadge
+                                    rank={(index + 2) as 2 | 3}
+                                    className="static"
+                                    size={20}
+                                  />
                                 </span>
                               )}
                               {index === 0 && (
@@ -432,22 +437,19 @@ export function LeftRail() {
           {bizOpen && (
             <div className="mt-2 rounded-lg bg-white border border-border p-3 leading-relaxed text-[10.5px]">
               <p>
-                <b className="text-ink">상호</b> 픽짐피티
+                <b className="text-ink">상호</b> 와이낫스피릿 주식회사
               </p>
               <p>
-                <b className="text-ink">대표</b> 김트
+                <b className="text-ink">대표</b> 김산
               </p>
               <p>
-                <b className="text-ink">사업자등록번호</b> 123-45-67890
+                <b className="text-ink">사업자등록번호</b> 596-81-03128
               </p>
               <p>
-                <b className="text-ink">통신판매업</b> 2026-서울강남-01234
+                <b className="text-ink">주소</b> 서울시 마포구 서강대길 22, 2층 4호
               </p>
               <p>
-                <b className="text-ink">주소</b> 서울시 강남구 테헤란로 123, 5층
-              </p>
-              <p>
-                <b className="text-ink">고객센터</b> support@pickgympt.com
+                <b className="text-ink">고객센터</b> pickgympt@gmail.com
               </p>
               <p className="mt-1.5 text-ink-soft/70">© 2026 PickGymPT</p>
             </div>

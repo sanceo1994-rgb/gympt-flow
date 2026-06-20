@@ -12,61 +12,122 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      announcements: {
+      booking_responses: {
         Row: {
-          content: string
           created_at: string
           id: string
-          trainer_id: string
+          schedule_id: string
+          status: Database["public"]["Enums"]["student_response_status"]
+          student_id: string | null
+          student_name: string
+          student_phone: string
+          unavailable_note: string | null
+          updated_at: string
         }
         Insert: {
-          content: string
           created_at?: string
           id?: string
-          trainer_id: string
+          schedule_id: string
+          status?: Database["public"]["Enums"]["student_response_status"]
+          student_id?: string | null
+          student_name: string
+          student_phone: string
+          unavailable_note?: string | null
+          updated_at?: string
         }
         Update: {
-          content?: string
           created_at?: string
           id?: string
-          trainer_id?: string
+          schedule_id?: string
+          status?: Database["public"]["Enums"]["student_response_status"]
+          student_id?: string | null
+          student_name?: string
+          student_phone?: string
+          unavailable_note?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "announcements_trainer_id_fkey"
-            columns: ["trainer_id"]
+            foreignKeyName: "booking_responses_schedule_id_fkey"
+            columns: ["schedule_id"]
             isOneToOne: false
-            referencedRelation: "trainers"
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "booking_responses_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_schedules"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_responses_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_responses_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["student_id"]
           },
         ]
       }
-      points: {
+      profiles: {
         Row: {
-          amount: number
+          avatar_url: string | null
           created_at: string
+          display_name: string | null
+          email: string | null
           id: string
-          reason: string
-          user_id: string
-          week_start: string
+          updated_at: string
         }
         Insert: {
-          amount: number
+          avatar_url?: string | null
           created_at?: string
-          id?: string
-          reason: string
-          user_id: string
-          week_start: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+          updated_at?: string
         }
         Update: {
-          amount?: number
+          avatar_url?: string | null
           created_at?: string
+          display_name?: string | null
+          email?: string | null
           id?: string
-          reason?: string
-          user_id?: string
-          week_start?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -121,32 +182,187 @@ export type Database = {
           },
         ]
       }
-      profiles: {
+      response_slot_preferences: {
         Row: {
-          avatar_url: string | null
           created_at: string
-          display_name: string | null
-          email: string | null
           id: string
+          preference_rank: number
+          response_id: string
+          slot_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          preference_rank: number
+          response_id: string
+          slot_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          preference_rank?: number
+          response_id?: string
+          slot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "response_slot_preferences_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "booking_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "response_slot_preferences_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["response_id"]
+          },
+          {
+            foreignKeyName: "response_slot_preferences_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "time_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          response_id: string | null
+          schedule_id: string
+          slot_id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          student_id: string | null
           updated_at: string
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string
-          display_name?: string | null
-          email?: string | null
-          id: string
+          id?: string
+          response_id?: string | null
+          schedule_id: string
+          slot_id: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          student_id?: string | null
           updated_at?: string
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string
-          display_name?: string | null
-          email?: string | null
           id?: string
+          response_id?: string | null
+          schedule_id?: string
+          slot_id?: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          student_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "schedule_assignments_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "booking_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_assignments_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["response_id"]
+          },
+          {
+            foreignKeyName: "schedule_assignments_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "schedule_assignments_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_assignments_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "time_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
+      student_rosters: {
+        Row: {
+          created_at: string
+          id: string
+          memo: string | null
+          remaining_sessions: number
+          status: string
+          student_email: string | null
+          student_name: string
+          student_phone: string | null
+          student_user_id: string | null
+          total_sessions: number
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          memo?: string | null
+          remaining_sessions?: number
+          status?: string
+          student_email?: string | null
+          student_name: string
+          student_phone?: string | null
+          student_user_id?: string | null
+          total_sessions?: number
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          memo?: string | null
+          remaining_sessions?: number
+          status?: string
+          student_email?: string | null
+          student_name?: string
+          student_phone?: string | null
+          student_user_id?: string | null
+          total_sessions?: number
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_rosters_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_selections: {
         Row: {
@@ -181,6 +397,13 @@ export type Database = {
             foreignKeyName: "student_selections_schedule_id_fkey"
             columns: ["schedule_id"]
             isOneToOne: false
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "student_selections_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
             referencedRelation: "weekly_schedules"
             referencedColumns: ["id"]
           },
@@ -193,17 +416,16 @@ export type Database = {
           },
         ]
       }
-      student_rosters: {
+      students: {
         Row: {
           created_at: string
           id: string
+          is_active: boolean
+          last_pt_label: string | null
           memo: string | null
+          name: string
+          phone: string | null
           remaining_sessions: number
-          status: string
-          student_email: string
-          student_name: string
-          student_phone: string | null
-          student_user_id: string | null
           total_sessions: number
           trainer_id: string
           updated_at: string
@@ -211,13 +433,12 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_active?: boolean
+          last_pt_label?: string | null
           memo?: string | null
+          name: string
+          phone?: string | null
           remaining_sessions?: number
-          status?: string
-          student_email: string
-          student_name: string
-          student_phone?: string | null
-          student_user_id?: string | null
           total_sessions?: number
           trainer_id: string
           updated_at?: string
@@ -225,23 +446,22 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_active?: boolean
+          last_pt_label?: string | null
           memo?: string | null
+          name?: string
+          phone?: string | null
           remaining_sessions?: number
-          status?: string
-          student_email?: string
-          student_name?: string
-          student_phone?: string | null
-          student_user_id?: string | null
           total_sessions?: number
           trainer_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "student_rosters_trainer_id_fkey"
+            foreignKeyName: "students_trainer_id_fkey"
             columns: ["trainer_id"]
             isOneToOne: false
-            referencedRelation: "trainers"
+            referencedRelation: "trainer_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -249,29 +469,48 @@ export type Database = {
       time_slots: {
         Row: {
           capacity: number
+          created_at: string
           day_of_week: number
           hour: number
           id: string
+          is_available: boolean
           is_closed: boolean
+          note: string | null
           schedule_id: string
+          updated_at: string
         }
         Insert: {
           capacity?: number
+          created_at?: string
           day_of_week: number
           hour: number
           id?: string
+          is_available?: boolean
           is_closed?: boolean
+          note?: string | null
           schedule_id: string
+          updated_at?: string
         }
         Update: {
           capacity?: number
+          created_at?: string
           day_of_week?: number
           hour?: number
           id?: string
+          is_available?: boolean
           is_closed?: boolean
+          note?: string | null
           schedule_id?: string
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "time_slots_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["schedule_id"]
+          },
           {
             foreignKeyName: "time_slots_schedule_id_fkey"
             columns: ["schedule_id"]
@@ -388,21 +627,45 @@ export type Database = {
       }
       weekly_schedules: {
         Row: {
+          booking_closes_at: string | null
+          booking_opens_at: string | null
+          booking_token: string
+          confirmed_at: string | null
           created_at: string
           id: string
+          is_published: boolean
+          request_sent_at: string | null
+          title: string | null
           trainer_id: string
+          updated_at: string
           week_start: string
         }
         Insert: {
+          booking_closes_at?: string | null
+          booking_opens_at?: string | null
+          booking_token?: string
+          confirmed_at?: string | null
           created_at?: string
           id?: string
+          is_published?: boolean
+          request_sent_at?: string | null
+          title?: string | null
           trainer_id: string
+          updated_at?: string
           week_start: string
         }
         Update: {
+          booking_closes_at?: string | null
+          booking_opens_at?: string | null
+          booking_token?: string
+          confirmed_at?: string | null
           created_at?: string
           id?: string
+          is_published?: boolean
+          request_sent_at?: string | null
+          title?: string | null
           trainer_id?: string
+          updated_at?: string
           week_start?: string
         }
         Relationships: [
@@ -410,31 +673,80 @@ export type Database = {
             foreignKeyName: "weekly_schedules_trainer_id_fkey"
             columns: ["trainer_id"]
             isOneToOne: false
-            referencedRelation: "trainers"
+            referencedRelation: "trainer_profiles"
             referencedColumns: ["id"]
           },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      trainer_dashboard_responses: {
+        Row: {
+          assigned_slot: Json | null
+          last_pt_label: string | null
+          preferred_slots: Json | null
+          remaining_sessions: number | null
+          response_id: string | null
+          response_status:
+            | Database["public"]["Enums"]["student_response_status"]
+            | null
+          schedule_id: string | null
+          student_id: string | null
+          student_name: string | null
+          student_phone: string | null
+          total_sessions: number | null
+          trainer_user_id: string | null
+          week_start: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      get_week_points: {
-        Args: { _user_id: string; _week_start: string }
-        Returns: number
+      confirm_weekly_schedule: {
+        Args: { p_assignments: Json; p_schedule_id: string }
+        Returns: undefined
       }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
+      current_user_owns_schedule: {
+        Args: { _schedule_id: string }
         Returns: boolean
+      }
+      current_user_owns_trainer: {
+        Args: { _trainer_id: string }
+        Returns: boolean
+      }
+      get_public_booking_schedule: {
+        Args: { _booking_token: string }
+        Returns: Json
+      }
+      get_schedule_demand: {
+        Args: { p_schedule_id: string }
+        Returns: {
+          picks: number
+          slot_id: string
+        }[]
+      }
+      mark_schedule_requested: {
+        Args: { p_schedule_id: string }
+        Returns: undefined
+      }
+      schedule_is_public: { Args: { _schedule_id: string }; Returns: boolean }
+      submit_booking_response: {
+        Args: {
+          _booking_token: string
+          _slot_ids: string[]
+          _student_name: string
+          _student_phone: string
+          _unavailable?: boolean
+          _unavailable_note?: string
+        }
+        Returns: string
       }
     }
     Enums: {
       app_role: "trainer" | "student"
+      assignment_status: "draft" | "confirmed"
       selection_status: "selected" | "unavailable" | "confirmed"
+      student_response_status: "not_responded" | "responded" | "unavailable"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -560,10 +872,15 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["trainer", "student"],
+      assignment_status: ["draft", "confirmed"],
       selection_status: ["selected", "unavailable", "confirmed"],
+      student_response_status: ["not_responded", "responded", "unavailable"],
     },
   },
 } as const
