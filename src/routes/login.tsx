@@ -9,6 +9,7 @@ import { useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhoneNumber } from "@/lib/phone";
 import { needsDisplayNameRepair, pickDisplayName } from "@/lib/display-name";
+import { trackEvent } from "@/lib/analytics";
 
 
 
@@ -135,6 +136,11 @@ function Login() {
           window.dispatchEvent(new Event("gympt-auth"));
         } catch {}
         setWelcome(`${displayName} 로그인`);
+        trackEvent("Authentication Completed", {
+          method: "email",
+          flow: "login",
+          role: data.user.user_metadata?.role ?? "unknown",
+        });
         setTimeout(() => {
           setWelcome(null);
           navigate({ to: "/profile" });
@@ -259,6 +265,11 @@ function Login() {
     }
 
     setEmailBusy(false);
+    trackEvent("Authentication Completed", {
+      method,
+      flow: "signup",
+      role,
+    });
     setWelcome(profile.name || "회원");
     setTimeout(() => {
       setWelcome(null);

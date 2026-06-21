@@ -8,6 +8,7 @@ import { RightRail } from "@/components/sidebars/RightRail";
 import logo from "@/assets/pickgympt-logo.png";
 import { pickDisplayName } from "@/lib/display-name";
 import { TrainerRankBadge } from "@/components/TrainerRankBadge";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useTrainerRank } from "@/hooks/use-trainer-rank";
 
 export function MobileAccountHeader() {
@@ -83,7 +84,10 @@ export function MobileAccountHeader() {
                   </span>
                 )}
                 {trainerRank && (
-                  <TrainerRankBadge rank={trainerRank} className="!-left-1 !-top-1" size={15} />
+                  <TrainerRankBadge rank={trainerRank} />
+                )}
+                {trainerId && (
+                  <VerifiedBadge />
                 )}
               </span>
               <span className="max-w-20 truncate text-[12px] font-extrabold text-ink">

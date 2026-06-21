@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Check, LoaderCircle, TriangleAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { pickDisplayName } from "@/lib/display-name";
+import { trackEvent } from "@/lib/analytics";
 
 export const Route = createFileRoute("/auth/callback")({
   head: () => ({ meta: [{ title: "카카오 로그인 — 픽짐피티" }] }),
@@ -36,6 +37,11 @@ function KakaoCallback() {
       if (cancelled) return;
 
       if (trainer || (roles ?? []).length > 0) {
+        trackEvent("Authentication Completed", {
+          method: "kakao",
+          flow: "login",
+          role: trainer ? "trainer" : (roles?.[0]?.role ?? "unknown"),
+        });
         setComplete(true);
         setTimeout(() => navigate({ to: "/profile", replace: true }), 500);
         return;

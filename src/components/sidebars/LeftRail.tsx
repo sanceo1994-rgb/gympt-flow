@@ -237,13 +237,9 @@ export function LeftRail() {
                         className="h-12 w-12 rounded-full ring-2 ring-white"
                       />
                       {rankById.get(myTrainer.id) && (
-                        <TrainerRankBadge
-                          rank={rankById.get(myTrainer.id)!}
-                          className="!-left-1.5 !-top-1.5"
-                          size={20}
-                        />
+                        <TrainerRankBadge rank={rankById.get(myTrainer.id)!} />
                       )}
-                      <VerifiedBadge size={16} className="!-bottom-0.5 !-right-0.5" />
+                      <VerifiedBadge />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-[15px] font-black text-ink">
@@ -270,26 +266,22 @@ export function LeftRail() {
                       key={trainer.id}
                       href={trainerHref(trainer.id)}
                       onClick={() => rememberTrainer(trainer)}
-                      className="group min-w-0 rounded-[13px] bg-[#F7F7F9] px-1 py-2 text-center transition hover:bg-primary/[0.05]"
+                      className="group relative min-w-0 rounded-[13px] bg-[#F7F7F9] px-1 py-2 pt-3 text-center transition hover:bg-primary/[0.05]"
                     >
+                      <span className="absolute right-1 top-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[7px] font-black text-amber-800">
+                        NEW
+                      </span>
                       <div className="relative mx-auto w-fit">
                         <TrainerAvatar
                           trainer={trainer}
                           index={index}
                           className="h-10 w-10 rounded-full ring-1 ring-black/[0.04]"
                         />
-                        <span className="absolute -left-1 -top-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[7px] font-black text-amber-800 ring-2 ring-[#F7F7F9]">
-                          NEW
-                        </span>
                         {rankById.get(trainer.id) && (
-                          <TrainerRankBadge
-                            rank={rankById.get(trainer.id)!}
-                            className="!-right-1 !-top-1"
-                            size={17}
-                          />
+                          <TrainerRankBadge rank={rankById.get(trainer.id)!} />
                         )}
                         {index === 0 && (
-                          <VerifiedBadge size={15} className="!-bottom-0.5 !-right-0.5" />
+                          <VerifiedBadge />
                         )}
                       </div>
                       <p className="mt-1.5 truncate text-[13px] font-semibold leading-tight text-ink">
@@ -328,10 +320,8 @@ export function LeftRail() {
                         index={0}
                         className="h-10 w-10 rounded-full ring-2 ring-white"
                       />
-                      <span className="absolute -left-1.5 -top-1.5">
-                        <TrainerRankBadge rank={1} className="static ring-[#FFF1F8]" size={20} />
-                      </span>
-                      <VerifiedBadge size={15} className="!-bottom-0.5 !-right-0.5" />
+                      <TrainerRankBadge rank={1} className="ring-[#FFF1F8]" />
+                      <VerifiedBadge />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-semibold leading-tight text-ink">
@@ -370,16 +360,10 @@ export function LeftRail() {
                                 className="h-8 w-8 rounded-full"
                               />
                               {index < 2 && (
-                                <span className="absolute -left-1.5 -top-1.5">
-                                  <TrainerRankBadge
-                                    rank={(index + 2) as 2 | 3}
-                                    className="static"
-                                    size={20}
-                                  />
-                                </span>
+                                <TrainerRankBadge rank={(index + 2) as 2 | 3} />
                               )}
                               {index === 0 && (
-                                <VerifiedBadge size={13} className="!-bottom-0.5 !-right-0.5" />
+                                <VerifiedBadge />
                               )}
                             </div>
                             <div className="min-w-0">

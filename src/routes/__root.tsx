@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 
 import appCss from "../styles.css?url";
 
@@ -128,6 +129,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AnalyticsProvider />
       <Outlet />
       <FloatingTools />
     </QueryClientProvider>

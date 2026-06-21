@@ -19,8 +19,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { pickDisplayName } from "@/lib/display-name";
 import { TrainerRankBadge } from "@/components/TrainerRankBadge";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { rankTrainerRows } from "@/lib/trainer-ranking";
 import { useTrainerRank } from "@/hooks/use-trainer-rank";
+import { trackEvent } from "@/lib/analytics";
 
 type PopularTrainer = {
   id: string;
@@ -132,6 +134,7 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
     const link = `${origin}/login?invite=${code}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     try {
       await navigator.clipboard.writeText(link);
+      trackEvent("Referral Link Copied", { source: "right_rail" });
       fireToast("초대 링크 복사 완료! 카톡으로 동료에게 공유해보세요 💌");
     } catch {
       fireToast("복사에 실패했어요. 다시 시도해주세요");
@@ -184,7 +187,10 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
                 </div>
               )}
               {role === "trainer" && ownTrainerRank && (
-                <TrainerRankBadge rank={ownTrainerRank} className="!-left-1 !-top-1" size={19} />
+                <TrainerRankBadge rank={ownTrainerRank} />
+              )}
+              {role === "trainer" && (
+                <VerifiedBadge />
               )}
             </div>
             <div className="min-w-0 flex-1">
@@ -302,7 +308,10 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
                       </span>
                     )}
                     {index < 3 && (
-                      <TrainerRankBadge rank={(index + 1) as 1 | 2 | 3} className="!-left-1 !-top-1" size={17} />
+                      <TrainerRankBadge rank={(index + 1) as 1 | 2 | 3} />
+                    )}
+                    {index === 0 && (
+                      <VerifiedBadge />
                     )}
                   </span>
                   <span className="min-w-0 flex-1">

@@ -29,6 +29,7 @@ import { awardPoints, getMyWeekPoints } from "@/lib/points.functions";
 import { pickDisplayName } from "@/lib/display-name";
 import { TrainerRankBadge } from "@/components/TrainerRankBadge";
 import { useTrainerRank } from "@/hooks/use-trainer-rank";
+import { trackEvent } from "@/lib/analytics";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -557,6 +558,10 @@ function Booking() {
     void persistSelections(true, []);
     // 팝업 확인 즉시 제출 처리
     setSubmitted(true);
+    trackEvent("Booking Availability Submitted", {
+      unavailable: true,
+      selected_slot_count: 0,
+    });
     setToast({ title: "‘이번 주 PT 불가’로 전달했어요" });
     setTimeout(() => setToast(null), 2400);
   };
@@ -582,6 +587,10 @@ function Booking() {
       setTimeout(() => setToast(null), 2400);
 
       void persistSelections(unavailable, selectedList);
+      trackEvent("Booking Availability Submitted", {
+        unavailable,
+        selected_slot_count: selectedList.length,
+      });
 
       if (!unavailable && user && !String(user.id).startsWith("virtual-")) {
         try {
@@ -646,9 +655,9 @@ function Booking() {
                 {displayTrainerInitial}
               </div>
               {trainerRank && (
-                <TrainerRankBadge rank={trainerRank} className="!-left-2 !-top-2" size={27} />
+                <TrainerRankBadge rank={trainerRank} />
               )}
-              <VerifiedBadge size={44} className="!-bottom-[11px] !-right-[11px]" />
+              <VerifiedBadge />
             </div>
             <a
               href={displayInstagramUrl}

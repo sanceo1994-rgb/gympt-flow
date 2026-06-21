@@ -1,11 +1,11 @@
-import { Dumbbell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import verifiedMuscle from "@/assets/verified-muscle.png";
 
 /**
  * 픽짐피티 첫 100 트레이너 인증 배지.
- * 단조로운 원 대신 12갈래 꽃/별 모양의 외곽선 안에 근육(덤벨) 아이콘이 들어가요.
+ * 12갈래 꽃/별 모양의 외곽선 안에 근육 아이콘이 들어가요.
  */
-export function VerifiedBadge({ className, size = 44 }: { className?: string; size?: number }) {
+export function VerifiedBadge({ className }: { className?: string }) {
   // 12-point flower-ish star polygon (alternating outer/inner radii) on a viewBox of 100x100
   const points = (() => {
     const cx = 50, cy = 50;
@@ -24,8 +24,10 @@ export function VerifiedBadge({ className, size = 44 }: { className?: string; si
   return (
     <span
       title="픽짐피티 첫 100 트레이너 인증"
-      className={cn("absolute -bottom-1 -right-1 grid place-items-center drop-shadow text-primary", className)}
-      style={{ height: size, width: size }}
+      className={cn(
+        "absolute -bottom-[10%] -right-[10%] grid h-[51%] w-[51%] place-items-center drop-shadow text-primary",
+        className,
+      )}
     >
       <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
         <polygon
@@ -36,10 +38,12 @@ export function VerifiedBadge({ className, size = 44 }: { className?: string; si
           strokeLinejoin="round"
         />
       </svg>
-      <Dumbbell
-        className="relative text-white"
-        style={{ height: size * 0.5, width: size * 0.5 }}
-        strokeWidth={3}
+      <img
+        src={verifiedMuscle}
+        alt=""
+        aria-hidden="true"
+        className="relative object-contain"
+        style={{ height: "62%", width: "62%" }}
       />
     </span>
   );

@@ -33,6 +33,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { pickDisplayName } from "@/lib/display-name";
 import { formatPhoneNumber } from "@/lib/phone";
+import { trackEvent } from "@/lib/analytics";
 import { matchesKoreanSearch } from "@/lib/koreanSearch";
 
 export const Route = createFileRoute("/students")({
@@ -223,6 +224,8 @@ function StudentsPage() {
       setError("학생 명단 저장에 실패했습니다.");
       return;
     }
+
+    trackEvent("Students Added", { student_count: validCount });
 
     setRows(Array.from({ length: 5 }, emptyRow));
     setAdding(false);

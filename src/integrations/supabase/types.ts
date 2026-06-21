@@ -762,8 +762,16 @@ export type Database = {
       }
     }
     Functions: {
+      assign_unregistered_roster: {
+        Args: { p_roster_id: string; p_schedule_id: string; p_slot_id: string }
+        Returns: undefined
+      }
       cancel_confirmed_assignment: {
         Args: { p_schedule_id: string; p_student_user_id: string }
+        Returns: undefined
+      }
+      cancel_unregistered_roster_assignment: {
+        Args: { p_roster_id: string; p_schedule_id: string }
         Returns: undefined
       }
       confirm_weekly_schedule: {

@@ -21,6 +21,7 @@ import {
   UserRoundSearch,
   Inbox,
   OctagonAlert,
+  UserX,
 } from "lucide-react";
 import {
   Dialog,
@@ -41,6 +42,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { maximizeScheduleAssignments, type MatchingSlot } from "@/lib/maximize-schedule";
 import { pickDisplayName } from "@/lib/display-name";
+import { trackEvent } from "@/lib/analytics";
 
 export const Route = createFileRoute("/schedule")({
   validateSearch: (search: Record<string, unknown>): { week?: number } => {
@@ -168,18 +170,26 @@ function StudentNameBadge({
       : tone === "heat"
         ? "border-white/40 bg-black/15 text-white"
         : "border-primary/40 bg-primary/20 text-white";
-  const sizing = compact
-    ? "h-5 gap-0.5 px-1 text-[9px] sm:h-7 sm:gap-1 sm:px-2 sm:text-[12px]"
-    : "h-7 gap-1.5 px-1.5 text-[12px] sm:px-2.5 sm:text-[14px]";
+  // Font size scales continuously with viewport width (via clamp) instead of
+  // stepping at a couple of breakpoints, so the name never wraps to a second
+  // line or gets ellipsized at in-between widths — it just keeps shrinking.
+  const fontSize = compact ? "clamp(6.5px, 1.7vw, 12px)" : "clamp(8px, 2.1vw, 14px)";
+  const padX = compact ? "clamp(2px, 0.5vw, 8px)" : "clamp(4px, 0.7vw, 10px)";
+  const gap = compact ? "clamp(1px, 0.3vw, 4px)" : "clamp(2px, 0.4vw, 6px)";
   const avatarSizing = compact ? "h-3.5 w-3.5 sm:h-5 sm:w-5" : "h-5 w-5";
 
   return (
     <span
-      className={`inline-flex min-w-0 max-w-full items-center overflow-hidden rounded-full border font-extrabold leading-none ${colors} ${sizing}`}
+      className={`inline-flex min-w-0 max-w-full items-center whitespace-nowrap rounded-full border font-extrabold leading-tight ${colors}`}
+      style={{ fontSize, paddingInline: padX, paddingBlock: "2px", gap }}
       title={name}
     >
       {avatarUrl ? (
-        <img src={avatarUrl} alt="" className={`${avatarSizing} shrink-0 rounded-full object-cover`} />
+        <img
+          src={avatarUrl}
+          alt=""
+          className={`${avatarSizing} shrink-0 rounded-full object-cover`}
+        />
       ) : (
         <span
           className={`${avatarSizing} grid shrink-0 place-items-center rounded-full ${tone === "light" ? "bg-primary/10 text-primary" : "bg-white/20 text-white"} text-[7px] font-black sm:text-[9px]`}
@@ -187,14 +197,15 @@ function StudentNameBadge({
           {name[0]}
         </span>
       )}
-      <span className="min-w-0 truncate">{name}</span>
+      {/* Full name, never ellipsized or wrapped — the font shrinks instead. */}
+      <span className="min-w-0 whitespace-nowrap">{name}</span>
     </span>
   );
 }
 
 const WEEK_LABELS = ["이번 주", "다음 주", "다다음 주", "3주 뒤", "4주 뒤"];
 
-type Status = "응답완료" | "응답대기" | "불가";
+type Status = "응답완료" | "응답대기" | "불가" | "미가입";
 type Student = {
   name: string;
   avatarUrl?: string | null;
@@ -207,99 +218,6 @@ type Student = {
   studentUserId?: string | null;
   rosterId?: string;
 };
-
-const STUDENTS: Student[] = [
-  {
-    name: "김지원",
-    status: "응답완료",
-    picks: ["월 19시", "월 20시", "수 19시", "금 19시"],
-    lastPT: "5.7 (목)",
-    remaining: 14,
-    total: 30,
-    joinedAt: "24.03.12",
-  },
-  {
-    name: "박서윤",
-    status: "응답완료",
-    picks: ["화 07시", "수 19시", "금 19시", "금 20시"],
-    lastPT: "5.8 (금)",
-    remaining: 7,
-    total: 20,
-    joinedAt: "24.08.21",
-  },
-  {
-    name: "최유나",
-    status: "응답완료",
-    picks: ["수 09시", "수 19시", "금 19시", "토 09시"],
-    lastPT: "5.6 (수)",
-    remaining: 22,
-    total: 40,
-    joinedAt: "23.11.05",
-  },
-  {
-    name: "정수민",
-    status: "응답완료",
-    picks: ["화 07시", "토 09시", "토 11시"],
-    lastPT: "5.4 (월)",
-    remaining: 3,
-    total: 20,
-    joinedAt: "25.01.18",
-  },
-  {
-    name: "한승호",
-    status: "응답완료",
-    picks: ["월 19시", "월 20시", "수 19시", "금 19시"],
-    lastPT: "5.9 (토)",
-    remaining: 11,
-    total: 24,
-    joinedAt: "24.06.30",
-  },
-  {
-    name: "이도현",
-    status: "응답대기",
-    picks: [],
-    lastPT: "5.2 (토)",
-    remaining: 5,
-    total: 10,
-    joinedAt: "25.04.02",
-  },
-  {
-    name: "김태현",
-    status: "응답대기",
-    picks: [],
-    lastPT: "5.1 (금)",
-    remaining: 9,
-    total: 20,
-    joinedAt: "24.12.10",
-  },
-  {
-    name: "윤서아",
-    status: "응답대기",
-    picks: [],
-    lastPT: "4.30 (목)",
-    remaining: 4,
-    total: 10,
-    joinedAt: "25.02.14",
-  },
-  {
-    name: "강민준",
-    status: "응답대기",
-    picks: [],
-    lastPT: "5.3 (일)",
-    remaining: 12,
-    total: 24,
-    joinedAt: "24.09.05",
-  },
-  {
-    name: "오지훈",
-    status: "불가",
-    picks: [],
-    lastPT: "5.5 (화)",
-    remaining: 8,
-    total: 20,
-    joinedAt: "25.03.20",
-  },
-];
 
 const AI_RESULT_INIT = [
   { day: "월", hour: "19:00", name: "김지원" },
@@ -655,7 +573,7 @@ function Schedule() {
             avatarUrl: roster.student_user_id
               ? (avatarByUserId.get(roster.student_user_id) ?? null)
               : null,
-            status: "응답대기",
+            status: roster.student_user_id ? "응답대기" : "미가입",
             picks: [],
             lastPT: latestCompleted.get(roster.id) || "기록 없음",
             remaining: roster.remaining_sessions,
@@ -755,11 +673,13 @@ function Schedule() {
           avatarUrl: roster.student_user_id
             ? (avatarByUserId.get(roster.student_user_id) ?? null)
             : null,
-          status: unavailable
-            ? ("불가" as const)
-            : picks.length
-              ? ("응답완료" as const)
-              : ("응답대기" as const),
+          status: !roster.student_user_id
+            ? ("미가입" as const)
+            : unavailable
+              ? ("불가" as const)
+              : picks.length
+                ? ("응답완료" as const)
+                : ("응답대기" as const),
           picks,
           lastPT: latestCompleted.get(roster.id) || "기록 없음",
           remaining: roster.remaining_sessions,
@@ -820,6 +740,28 @@ function Schedule() {
           day: DAYS[slot.day_of_week],
           hour: slot.hour,
           method: selection.assigned_method === "manual" ? "manual" : "auto",
+        });
+      }
+      // Students with no linked auth account never get a student_selections
+      // row (confirm_weekly_schedule requires student_user_id), so their
+      // manual assignment lives only in pt_sessions. Without this, this view
+      // would show them as unassigned after every reload — and worse, the
+      // next manual move for them would have no "previous slot" to clear,
+      // leaving the old pt_sessions row behind as an orphan (the trainer and
+      // student-side timetables would then disagree).
+      const weekEndDate = new Date(targetMonday);
+      weekEndDate.setDate(weekEndDate.getDate() + 7);
+      for (const session of sessions ?? []) {
+        if (session.status !== "scheduled") continue;
+        const roster = rosterById.get(session.roster_id);
+        if (!roster || roster.student_user_id) continue;
+        const scheduledAt = new Date(session.scheduled_at);
+        if (scheduledAt < targetMonday || scheduledAt >= weekEndDate) continue;
+        confirmedByName.set(roster.student_name, {
+          name: roster.student_name,
+          day: DAYS[(scheduledAt.getDay() + 6) % 7],
+          hour: scheduledAt.getHours(),
+          method: "manual",
         });
       }
       setConfirmedStudentNames(new Set(confirmedByName.keys()));
@@ -1062,7 +1004,9 @@ function Schedule() {
 
   const stats = useMemo(() => {
     const total = STUDENTS.length;
-    const responded = STUDENTS.filter((s) => s.status !== "응답대기").length;
+    const responded = STUDENTS.filter(
+      (s) => s.status === "응답완료" || s.status === "불가",
+    ).length;
     const unavailable = STUDENTS.filter((s) => s.status === "불가").length;
     const assignable = AI_RESULT_INIT.length;
     return { total, responded, unavailable, assignable };
@@ -1102,6 +1046,11 @@ function Schedule() {
       });
     }
     setDbActivity((prev) => [{ kind: "request", count, when: "방금" }, ...prev]);
+    trackEvent("Schedule Request Sent", {
+      recipient_count: count,
+      week_offset: panelWeek,
+      all_students: all,
+    });
     fireToast(
       all
         ? `전원에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`
@@ -1168,7 +1117,7 @@ function Schedule() {
     });
     setConfirmedSummary({ count: payload.length, responded: stats.responded, total: stats.total });
     if (trainerId) {
-      const { data: confirmationLogs } = await supabase
+      const { data: confirmationLogs, error: logError } = await supabase
         .from("schedule_activity_log")
         .insert([
           {
@@ -1186,6 +1135,7 @@ function Schedule() {
           })),
         ])
         .select("who,created_at");
+      if (logError) console.error("schedule_activity_log insert (confirm) failed", logError);
       const nextTimes: Record<string, string> = {};
       for (const log of confirmationLogs ?? []) {
         if (log.who) nextTimes[log.who] = log.created_at;
@@ -1204,6 +1154,12 @@ function Schedule() {
       { kind: "confirm", count: payload.length, when: "방금" },
       ...prev,
     ]);
+    trackEvent("Schedule Confirmed", {
+      student_count: payload.length,
+      responded_count: stats.responded,
+      total_students: stats.total,
+      saved_minutes: payload.length * 15,
+    });
     fireToast(
       `${payload.length}명 일정 확정 · 약 ${payload.length * 15}분을 절약했어요`,
     );
@@ -1287,7 +1243,7 @@ function Schedule() {
       </div>
 
       {/* DASHBOARD */}
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="mt-6 grid grid-cols-3 gap-1.5 sm:gap-3">
         <KpiCard
           icon={<Users className="h-4 w-4" />}
           label="관리 회원"
@@ -1603,16 +1559,19 @@ function Schedule() {
           {assignments.map((a, i) => (
             <div
               key={i}
-              className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-center justify-between"
+              className="rounded-xl bg-white/5 border border-white/10 px-2 py-2.5 sm:px-3 flex items-center justify-between gap-1.5 min-w-0"
             >
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">
+              <div className="min-w-0">
+                <p
+                  className="font-bold uppercase tracking-wider text-white/50 whitespace-nowrap"
+                  style={{ fontSize: "clamp(8px, 2vw, 10px)" }}
+                >
                   {a.day}요일
                   {a.method === "manual" && (
                     <span className="ml-1 text-red-400 font-extrabold">· 수동</span>
                   )}
                 </p>
-                <p className="text-[15px] font-black tabular-nums">
+                <p className="text-[15px] font-black tabular-nums whitespace-nowrap">
                   {String(a.hour).padStart(2, "0")}:00
                 </p>
               </div>
@@ -1624,7 +1583,7 @@ function Schedule() {
           ))}
         </div>
 
-        <div className="relative mt-3 rounded-xl border border-white/10 overflow-hidden bg-white/[0.03]">
+        <div className="relative -mx-5 mt-3 overflow-hidden border-y border-white/10 bg-white/[0.03] sm:mx-0 sm:rounded-xl sm:border-x">
           <div className="grid grid-cols-[30px_repeat(7,minmax(0,1fr))] bg-white/5 border-b border-white/10 sm:grid-cols-[36px_repeat(7,minmax(0,1fr))]">
             <div className="p-1.5 text-[12px] text-white/50 font-bold text-center">시간</div>
             {DAYS.map((d, i) => (
@@ -1647,7 +1606,7 @@ function Schedule() {
                     return (
                       <div
                         key={`${d}-${h}`}
-                        className="grid h-9 min-w-0 place-items-center overflow-hidden border-b border-l border-white/10 px-0.5 text-[10px] font-extrabold"
+                        className="grid min-h-9 min-w-0 place-items-center border-b border-l border-white/10 px-0.5 py-1 text-[10px] font-extrabold"
                       >
                         {a ? (
                           <StudentNameBadge
@@ -1722,23 +1681,25 @@ function Schedule() {
         </div>
 
         <div
-          className={`mt-3 rounded-2xl border border-border overflow-hidden ${pendingClose.size > 0 ? "pb-28" : ""}`}
+          className={`-mx-5 mt-3 overflow-hidden rounded-none border-x-0 border-border sm:mx-0 sm:rounded-2xl sm:border-x ${pendingClose.size > 0 ? "pb-28" : ""}`}
         >
-          <div className="grid grid-cols-[36px_repeat(7,minmax(0,1fr))] bg-surface-muted border-b border-border sm:grid-cols-[44px_repeat(7,minmax(0,1fr))]">
-            <div className="p-2 text-[12px] text-muted-foreground font-bold text-center">시간</div>
+          <div className="grid grid-cols-[26px_repeat(7,minmax(0,1fr))] bg-surface-muted border-b border-border sm:grid-cols-[44px_repeat(7,minmax(0,1fr))]">
+            <div className="p-1 text-[12px] text-muted-foreground font-bold text-center sm:p-2">
+              시간
+            </div>
             {DAYS.map((d, i) => (
               <button
                 key={d}
                 onClick={() => closeDay(d)}
                 disabled={requestSentAt != null && !closeEditMode}
-                className="p-2 text-[15px] transition enabled:hover:bg-white disabled:cursor-default"
+                className="p-1 text-[15px] transition enabled:hover:bg-white disabled:cursor-default sm:p-2"
                 title="이 요일 전체 닫기/열기 토글"
               >
                 <DayHeaderLabel day={d} date={weekDates[i]} i={i} />
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-[36px_repeat(7,minmax(0,1fr))] sm:grid-cols-[44px_repeat(7,minmax(0,1fr))]">
+          <div className="grid grid-cols-[26px_repeat(7,minmax(0,1fr))] sm:grid-cols-[44px_repeat(7,minmax(0,1fr))]">
             {HOURS.map((h) => (
               <React.Fragment key={h}>
                 <button
@@ -1767,7 +1728,7 @@ function Schedule() {
                         toggleCellPending(key);
                       }}
                       title={picks.length ? picks.join(", ") : "선택한 학생 없음"}
-                      className={`relative min-h-[56px] overflow-hidden border-b border-l border-border transition group
+                      className={`relative min-h-[56px] border-b border-l border-border transition group
                         ${willBeClosed && !isPending ? "bg-muted text-muted-foreground/50" : ""}
                         ${!willBeClosed ? `heat-${lvl}` : ""}
                         ${isPending ? "ring-2 ring-ink-soft/60 ring-inset bg-ink-soft/10" : ""}
@@ -1777,7 +1738,7 @@ function Schedule() {
                       {willBeClosed && !isPending ? (
                         <Lock className="absolute inset-0 m-auto h-3.5 w-3.5" />
                       ) : picks.length > 0 ? (
-                        <span className="absolute inset-0 flex flex-wrap content-center items-center justify-center gap-1 p-1">
+                        <span className="flex min-h-[56px] flex-wrap content-center items-center justify-center gap-0.5 p-0.5 sm:gap-1 sm:p-1">
                           {picks.slice(0, 2).map((name, index) => (
                             <span key={name} className={index === 1 ? "hidden min-w-0 max-w-full sm:block" : "min-w-0 max-w-full"}>
                               <StudentNameBadge
@@ -1790,16 +1751,16 @@ function Schedule() {
                           ))}
                           {picks.length > 1 && (
                             <span
-                              className={`inline-flex items-center rounded-full border px-1 py-0.5 text-[9px] font-extrabold leading-tight sm:hidden ${lvl >= 4 ? "border-white/50 bg-black/15 text-white" : "border-black/10 bg-white/90 text-ink"}`}
+                              className={`text-[9px] font-extrabold leading-tight sm:hidden ${lvl >= 4 ? "text-white" : "text-ink"}`}
                             >
-                              +{picks.length - 1}
+                              +{picks.length - 1}명
                             </span>
                           )}
                           {picks.length > 2 && (
                             <span
-                              className={`hidden items-center rounded-full border px-2 py-0.5 text-[12px] font-extrabold leading-tight sm:inline-flex ${lvl >= 4 ? "border-white/50 bg-black/15 text-white" : "border-black/10 bg-white/90 text-ink"}`}
+                              className={`hidden text-[11px] font-extrabold leading-tight sm:inline ${lvl >= 4 ? "text-white" : "text-ink"}`}
                             >
-                              ...+{picks.length - 2}명
+                              +{picks.length - 2}명
                             </span>
                           )}
                         </span>
@@ -1848,7 +1809,12 @@ function Schedule() {
             </thead>
             <tbody>
               {STUDENTS.map((s) => (
-                <tr key={s.name} className="border-t border-border align-middle">
+                <tr
+                  key={s.name}
+                  className={`border-t border-border align-middle ${
+                    s.status === "미가입" ? "bg-surface-muted/60 text-muted-foreground" : ""
+                  }`}
+                >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <div className="h-9 w-9 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
@@ -1946,7 +1912,12 @@ function Schedule() {
         {/* Mobile card list */}
         <div className="mt-4 grid gap-2 md:hidden">
           {STUDENTS.map((s) => (
-            <div key={s.name} className="rounded-xl border border-border bg-white p-3">
+            <div
+              key={s.name}
+              className={`rounded-xl border border-border p-3 ${
+                s.status === "미가입" ? "bg-surface-muted/60 text-muted-foreground" : "bg-white"
+              }`}
+            >
               <div className="flex items-start gap-2.5">
                 {s.avatarUrl ? (
                   <img
@@ -2213,29 +2184,56 @@ function Schedule() {
                 const wasAlreadyConfirmed = confirmedStudentNames.has(movedName);
                 const previousAssignment = assignments.find((a) => a.name === movedName);
                 const slotId = slotIds[`${movedDay}-${movedHour}`];
-                const studentUserId = STUDENTS.find((s) => s.name === movedName)?.studentUserId;
-                if (!slotId || !studentUserId) {
+                const movedStudent = STUDENTS.find((s) => s.name === movedName);
+                const studentUserId = movedStudent?.studentUserId;
+                const rosterId = movedStudent?.rosterId;
+                if (!slotId || (!studentUserId && !rosterId)) {
                   setPendingMove(null);
                   fireToast("이 학생의 시간은 아직 저장할 수 없어요.");
                   return;
                 }
 
-                const { error } = await supabase.rpc("confirm_weekly_schedule", {
-                  p_schedule_id: scheduleId,
-                  p_assignments: [
-                    {
-                      slot_id: slotId,
-                      student_user_id: studentUserId,
-                      student_name: movedName,
-                      method: "manual",
-                    },
-                  ],
-                  p_mark_week_confirmed: false,
-                });
-                if (error) {
-                  console.error("manual move confirm failed", error);
+                if (studentUserId) {
+                  const { error } = await supabase.rpc("confirm_weekly_schedule", {
+                    p_schedule_id: scheduleId,
+                    p_assignments: [
+                      {
+                        slot_id: slotId,
+                        student_user_id: studentUserId,
+                        student_name: movedName,
+                        method: "manual",
+                      },
+                    ],
+                    p_mark_week_confirmed: false,
+                  });
+                  if (error) {
+                    console.error("manual move confirm failed", error);
+                    setPendingMove(null);
+                    fireToast("저장에 실패했어요. 다시 시도해주세요.");
+                    return;
+                  }
+                } else if (rosterId && trainerId) {
+                  // No linked auth account yet — confirm_weekly_schedule (and
+                  // student_selections) require student_user_id. This RPC
+                  // mirrors it for unregistered rosters: it evicts whoever
+                  // else holds the destination slot and clears this roster's
+                  // own previous slot by looking at pt_sessions directly
+                  // (not client state), so it can't drift the way the old
+                  // client-side delete+upsert did.
+                  const { error } = await supabase.rpc("assign_unregistered_roster", {
+                    p_schedule_id: scheduleId,
+                    p_roster_id: rosterId,
+                    p_slot_id: slotId,
+                  });
+                  if (error) {
+                    console.error("manual move (unregistered student) failed", error);
+                    setPendingMove(null);
+                    fireToast("저장에 실패했어요. 다시 시도해주세요.");
+                    return;
+                  }
+                } else {
                   setPendingMove(null);
-                  fireToast("저장에 실패했어요. 다시 시도해주세요.");
+                  fireToast("이 학생의 시간은 아직 저장할 수 없어요.");
                   return;
                 }
 
@@ -2250,7 +2248,7 @@ function Schedule() {
                 });
                 const isReschedule = wasAlreadyConfirmed && !!previousAssignment;
                 if (trainerId) {
-                  const { data: manualLog } = await supabase
+                  const { data: manualLog, error: logError } = await supabase
                     .from("schedule_activity_log")
                     .insert(
                       isReschedule
@@ -2275,6 +2273,7 @@ function Schedule() {
                     )
                     .select("created_at")
                     .maybeSingle();
+                  if (logError) console.error("schedule_activity_log insert (manual move) failed", logError);
                   setConfirmedMessageAtByName((previous) => ({
                     ...previous,
                     [movedName]: manualLog?.created_at ?? new Date().toISOString(),
@@ -2336,20 +2335,38 @@ function Schedule() {
                 const name = pendingCancel;
                 if (!name || !scheduleId) return;
                 const cancelled = assignments.find((a) => a.name === name);
-                const studentUserId = STUDENTS.find((s) => s.name === name)?.studentUserId;
-                if (!cancelled || !studentUserId) {
+                const cancelledStudent = STUDENTS.find((s) => s.name === name);
+                const studentUserId = cancelledStudent?.studentUserId;
+                const rosterId = cancelledStudent?.rosterId;
+                if (!cancelled || (!studentUserId && !rosterId)) {
                   setPendingCancel(null);
                   return;
                 }
-                const { error } = await supabase.rpc("cancel_confirmed_assignment", {
-                  p_schedule_id: scheduleId,
-                  p_student_user_id: studentUserId,
-                });
-                if (error) {
-                  console.error("cancel_confirmed_assignment failed", error);
-                  setPendingCancel(null);
-                  fireToast("취소에 실패했어요. 다시 시도해주세요.");
-                  return;
+                if (studentUserId) {
+                  const { error } = await supabase.rpc("cancel_confirmed_assignment", {
+                    p_schedule_id: scheduleId,
+                    p_student_user_id: studentUserId,
+                  });
+                  if (error) {
+                    console.error("cancel_confirmed_assignment failed", error);
+                    setPendingCancel(null);
+                    fireToast("취소에 실패했어요. 다시 시도해주세요.");
+                    return;
+                  }
+                } else if (rosterId) {
+                  // Unregistered student — no student_selections row exists for
+                  // them in the first place, so just clear their pt_sessions
+                  // row(s) for this week directly.
+                  const { error } = await supabase.rpc("cancel_unregistered_roster_assignment", {
+                    p_schedule_id: scheduleId,
+                    p_roster_id: rosterId,
+                  });
+                  if (error) {
+                    console.error("cancel unregistered assignment failed", error);
+                    setPendingCancel(null);
+                    fireToast("취소에 실패했어요. 다시 시도해주세요.");
+                    return;
+                  }
                 }
                 setAssignments((prev) => prev.filter((a) => a.name !== name));
                 setConfirmedStudentNames((previous) => {
@@ -2882,24 +2899,28 @@ function KpiCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}
+      className={`min-w-0 rounded-xl sm:rounded-2xl border p-2.5 sm:p-4 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}
     >
       <div
-        className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${accent ? "text-primary" : "text-ink-soft"}`}
+        className={`flex items-center gap-1 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider truncate ${accent ? "text-primary" : "text-ink-soft"}`}
       >
-        {icon}
-        {label}
+        <span className="hidden sm:inline-flex shrink-0">{icon}</span>
+        <span className="truncate">{label}</span>
       </div>
-      <div className="mt-2 flex items-baseline gap-1">
-        <span className="text-[28px] font-black tabular-nums leading-none">{value}</span>
+      <div className="mt-1 sm:mt-2 flex min-w-0 flex-wrap items-baseline gap-0.5 sm:gap-1">
+        <span className="text-[17px] sm:text-[28px] font-black tabular-nums leading-none">
+          {value}
+        </span>
         {suffix && (
-          <span className={`text-[12px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}>
+          <span
+            className={`truncate text-[9.5px] sm:text-[12px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}
+          >
             {suffix}
           </span>
         )}
         {detail && (
           <span
-            className={`ml-1 text-[10px] font-semibold ${accent ? "text-white/55" : "text-muted-foreground"}`}
+            className={`hidden sm:inline ml-1 text-[10px] font-semibold ${accent ? "text-white/55" : "text-muted-foreground"}`}
           >
             · {detail}
           </span>
@@ -2936,8 +2957,10 @@ function StatusBadge({ s }: { s: Status }) {
     응답완료: { bg: "#E6F9F1", fg: "#009B72" },
     응답대기: { bg: "#F2F3F5", fg: "#5F6673" },
     불가: { bg: "#FFE8EA", fg: "#E53945" },
+    미가입: { bg: "#EFEAFB", fg: "#7C5BD6" },
   };
-  const icon = s === "불가" ? <Ban className="h-3 w-3" /> : null;
+  const icon =
+    s === "불가" ? <Ban className="h-3 w-3" /> : s === "미가입" ? <UserX className="h-3 w-3" /> : null;
   return (
     <span
       style={{ backgroundColor: map[s].bg, color: map[s].fg }}

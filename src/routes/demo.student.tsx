@@ -115,7 +115,7 @@ function DemoStudentBooking() {
               <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">
                 김
               </div>
-              <VerifiedBadge size={44} className="!-bottom-[11px] !-right-[11px]" />
+              <VerifiedBadge />
             </div>
             <a
               href="https://instagram.com/"

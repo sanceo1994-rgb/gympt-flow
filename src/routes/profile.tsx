@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { normalizeDisplayName, pickDisplayName } from "@/lib/display-name";
 import { TrainerRankBadge } from "@/components/TrainerRankBadge";
 import { useTrainerRank } from "@/hooks/use-trainer-rank";
+import { trackEvent } from "@/lib/analytics";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "내 정보 — 픽짐피티" }] }),
@@ -408,6 +409,7 @@ function ProfilePage() {
     try {
       navigator.clipboard.writeText(inviteCode);
     } catch {}
+    trackEvent("Referral Link Copied", { source: "profile" });
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -450,10 +452,10 @@ function ProfilePage() {
               </div>
             )}
             {role === "trainer" && isVerified && (
-              <VerifiedBadge size={48} className="!-bottom-[12px] !-right-[12px]" />
+              <VerifiedBadge />
             )}
             {role === "trainer" && trainerRank && (
-              <TrainerRankBadge rank={trainerRank} className="!-left-2 !-top-2" size={30} />
+              <TrainerRankBadge rank={trainerRank} />
             )}
           </div>
           <p className="mt-3 text-[15px] font-extrabold text-ink">{name || "이름 없음"}</p>
@@ -1199,7 +1201,7 @@ function StudentWeeklyInsight({
                 >
                   <span
                     className={`absolute left-1/2 top-0 inline-flex h-7 min-w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-4 text-[10.5px] font-black text-white shadow-sm ${
-                      req.responded ? "bg-emerald-500" : "bg-primary"
+                      req.responded ? "bg-emerald-500" : "bg-amber-500"
                     }`}
                   >
                     {req.responded ? "선택 완료" : "시간 선택 요청"}
