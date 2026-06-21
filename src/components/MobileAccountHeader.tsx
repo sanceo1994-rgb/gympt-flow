@@ -61,9 +61,9 @@ export function MobileAccountHeader() {
   }, [user, metadata?.name, metadata?.avatar_url]);
 
   return (
-    <header className="min-[1720px]:hidden h-14 border-b border-border bg-white/95 backdrop-blur px-4 flex items-center justify-between sticky top-0 z-40">
-      <Link to="/" className="flex h-12 items-center" aria-label="픽짐피티 홈">
-        <img src={logo} alt="픽짐피티" className="h-11 w-auto object-contain" />
+    <header className="min-[1720px]:hidden h-16 border-b border-border bg-white/95 backdrop-blur px-4 flex items-center justify-between sticky top-0 z-40">
+      <Link to="/" className="flex h-16 max-w-[52vw] items-center" aria-label="픽짐피티 홈">
+        <img src={logo} alt="픽짐피티" className="h-[66px] max-w-full w-auto object-contain" />
       </Link>
       {loading ? (
         <div className="h-9 w-24 rounded-full bg-surface-muted animate-pulse" />

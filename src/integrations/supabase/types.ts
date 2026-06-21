@@ -364,8 +364,66 @@ export type Database = {
           },
         ]
       }
+      schedule_activity_log: {
+        Row: {
+          count: number | null
+          created_at: string
+          day: string | null
+          from_day: string | null
+          from_hour: number | null
+          hour: number | null
+          id: string
+          kind: string
+          schedule_id: string
+          trainer_id: string
+          who: string | null
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string
+          day?: string | null
+          from_day?: string | null
+          from_hour?: number | null
+          hour?: number | null
+          id?: string
+          kind: string
+          schedule_id: string
+          trainer_id: string
+          who?: string | null
+        }
+        Update: {
+          count?: number | null
+          created_at?: string
+          day?: string | null
+          from_day?: string | null
+          from_hour?: number | null
+          hour?: number | null
+          id?: string
+          kind?: string
+          schedule_id?: string
+          trainer_id?: string
+          who?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_activity_log_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_activity_log_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_selections: {
         Row: {
+          assigned_method: string
           created_at: string
           id: string
           schedule_id: string
@@ -375,6 +433,7 @@ export type Database = {
           student_user_id: string
         }
         Insert: {
+          assigned_method?: string
           created_at?: string
           id?: string
           schedule_id: string
@@ -384,6 +443,7 @@ export type Database = {
           student_user_id: string
         }
         Update: {
+          assigned_method?: string
           created_at?: string
           id?: string
           schedule_id?: string
@@ -702,8 +762,16 @@ export type Database = {
       }
     }
     Functions: {
+      cancel_confirmed_assignment: {
+        Args: { p_schedule_id: string; p_student_user_id: string }
+        Returns: undefined
+      }
       confirm_weekly_schedule: {
-        Args: { p_assignments: Json; p_schedule_id: string }
+        Args: {
+          p_assignments: Json
+          p_mark_week_confirmed?: boolean
+          p_schedule_id: string
+        }
         Returns: undefined
       }
       current_user_owns_schedule: {

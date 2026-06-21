@@ -343,20 +343,20 @@ function StudentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-surface-muted rounded-xl px-3 h-10 border border-border">
-            <Search className="h-4 w-4 text-ink-soft" />
+          <div className="flex h-8 items-center gap-1.5 rounded-xl border border-border bg-surface-muted px-2.5 sm:h-10 sm:px-3">
+            <Search className="h-3.5 w-3.5 text-ink-soft sm:h-4 sm:w-4" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="이름/전화 검색"
-              className="bg-transparent outline-none text-[13px] w-52"
+              className="w-[166px] bg-transparent text-[12px] outline-none sm:w-52 sm:text-[13px]"
             />
           </div>
           <button
             onClick={() => setAdding(true)}
-            className="h-10 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center gap-1.5"
+            className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-primary px-[18px] text-[14px] font-extrabold text-white sm:h-10 sm:px-4 sm:text-[13px]"
           >
-            <Plus className="h-4 w-4" /> 추가
+            <Plus className="h-[18px] w-[18px] sm:h-4 sm:w-4" /> 추가
           </button>
         </div>
       </div>

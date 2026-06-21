@@ -17,6 +17,8 @@ import {
   Receipt,
   Zap,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Dialog,
@@ -101,6 +103,7 @@ function ProfilePage() {
   const [weeklySessions, setWeeklySessions] = useState<WeeklySession[]>([]);
   const [recentSession, setRecentSession] = useState<WeeklySession | null>(null);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [trainerWeekOffset, setTrainerWeekOffset] = useState(0);
 
   // Trainer-only mock state
   const inviteCode = "PGPT-" + (name || "JAEHYUN").slice(0, 4).toUpperCase() + "-7K2";
@@ -173,6 +176,10 @@ function ProfilePage() {
       weekStart.setDate(weekStart.getDate() - mondayDistance);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
+      const trainerWeekStart = new Date(weekStart);
+      trainerWeekStart.setDate(trainerWeekStart.getDate() + trainerWeekOffset * 7);
+      const trainerWeekEnd = new Date(trainerWeekStart);
+      trainerWeekEnd.setDate(trainerWeekEnd.getDate() + 7);
       const { data: roleRow } = await supabase
         .from("user_roles")
         .select("role")
@@ -213,8 +220,8 @@ function ProfilePage() {
           .from("pt_sessions")
           .select("id,scheduled_at,status,note,student_rosters(student_name)")
           .eq("trainer_id", trainerRow.id)
-          .gte("scheduled_at", weekStart.toISOString())
-          .lt("scheduled_at", weekEnd.toISOString())
+          .gte("scheduled_at", trainerWeekStart.toISOString())
+          .lt("scheduled_at", trainerWeekEnd.toISOString())
           .order("scheduled_at", { ascending: true });
         if (!cancelled) {
           setWeeklySessions(
@@ -358,7 +365,7 @@ function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, trainerWeekOffset]);
 
   const save = async () => {
     const normalizedName = normalizeDisplayName(name);
@@ -512,65 +519,6 @@ function ProfilePage() {
               </div>
             )}
           </div>
-          {role === "student" && pendingRequests.length > 0 && (
-            <div className="mt-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
-                트레이너가 보낸 시간 선택 요청
-              </span>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                {pendingRequests.map((req) => {
-                  const d = new Date(`${req.weekStart}T00:00:00`);
-                  const end = new Date(d);
-                  end.setDate(end.getDate() + 6);
-                  const fmt = (x: Date) => `${x.getMonth() + 1}.${x.getDate()}`;
-                  return (
-                    <Link
-                      key={req.scheduleId}
-                      to="/booking"
-                      search={{ trainer: assignedTrainer?.id, week: req.weekStart }}
-                      className="flex items-center gap-2.5 rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 hover:border-primary/40 hover:bg-primary/[0.04] transition"
-                    >
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white ring-1 ring-border">
-                        <CalendarDays className="h-4 w-4 text-primary" />
-                      </span>
-                      <div className="leading-tight">
-                        <p className="text-[12.5px] font-extrabold text-ink">
-                          {fmt(d)} – {fmt(end)}
-                        </p>
-                        <span
-                          className={`mt-0.5 inline-flex items-center px-2 h-5 rounded-full text-[10px] font-extrabold ${
-                            req.responded
-                              ? "bg-primary/10 text-primary"
-                              : "bg-destructive/10 text-destructive"
-                          }`}
-                        >
-                          {req.responded ? "응답 완료" : "응답 필요"}
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {role === "trainer" && <div className="mt-4">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
-              트레이너 소개
-            </span>
-            {editMode ? (
-              <textarea
-                value={intro}
-                onChange={(e) => setIntro(e.target.value)}
-                rows={4}
-                placeholder="전문 분야, 자격증, 운영 시간 등을 자유롭게 소개해주세요."
-                className="mt-1.5 w-full px-3.5 py-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink resize-none"
-              />
-            ) : (
-              <p className="mt-1.5 text-[13.5px] text-ink leading-relaxed min-h-[60px]">
-                {intro || <span className="text-ink-soft">소개가 아직 없어요.</span>}
-              </p>
-            )}
-          </div>}
           {editMode && (
             <div className="mt-6 flex items-center gap-2">
               <button
@@ -596,6 +544,10 @@ function ProfilePage() {
         sessions={weeklySessions}
         recentSession={recentSession}
         loading={sessionsLoading}
+        pendingRequests={pendingRequests}
+        trainerId={assignedTrainer?.id}
+        weekOffset={trainerWeekOffset}
+        onWeekOffsetChange={setTrainerWeekOffset}
       />
 
       {/* Trainer-only sections */}
@@ -907,11 +859,19 @@ function WeeklyScheduleSummary({
   sessions,
   recentSession,
   loading,
+  pendingRequests,
+  trainerId,
+  weekOffset,
+  onWeekOffsetChange,
 }: {
   role: "trainer" | "student";
   sessions: WeeklySession[];
   recentSession: WeeklySession | null;
   loading: boolean;
+  pendingRequests: { scheduleId: string; weekStart: string; responded: boolean }[];
+  trainerId?: string;
+  weekOffset: number;
+  onWeekOffsetChange: (next: number) => void;
 }) {
   if (loading) {
     return (
@@ -926,13 +886,32 @@ function WeeklyScheduleSummary({
   }
 
   return role === "trainer" ? (
-    <TrainerWeeklySchedule sessions={sessions} />
+    <TrainerWeeklySchedule
+      sessions={sessions}
+      weekOffset={weekOffset}
+      onWeekOffsetChange={onWeekOffsetChange}
+    />
   ) : (
-    <StudentWeeklyInsight sessions={sessions} recentSession={recentSession} />
+    <StudentWeeklyInsight
+      sessions={sessions}
+      recentSession={recentSession}
+      pendingRequests={pendingRequests}
+      trainerId={trainerId}
+    />
   );
 }
 
-function TrainerWeeklySchedule({ sessions }: { sessions: WeeklySession[] }) {
+const WEEK_OFFSET_LABELS = ["이번 주", "다음 주", "다다음 주", "3주 뒤", "4주 뒤"];
+
+function TrainerWeeklySchedule({
+  sessions,
+  weekOffset,
+  onWeekOffsetChange,
+}: {
+  sessions: WeeklySession[];
+  weekOffset: number;
+  onWeekOffsetChange: (next: number) => void;
+}) {
   const activeSessions = sessions.filter((session) => session.status !== "cancelled");
   const completedCount = activeSessions.filter((session) => session.status === "completed").length;
   const upcomingCount = activeSessions.filter((session) => session.status === "scheduled").length;
@@ -960,16 +939,42 @@ function TrainerWeeklySchedule({ sessions }: { sessions: WeeklySession[] }) {
             <CalendarDays className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">이번 주</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
+              {WEEK_OFFSET_LABELS[weekOffset] ?? `${weekOffset}주 뒤`}
+            </p>
             <h2 className="text-[16px] font-black text-ink">수업 운영 요약</h2>
           </div>
         </div>
-        <Link
-          to="/schedule"
-          className="inline-flex h-9 items-center rounded-full border border-border-strong px-3.5 text-[11.5px] font-extrabold text-ink hover:bg-muted"
-        >
-          전체 일정 보기
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-full border border-border-strong">
+            <button
+              onClick={() => onWeekOffsetChange(Math.max(0, weekOffset - 1))}
+              disabled={weekOffset <= 0}
+              className="grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-muted disabled:opacity-30"
+              aria-label="이전 주"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="px-1 text-[11.5px] font-extrabold text-ink tabular-nums">
+              {WEEK_OFFSET_LABELS[weekOffset] ?? `${weekOffset}주 뒤`}
+            </span>
+            <button
+              onClick={() => onWeekOffsetChange(Math.min(4, weekOffset + 1))}
+              disabled={weekOffset >= 4}
+              className="grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-muted disabled:opacity-30"
+              aria-label="다음 주"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <Link
+            to="/schedule"
+            search={{ week: weekOffset }}
+            className="inline-flex h-9 items-center rounded-full border border-border-strong px-3.5 text-[11.5px] font-extrabold text-ink hover:bg-muted"
+          >
+            자세히 보기
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 p-5 sm:p-6">
@@ -981,7 +986,9 @@ function TrainerWeeklySchedule({ sessions }: { sessions: WeeklySession[] }) {
       <div className="border-t border-border px-5 pb-6 pt-4 sm:px-6">
         <div className="mb-3 flex items-center gap-2">
           <UsersRound className="h-4 w-4 text-ink" />
-          <h3 className="text-[13px] font-black text-ink">확정된 이번 주 타임테이블</h3>
+          <h3 className="text-[13px] font-black text-ink">
+            확정된 {WEEK_OFFSET_LABELS[weekOffset] ?? `${weekOffset}주 뒤`} 타임테이블
+          </h3>
         </div>
         {sortedTimes.length ? (
           <div className="overflow-x-auto rounded-xl border border-border">
@@ -1017,7 +1024,8 @@ function TrainerWeeklySchedule({ sessions }: { sessions: WeeklySession[] }) {
           </div>
         ) : (
           <div className="flex min-h-24 items-center justify-center gap-2 rounded-xl bg-surface-muted px-4 text-[12px] font-semibold text-ink-soft">
-            <CalendarClock className="h-4 w-4" /> 이번 주에 확정된 수업이 없습니다.
+            <CalendarClock className="h-4 w-4" />{" "}
+            {WEEK_OFFSET_LABELS[weekOffset] ?? `${weekOffset}주 뒤`}에 확정된 수업이 없습니다.
           </div>
         )}
       </div>
@@ -1025,12 +1033,27 @@ function TrainerWeeklySchedule({ sessions }: { sessions: WeeklySession[] }) {
   );
 }
 
+function relativeWeekLabel(weekStart: string) {
+  const target = new Date(`${weekStart}T00:00:00`);
+  const monday = new Date();
+  const mondayDistance = (monday.getDay() + 6) % 7;
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - mondayDistance);
+  const diffWeeks = Math.round((target.getTime() - monday.getTime()) / (7 * 86_400_000));
+  const labels = ["이번 주", "다음 주", "다다음 주", "3주 뒤", "4주 뒤"];
+  return labels[diffWeeks] ?? `${diffWeeks}주 뒤`;
+}
+
 function StudentWeeklyInsight({
   sessions,
   recentSession,
+  pendingRequests,
+  trainerId,
 }: {
   sessions: WeeklySession[];
   recentSession: WeeklySession | null;
+  pendingRequests: { scheduleId: string; weekStart: string; responded: boolean }[];
+  trainerId?: string;
 }) {
   const now = Date.now();
   const upcoming = sessions
@@ -1116,14 +1139,97 @@ function StudentWeeklyInsight({
       </div>
 
       {upcoming.length > 1 && (
-        <div className="border-t border-border px-5 py-4 sm:px-6">
-          <p className="text-[11px] font-bold text-ink-soft">다른 예정된 일정</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {upcoming.slice(1).map((session) => (
-              <span key={session.id} className="rounded-full bg-surface-muted px-3 py-1.5 text-[11.5px] font-bold text-ink">
-                {formatLong(new Date(session.scheduledAt))}
-              </span>
-            ))}
+        <div className="border-t border-border px-5 py-5 sm:px-6 sm:py-6">
+          <div className="flex items-center gap-2">
+            <CalendarClock className="h-4 w-4 text-primary" />
+            <p className="text-[14px] font-black text-ink">다른 예정된 일정</p>
+          </div>
+          <ol className="relative mt-5 ml-2 space-y-0 border-l-2 border-border">
+            {upcoming.slice(1).map((session, index) => {
+              const sessionDate = new Date(session.scheduledAt);
+              const daysAway = Math.max(
+                0,
+                Math.ceil((sessionDate.getTime() - now) / 86_400_000),
+              );
+              const relativeLabel = daysAway === 0 ? "오늘" : `${daysAway}일 뒤`;
+              return (
+                <li
+                  key={session.id}
+                  className={`relative pl-7 ${index < upcoming.length - 2 ? "pb-6" : "pb-1"}`}
+                >
+                  <span className="absolute -left-[7px] top-1.5 h-3 w-3 rounded-full border-[3px] border-white bg-primary ring-2 ring-primary/20" />
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-black leading-tight text-ink sm:text-[16px]">
+                        {formatLong(sessionDate)}
+                      </p>
+                      <p className="mt-1.5 text-[12.5px] font-semibold text-ink-soft">
+                        {session.counterpart} 트레이너
+                        {session.gym ? ` · ${session.gym}` : ""}
+                      </p>
+                    </div>
+                    <span className="inline-flex h-7 shrink-0 items-center rounded-full bg-primary/[0.08] px-2.5 text-[11.5px] font-extrabold text-primary">
+                      {relativeLabel}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+
+      {pendingRequests.length > 0 && (
+        <div className="border-t border-border px-5 py-5 sm:px-6">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
+            트레이너가 보낸 시간 선택 요청
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {pendingRequests.map((req) => {
+              const d = new Date(`${req.weekStart}T00:00:00`);
+              const end = new Date(d);
+              end.setDate(end.getDate() + 6);
+              const fmt = (x: Date) => `${x.getMonth() + 1}.${x.getDate()}`;
+              return (
+                <Link
+                  key={req.scheduleId}
+                  to="/booking"
+                  search={{ trainer: trainerId, week: req.weekStart }}
+                  className="group relative mt-2 min-h-[154px] rounded-2xl border border-border bg-white px-5 pb-5 pt-8 shadow-[0_8px_24px_rgba(17,24,39,0.07)] transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_30px_rgba(17,24,39,0.10)]"
+                >
+                  <span
+                    className={`absolute left-1/2 top-0 inline-flex h-7 min-w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-4 text-[10.5px] font-black text-white shadow-sm ${
+                      req.responded ? "bg-emerald-500" : "bg-primary"
+                    }`}
+                  >
+                    {req.responded ? "선택 완료" : "시간 선택 요청"}
+                  </span>
+                  <div className="flex items-center gap-3 border-b border-border pb-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/[0.08]">
+                      <CalendarDays className="h-5 w-5 text-primary" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[17px] font-black leading-tight text-ink">
+                        {relativeWeekLabel(req.weekStart)} 가능 시간
+                      </p>
+                      <p className="mt-1 text-[12px] font-bold text-ink-soft tabular-nums">
+                        {fmt(d)} – {fmt(end)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-[12px] font-semibold leading-relaxed text-ink-soft">
+                      {req.responded
+                        ? "선택한 시간을 다시 확인하거나 수정할 수 있어요."
+                        : "가능한 시간을 선택해 트레이너에게 알려주세요."}
+                    </p>
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-muted text-ink transition group-hover:bg-primary group-hover:text-white">
+                      <ChevronRight className="h-4 w-4" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}
