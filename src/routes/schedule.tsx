@@ -2604,27 +2604,34 @@ function Schedule() {
       {pendingClose.size === 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[min(720px,calc(100vw-24px))]">
           {confirmedAt != null ? (
-            <div className="rounded-2xl bg-ink text-white shadow-pop p-3 flex flex-wrap items-center gap-2.5">
-              <span className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
-                <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+            <div
+              className="flex items-start gap-[18px] rounded-[20px] px-6 py-[22px]"
+              style={{ background: "#15171c", border: "1px solid rgba(255,255,255,.06)", boxShadow: "0 18px 48px -20px rgba(0,0,0,.75)" }}
+            >
+              <span className="grid h-[50px] w-[50px] shrink-0 place-items-center rounded-2xl" style={{ background: "#22c97c" }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12.5l4.2 4.2L19 7" />
+                </svg>
               </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-extrabold leading-tight">
+              <div className="min-w-0 flex-1">
+                <p className="text-[18px] font-bold leading-tight tracking-tight" style={{ color: "#f4f5f6" }}>
                   {WEEK_LABELS[weekOffset]} 일정 확정이 완료됐어요
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-extrabold tabular-nums">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2.5 py-1 text-emerald-200">
-                    <Users className="h-3 w-3" /> {confirmedSummary?.responded ?? stats.responded}/
-                    {confirmedSummary?.total ?? stats.total}명 응답
+                <div className="mt-[15px] flex flex-wrap gap-[9px]">
+                  <span className="inline-flex h-10 items-center gap-[9px] rounded-xl pl-[7px] pr-3.5 text-[13.5px] font-semibold tracking-tight" style={{ background: "rgba(255,255,255,.06)", color: "#d6d9dd" }}>
+                    <ToastPeopleIcon />
+                    {confirmedSummary?.responded ?? stats.responded}/{confirmedSummary?.total ?? stats.total}명 응답
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-pink-200">
-                    <CalendarCheck className="h-3 w-3" /> {confirmedCount}명 일정 확정
+                  <span className="inline-flex h-10 items-center gap-[9px] rounded-xl pl-[7px] pr-3.5 text-[13.5px] font-semibold tracking-tight" style={{ background: "rgba(255,255,255,.06)", color: "#d6d9dd" }}>
+                    <ToastCalendarIcon />
+                    {confirmedCount}명 일정 확정
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-300/15 px-2.5 py-1 text-amber-200">
-                    <Sparkles className="h-3 w-3" /> 약 {savedMinutes}분 절약
+                  <span className="inline-flex h-10 items-center gap-[9px] rounded-xl pl-[7px] pr-[15px] text-[13.5px] font-bold tracking-tight" style={{ background: "rgba(255,182,72,.13)", color: "#ffce8a" }}>
+                    <ToastClockIcon />
+                    약 {savedMinutes}분 절약
                   </span>
                 </div>
-                <p className="mt-0.5 text-[10px] text-white/45 leading-snug">
+                <p className="mt-[15px] text-[13px] font-medium leading-[1.55] tracking-tight" style={{ color: "#82858b" }}>
                   확정 후 새롭게 변경된 사항은 ‘02 학생 응답’에서 수동 일정 조정 후 개별 통지로
                   직접 안내해주세요.
                 </p>
@@ -2949,6 +2956,65 @@ function SectionHeader({
       </div>
       {subtitle && <p className="text-[12px] text-ink-soft">{subtitle}</p>}
     </div>
+  );
+}
+
+function ToastPeopleIcon() {
+  return (
+    <span className="relative shrink-0 h-[30px] w-[30px]" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.35))" }}>
+      <span className="absolute left-0 top-3 h-[11px] w-[14px] rounded-[7px_7px_4px_4px]" style={{ background: "linear-gradient(160deg, #9be7c4, #3fc78a)" }} />
+      <span className="absolute left-[1px] top-[5px] h-[9px] w-[9px] rounded-full" style={{ background: "linear-gradient(160deg, #b6f0d6, #45c98c)" }} />
+      <span
+        className="absolute left-2 top-[14px] h-[13px] w-5 rounded-[10px_10px_5px_5px]"
+        style={{ background: "linear-gradient(160deg, #8fc2ff, #3f86f2)", boxShadow: "inset 0 1.5px 1px rgba(255,255,255,.5)" }}
+      />
+      <span
+        className="absolute left-[11.5px] top-[3px] h-[13px] w-[13px] rounded-full"
+        style={{ background: "linear-gradient(160deg, #a9d2ff, #4a8df4)", boxShadow: "inset 0 1.5px 1px rgba(255,255,255,.55)" }}
+      />
+    </span>
+  );
+}
+
+function ToastCalendarIcon() {
+  return (
+    <span className="relative shrink-0 h-[30px] w-[30px]" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.35))" }}>
+      <span
+        className="absolute left-[3px] top-[6px] h-[21px] w-6 rounded-lg"
+        style={{ background: "linear-gradient(160deg, #b9aaff, #7a5cf0)", boxShadow: "inset 0 -3px 5px rgba(70,40,150,.4)" }}
+      />
+      <span className="absolute left-[3px] top-[6px] h-2 w-6 rounded-t-lg" style={{ background: "linear-gradient(160deg, #6f54e0, #5a40c8)" }} />
+      <span className="absolute left-[6px] top-4 h-[9px] w-[18px] rounded-[3px]" style={{ background: "linear-gradient(160deg, #ffffff, #eef0fb)" }} />
+      <span className="absolute left-[9px] top-[17px] h-2 w-3 flex items-center justify-center">
+        <svg width="12" height="8" viewBox="0 0 12 8" fill="none" stroke="#2ec27a" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M1.5 4.2l2.6 2.6L10.5 1.2" />
+        </svg>
+      </span>
+      <span className="absolute left-[9px] top-[2px] h-[6px] w-[3.5px] rounded-sm" style={{ background: "linear-gradient(180deg, #f0f1f6, #c7c9d6)" }} />
+      <span className="absolute left-[18px] top-[2px] h-[6px] w-[3.5px] rounded-sm" style={{ background: "linear-gradient(180deg, #f0f1f6, #c7c9d6)" }} />
+    </span>
+  );
+}
+
+function ToastClockIcon() {
+  return (
+    <span className="relative shrink-0 h-[30px] w-[30px]" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.35))" }}>
+      <span
+        className="absolute left-[2px] top-[2px] h-[26px] w-[26px] rounded-full"
+        style={{ background: "linear-gradient(160deg, #ffd79a, #f59e1f)", boxShadow: "inset 0 -3px 6px rgba(150,80,0,.4), inset 0 2px 2px rgba(255,255,255,.55)" }}
+      />
+      <span className="absolute left-[6px] top-[6px] h-[18px] w-[18px] rounded-full" style={{ background: "linear-gradient(160deg, #fff7e6, #ffe6bd)" }} />
+      <span className="absolute left-[14.2px] top-[9px] h-[7px] w-[1.8px] rounded-sm" style={{ background: "#c47a08" }} />
+      <span className="absolute left-[15px] top-[14px] h-[1.8px] w-[6px] rounded-sm" style={{ background: "#c47a08" }} />
+      <span
+        className="absolute left-[18px] top-[17px] h-[11px] w-[11px] rounded-full flex items-center justify-center"
+        style={{ background: "linear-gradient(160deg, #79e6a8, #25b46c)", boxShadow: "inset 0 1px 1px rgba(255,255,255,.5)" }}
+      >
+        <svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="#ffffff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 2v7M3 6l3 3 3-3" />
+        </svg>
+      </span>
+    </span>
   );
 }
 
