@@ -102,6 +102,15 @@ function Login() {
         email: emailPw.email,
         password: emailPw.password,
       });
+      if (error) {
+        const { data: exists } = await supabase.rpc("email_exists", { check_email: emailPw.email });
+        if (exists) {
+          setEmailBusy(false);
+          setEmailErr("비밀번호가 올바르지 않습니다");
+          return;
+        }
+      }
+
       if (!error && data.user) {
         const [trainerResult, profileResult] = await Promise.all([
           supabase.from("trainers").select("name").eq("user_id", data.user.id).maybeSingle(),
@@ -373,7 +382,13 @@ function Login() {
                   이메일을 입력하면 <b className="text-ink">기존 회원은 로그인</b>, <b className="text-ink">처음이라면 가입</b>으로 자동 분기해드려요.
                 </p>
 
-                <div className="mt-5 grid gap-3">
+                <form
+                  className="mt-5 grid gap-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!emailBusy && emailPw.email && emailPw.password) void submitEmail();
+                  }}
+                >
                   <Field
                     label="이메일"
                     type="email"
@@ -381,24 +396,34 @@ function Login() {
                     onChange={(v) => { setEmailPw((p) => ({ ...p, email: v })); setEmailErr(null); setEmailMode(null); }}
                     placeholder="you@example.com"
                   />
-                  <Field
-                    label="비밀번호"
-                    type="password"
-                    value={emailPw.password}
-                    onChange={(v) => { setEmailPw((p) => ({ ...p, password: v })); setEmailErr(null); }}
-                    placeholder="8자 이상"
-                  />
-                </div>
+                  <div>
+                    <Field
+                      label="비밀번호"
+                      type="password"
+                      value={emailPw.password}
+                      onChange={(v) => { setEmailPw((p) => ({ ...p, password: v })); setEmailErr(null); }}
+                      placeholder="영문+숫자+특수문자, 8자 이상"
+                    />
+                    {emailPw.password.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <PwRule ok={emailPw.password.length >= 8} label="8자 이상" />
+                        <PwRule ok={/[a-zA-Z]/.test(emailPw.password)} label="영문" />
+                        <PwRule ok={/\d/.test(emailPw.password)} label="숫자" />
+                        <PwRule ok={/[^a-zA-Z0-9]/.test(emailPw.password)} label="특수문자" />
+                      </div>
+                    )}
+                  </div>
 
-                {emailErr && <p className="mt-3 text-[12px] font-bold text-destructive">{emailErr}</p>}
+                  {emailErr && <p className="text-[12px] font-bold text-destructive">{emailErr}</p>}
 
-                <button
-                  onClick={submitEmail}
-                  disabled={emailBusy || !emailPw.email || !emailPw.password}
-                  className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
-                >
-                  계속하기 <ArrowRight className="h-4 w-4" />
-                </button>
+                  <button
+                    type="submit"
+                    disabled={emailBusy || !emailPw.email || !emailPw.password}
+                    className="mt-3 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
+                  >
+                    계속하기 <ArrowRight className="h-4 w-4" />
+                  </button>
+                </form>
 
                 <p className="mt-4 text-center text-[11.5px] text-ink-soft">
                   비밀번호를 잊으셨나요? <a className="text-primary font-bold hover:underline" href="#">재설정</a>
