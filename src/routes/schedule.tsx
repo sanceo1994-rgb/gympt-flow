@@ -2605,56 +2605,62 @@ function Schedule() {
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[min(720px,calc(100vw-24px))]">
           {confirmedAt != null ? (
             <div
-              className="flex items-start gap-[18px] rounded-[20px] px-6 py-[22px]"
-              style={{ background: "#15171c", border: "1px solid rgba(255,255,255,.06)", boxShadow: "0 18px 48px -20px rgba(0,0,0,.75)" }}
+              className="flex flex-wrap items-center gap-[14px] rounded-[18px] px-[18px] py-[15px]"
+              style={{ background: "#0e6b46", border: "1px solid rgba(255,255,255,.12)", boxShadow: "0 16px 40px -22px rgba(8,52,34,.7)" }}
             >
-              <span className="grid h-[50px] w-[50px] shrink-0 place-items-center rounded-2xl" style={{ background: "#22c97c" }}>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-white">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e6b46" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12.5l4.2 4.2L19 7" />
                 </svg>
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[18px] font-bold leading-tight tracking-tight" style={{ color: "#f4f5f6" }}>
-                  {WEEK_LABELS[weekOffset]} 일정 확정이 완료됐어요
-                </p>
-                <div className="mt-[15px] flex flex-wrap gap-[9px]">
-                  <span className="inline-flex h-10 items-center gap-[9px] rounded-xl pl-[7px] pr-3.5 text-[13.5px] font-semibold tracking-tight" style={{ background: "rgba(255,255,255,.06)", color: "#d6d9dd" }}>
-                    <ToastPeopleIcon />
-                    {confirmedSummary?.responded ?? stats.responded}/{confirmedSummary?.total ?? stats.total}명 응답
-                  </span>
-                  <span className="inline-flex h-10 items-center gap-[9px] rounded-xl pl-[7px] pr-3.5 text-[13.5px] font-semibold tracking-tight" style={{ background: "rgba(255,255,255,.06)", color: "#d6d9dd" }}>
-                    <ToastCalendarIcon />
-                    {confirmedCount}명 일정 확정
-                  </span>
-                  <span className="inline-flex h-10 items-center gap-[9px] rounded-xl pl-[7px] pr-[15px] text-[13.5px] font-bold tracking-tight" style={{ background: "rgba(255,182,72,.13)", color: "#ffce8a" }}>
-                    <ToastClockIcon />
-                    약 {savedMinutes}분 절약
-                  </span>
-                </div>
-                <p className="mt-[15px] text-[13px] font-medium leading-[1.55] tracking-tight" style={{ color: "#82858b" }}>
-                  확정 후 새롭게 변경된 사항은 ‘02 학생 응답’에서 수동 일정 조정 후 개별 통지로
-                  직접 안내해주세요.
-                </p>
+              <p className="min-w-[160px] flex-1 text-[16px] font-bold leading-tight tracking-tight text-white">
+                {WEEK_LABELS[weekOffset]} 일정 확정이 완료됐어요
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
+                <span className="inline-flex h-[34px] items-center gap-2 rounded-[11px] pl-1.5 pr-3.5 text-[13px] font-semibold tracking-tight" style={{ background: "rgba(255,255,255,.13)", color: "rgba(255,255,255,.92)" }}>
+                  <ToastPeopleIcon />
+                  {confirmedSummary?.responded ?? stats.responded}/{confirmedSummary?.total ?? stats.total}명 응답
+                </span>
+                <span className="inline-flex h-[34px] items-center gap-2 rounded-[11px] pl-1.5 pr-3.5 text-[13px] font-semibold tracking-tight" style={{ background: "rgba(255,255,255,.13)", color: "rgba(255,255,255,.92)" }}>
+                  <ToastCalendarIcon />
+                  {confirmedCount}명 확정
+                </span>
+                <span className="inline-flex h-[34px] items-center gap-2 rounded-[11px] pl-1.5 pr-3.5 text-[13px] font-bold tracking-tight text-white">
+                  <ToastClockIcon />약 {savedMinutes}분 절약
+                </span>
               </div>
+              <p className="basis-full pl-[54px] text-[12.5px] font-medium leading-[1.5] tracking-tight" style={{ color: "rgba(255,255,255,.62)" }}>
+                확정 후 새롭게 변경된 사항은 ‘02 학생 응답’에서 수동 일정 조정 후 개별 통지로
+                직접 안내해주세요.
+              </p>
             </div>
           ) : requestSentAt != null ? (
-            <div className="rounded-2xl bg-ink text-white shadow-pop p-3 flex flex-wrap items-center gap-2.5">
-              <span className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
-                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+            <div
+              className="flex flex-wrap items-center gap-[14px] rounded-[18px] px-4 py-[15px]"
+              style={{ background: "#b46213", border: "1px solid rgba(255,255,255,.14)", boxShadow: "0 16px 42px -20px rgba(120,66,8,.7)" }}
+            >
+              <span className="grid h-[46px] w-[46px] shrink-0 place-items-center rounded-[14px]" style={{ background: "rgba(255,255,255,.14)" }}>
+                <ToastHourglassIcon />
               </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-extrabold leading-tight">
+              <div className="min-w-0 flex-1">
+                <span className="inline-flex h-[21px] items-center gap-1.5 rounded-[7px] px-2.5" style={{ background: "rgba(255,255,255,.16)" }}>
+                  <span className="h-1.5 w-1.5 rounded-full animate-pulse-dot" style={{ background: "#ffd54a" }} />
+                  <span className="text-[11px] font-extrabold tracking-wide" style={{ color: "#ffe9bf" }}>
+                    진행 중 · 응답 받는 중
+                  </span>
+                </span>
+                <p className="mt-[7px] text-[16px] font-bold leading-tight tracking-tight text-white">
                   {WEEK_LABELS[weekOffset]} 응답 현황 · {STUDENTS.length}명에게 알림 발송됨
                 </p>
-                <p className="text-[11px] text-white/70 mt-0.5 leading-snug tabular-nums">
-                  <b className="text-white">
-                    {STUDENTS.filter((s) => s.status !== "응답대기").length}명
-                  </b>{" "}
-                  시간 선택 완료 · <b className="text-primary">{AI_RESULT_INIT.length}명</b> 자동
-                  배정됨 · <b className="text-white">{pendingResponders.length}명</b> 응답 대기
+                <p className="mt-1 text-[12.5px] font-medium leading-[1.5] tracking-tight tabular-nums" style={{ color: "rgba(255,255,255,.72)" }}>
+                  {STUDENTS.filter((s) => s.status !== "응답대기").length}명 시간 선택 완료 ·{" "}
+                  {AI_RESULT_INIT.length}명 자동 배정됨 ·{" "}
+                  <span className="font-bold" style={{ color: "#ffdf9e" }}>
+                    {pendingResponders.length}명 응답 대기
+                  </span>
                 </p>
               </div>
-              <div className="flex w-full sm:w-auto gap-2">
+              <div className="flex w-full shrink-0 gap-2 sm:w-auto">
                 <button
                   onClick={() => {
                     if (closeEditMode) {
@@ -2670,7 +2676,8 @@ function Schedule() {
                       }),
                     );
                   }}
-                  className={`flex-1 sm:flex-initial h-11 px-4 rounded-xl text-[13px] font-extrabold inline-flex items-center justify-center gap-1 shrink-0 ${closeEditMode ? "bg-white/10 text-white" : "bg-white text-ink"}`}
+                  className="inline-flex h-[42px] flex-1 shrink-0 items-center justify-center gap-1.5 rounded-xl px-4 text-[14px] font-bold text-white sm:flex-initial"
+                  style={{ background: "rgba(255,255,255,.16)" }}
                 >
                   <Lock className="h-3.5 w-3.5" /> {closeEditMode ? "막기 종료" : "시간 막기"}
                 </button>
@@ -2680,35 +2687,44 @@ function Schedule() {
                     setPanelWeek(weekOffset);
                     setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
                   }}
-                  className="flex-1 sm:flex-initial h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-1 shrink-0 hover:brightness-110"
+                  className="inline-flex h-[42px] flex-1 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white px-[18px] text-[14px] font-bold sm:flex-initial"
+                  style={{ color: "#b46213" }}
                 >
                   <Check className="h-3.5 w-3.5" /> 확정 알림 보내기
                 </button>
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-primary text-white shadow-pop p-3 flex flex-wrap items-center gap-2.5">
-              <span className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-white grid place-items-center shrink-0">
-                <OctagonAlert
-                  className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 drop-shadow-[0_2px_3px_rgba(220,38,38,0.55)] -rotate-6 scale-110"
-                  strokeWidth={2.5}
-                />
+            <div
+              className="flex flex-wrap items-center gap-[14px] rounded-[18px] px-4 py-[15px]"
+              style={{ background: "#1f54e6", border: "1px solid rgba(255,255,255,.14)", boxShadow: "0 16px 42px -20px rgba(20,52,150,.75)" }}
+            >
+              <span className="grid h-[46px] w-[46px] shrink-0 place-items-center rounded-[14px]" style={{ background: "rgba(255,255,255,.14)" }}>
+                <ToastBellIcon />
               </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-extrabold leading-tight">
-                  !가장 먼저 할 일! {WEEK_LABELS[weekOffset]}의 안되는 시간을 먼저 닫고 가능 시간을
-                  학생에게 물어보세요
+              <div className="min-w-0 flex-1">
+                <span className="inline-flex h-[21px] items-center gap-1.5 rounded-[7px] px-2" style={{ background: "#ffd54a" }}>
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#1f54e6" }} />
+                  <span className="text-[11px] font-extrabold tracking-wide" style={{ color: "#1a2e6e" }}>
+                    STEP 1 · 먼저 할 일
+                  </span>
+                </span>
+                <p className="mt-[7px] text-[16px] font-bold leading-tight tracking-tight text-white">
+                  학생들에게 시간 선택을 먼저 요청하세요
                 </p>
-                <p className="text-[11px] text-white/80 mt-0.5 leading-snug">
-                  응답이 모이면 픽짐피티가 최적 시간표를 추천해요. 지금 바로 카톡으로 한 번에 요청
-                  보내기!
+                <p className="mt-1 text-[12.5px] font-medium leading-[1.5] tracking-tight" style={{ color: "rgba(255,255,255,.72)" }}>
+                  응답이 모여야 {WEEK_LABELS[weekOffset]} 일정을 확정할 수 있어요.
                 </p>
               </div>
               <button
                 onClick={() => setInviteIntent(true)}
-                className="w-full sm:w-auto h-11 px-4 rounded-xl bg-ink text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-1 shrink-0 hover:brightness-125"
+                className="inline-flex h-[42px] w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white px-[18px] text-[14px] font-bold sm:w-auto"
+                style={{ color: "#1f54e6" }}
               >
-                <Send className="h-3.5 w-3.5" /> 요청 보내기
+                시간 선택 요청
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1f54e6" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h13M12 5.5l6.5 6.5L12 18.5" />
+                </svg>
               </button>
             </div>
           )}
@@ -3014,6 +3030,50 @@ function ToastClockIcon() {
           <path d="M6 2v7M3 6l3 3 3-3" />
         </svg>
       </span>
+    </span>
+  );
+}
+
+function ToastBellIcon() {
+  return (
+    <span className="relative shrink-0 h-[30px] w-[30px]" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.3))" }}>
+      <span
+        className="absolute left-[5px] top-1 h-[18px] w-5 rounded-[11px_11px_6px_6px]"
+        style={{ background: "linear-gradient(160deg, #ffd98e, #f7ab1f)", boxShadow: "inset 0 -3px 5px rgba(160,90,0,.4), inset 0 2px 1.5px rgba(255,255,255,.6)" }}
+      />
+      <span className="absolute left-1 top-[18px] h-1.5 w-[22px] rounded-md" style={{ background: "linear-gradient(160deg, #ffcf7a, #ef9e12)" }} />
+      <span className="absolute left-[12.5px] top-[1px] h-[5px] w-[5px] rounded-full" style={{ background: "linear-gradient(160deg, #ffe3a6, #f3a417)" }} />
+      <span className="absolute left-3 top-[23px] h-[6px] w-[6px] rounded-full" style={{ background: "linear-gradient(160deg, #ffe3a6, #ef9e12)" }} />
+      <span
+        className="absolute left-[19px] top-0 h-[11px] w-[11px] rounded-full"
+        style={{ background: "linear-gradient(160deg, #ff8d8d, #f0463f)", boxShadow: "inset 0 1px 1px rgba(255,255,255,.5)" }}
+      />
+    </span>
+  );
+}
+
+function ToastHourglassIcon() {
+  return (
+    <span className="relative shrink-0 h-[30px] w-[30px] animate-hourglass-flip" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.3))" }}>
+      <span
+        className="absolute left-[7px] top-1 h-[22px] w-4"
+        style={{
+          clipPath: "polygon(0 0, 100% 0, 58% 50%, 100% 100%, 0 100%, 42% 50%)",
+          background: "linear-gradient(160deg, #fff5de, #ffe6b3)",
+          boxShadow: "inset 0 2px 1px rgba(255,255,255,.6)",
+        }}
+      />
+      <span
+        className="absolute left-[9px] top-[7px] h-2 w-3"
+        style={{ clipPath: "polygon(0 0, 100% 0, 50% 100%)", background: "linear-gradient(160deg, #ffbf57, #f59e1f)" }}
+      />
+      <span
+        className="absolute left-[11px] top-[18px] h-[6px] w-2"
+        style={{ clipPath: "polygon(50% 0, 0 100%, 100% 100%)", background: "linear-gradient(160deg, #ffbf57, #f08f10)" }}
+      />
+      <span className="absolute left-[14.4px] top-[14px] h-1 w-[1.6px] rounded-sm" style={{ background: "#f59e1f" }} />
+      <span className="absolute left-[5px] top-[2.5px] h-1 w-5 rounded-sm" style={{ background: "linear-gradient(160deg, #ffd98e, #e9920f)" }} />
+      <span className="absolute left-[5px] top-[23.5px] h-1 w-5 rounded-sm" style={{ background: "linear-gradient(160deg, #ffd98e, #e9920f)" }} />
     </span>
   );
 }

@@ -303,3 +303,38 @@
     scrollbar-width: none;
   }
 }
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes hourglass-flip {
+  0%,
+  40% {
+    transform: rotate(0deg);
+  }
+  50%,
+  90% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@layer utilities {
+  .animate-pulse-dot {
+    animation: pulse-dot 1.3s ease-in-out infinite;
+  }
+  .animate-hourglass-flip {
+    animation: hourglass-flip 4.5s ease-in-out infinite;
+  }
+}

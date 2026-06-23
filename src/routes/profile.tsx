@@ -44,6 +44,9 @@ type WeeklySession = {
   scheduledAt: string;
   status: string;
   counterpart: string;
+  dayKey?: string;
+  timeLabel?: string;
+  avatarUrl?: string | null;
   gym?: string | null;
   note?: string | null;
 };
@@ -53,7 +56,10 @@ type TrainerSessionRow = {
   scheduled_at: string;
   status: string;
   note: string | null;
-  student_rosters: { student_name: string } | { student_name: string }[] | null;
+  student_rosters:
+    | { student_name: string; student_user_id?: string | null }
+    | { student_name: string; student_user_id?: string | null }[]
+    | null;
 };
 
 type StudentSessionRow = {
@@ -66,6 +72,19 @@ type StudentSessionRow = {
 
 function relationOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function formatLocalDate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+function makeWeekSlotDate(weekStart: Date, dayOfWeek: number, hour: number) {
+  const date = new Date(weekStart);
+  date.setDate(date.getDate() + dayOfWeek);
+  date.setHours(hour, 0, 0, 0);
+  return date;
 }
 
 function ProfilePage() {
@@ -217,23 +236,113 @@ function ProfilePage() {
         setGym(trainerRow.gym ?? "");
         setIntro(trainerRow.intro ?? "");
         setRecentSession(null);
-        const { data: sessions } = await supabase
+        const { data: scheduleTrainer } = await supabase
+          .from("trainer_profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        const schedule = scheduleTrainer
+          ? (
+              await supabase
+                .from("weekly_schedules")
+                .select("id")
+                .eq("trainer_id", scheduleTrainer.id)
+                .eq("week_start", formatLocalDate(trainerWeekStart))
+                .maybeSingle()
+            ).data
+          : null;
+
+        const confirmedSessions: WeeklySession[] = [];
+        if (schedule) {
+          const { data: confirmedSelections } = await supabase
+            .from("student_selections")
+            .select("id,slot_id,student_user_id,student_name,status")
+            .eq("schedule_id", schedule.id)
+            .eq("status", "confirmed");
+
+          const studentUserIds = [
+            ...new Set(
+              (confirmedSelections ?? [])
+                .map((selection) => selection.student_user_id)
+                .filter((studentUserId): studentUserId is string => Boolean(studentUserId)),
+            ),
+          ];
+          const { data: studentProfiles } = studentUserIds.length
+            ? await supabase.from("profiles").select("id,avatar_url").in("id", studentUserIds)
+            : { data: [] as { id: string; avatar_url: string | null }[] };
+          const avatarByUserId = new Map(
+            ((studentProfiles ?? []) as { id: string; avatar_url: string | null }[]).map(
+              (profile) => [profile.id, profile.avatar_url],
+            ),
+          );
+
+          const slotIds = [
+            ...new Set(
+              (confirmedSelections ?? [])
+                .map((selection) => selection.slot_id)
+                .filter((slotId): slotId is string => Boolean(slotId)),
+            ),
+          ];
+          const { data: slots } = slotIds.length
+            ? await supabase
+                .from("time_slots")
+                .select("id,day_of_week,hour")
+                .in("id", slotIds)
+            : { data: [] };
+
+          const slotById = new Map((slots ?? []).map((slot) => [slot.id, slot]));
+          const dayKeys = ["월", "화", "수", "목", "금", "토", "일"];
+          for (const selection of confirmedSelections ?? []) {
+            if (!selection.slot_id) continue;
+            const slot = slotById.get(selection.slot_id);
+            if (!slot) continue;
+            const scheduledAt = makeWeekSlotDate(
+              trainerWeekStart,
+              slot.day_of_week,
+              slot.hour,
+            ).toISOString();
+            confirmedSessions.push({
+              id: selection.id,
+              scheduledAt,
+              status: "scheduled",
+              counterpart: selection.student_name,
+              dayKey: dayKeys[slot.day_of_week],
+              timeLabel: `${String(slot.hour).padStart(2, "0")}:00`,
+              avatarUrl: avatarByUserId.get(selection.student_user_id) ?? null,
+              note: null,
+            });
+          }
+        }
+
+        const { data: fallbackSessions } = await supabase
           .from("pt_sessions")
-          .select("id,scheduled_at,status,note,student_rosters(student_name)")
+          .select("id,scheduled_at,status,note,student_rosters(student_name,student_user_id)")
           .eq("trainer_id", trainerRow.id)
           .gte("scheduled_at", trainerWeekStart.toISOString())
           .lt("scheduled_at", trainerWeekEnd.toISOString())
           .order("scheduled_at", { ascending: true });
         if (!cancelled) {
-          setWeeklySessions(
-            ((sessions ?? []) as TrainerSessionRow[]).map((session) => ({
+          const confirmedNames = new Set(confirmedSessions.map((session) => session.counterpart));
+          const unregisteredManualSessions = ((fallbackSessions ?? []) as TrainerSessionRow[])
+            .filter((session) => {
+              const roster = relationOne(session.student_rosters);
+              if (!roster) return true;
+              return !roster.student_user_id && !confirmedNames.has(roster.student_name);
+            })
+            .map((session) => ({
               id: session.id,
               scheduledAt: session.scheduled_at,
               status: session.status,
               counterpart:
                 relationOne(session.student_rosters)?.student_name ?? "학생 이름 확인 필요",
               note: session.note,
-            })),
+            }));
+
+          setWeeklySessions(
+            [...confirmedSessions, ...unregisteredManualSessions].sort(
+              (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+            ),
           );
         }
       } else {
@@ -416,38 +525,38 @@ function ProfilePage() {
 
   return (
     <AppShell>
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">계정</p>
-          <h1 className="mt-1.5 text-[26px] sm:text-[30px] font-black text-ink leading-tight">
+          <h1 className="mt-0.5 text-[22px] sm:text-[28px] font-black text-ink leading-tight">
             내 정보
           </h1>
-          <p className="mt-2 text-[13.5px] text-ink-soft">
+          <p className="mt-1 text-[12px] sm:text-[13.5px] text-ink-soft">
             기본 정보와 {role === "trainer" ? "결제·초대 내역" : "프로필"}을 한눈에 확인해요.
           </p>
         </div>
         {!editMode && (
           <button
             onClick={() => setEditMode(true)}
-            className="h-10 px-4 rounded-full bg-ink text-white text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-110"
+            className="h-9 px-3.5 rounded-full bg-ink text-white text-[11.5px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-110"
           >
             <Pencil className="h-3.5 w-3.5" /> 정보 수정
           </button>
         )}
       </div>
 
-      <div className="mt-6 grid lg:grid-cols-[280px_1fr] gap-4">
+      <div className="mt-3 grid lg:grid-cols-[220px_1fr] gap-3">
         {/* Avatar card */}
-        <div className="rounded-2xl border border-border bg-white p-5 text-center">
+        <div className="rounded-2xl border border-border bg-white p-3.5 text-center">
           <div className="relative inline-block">
             {meta.avatar_url ? (
               <img
                 src={meta.avatar_url}
                 alt=""
-                className="h-24 w-24 rounded-2xl object-cover mx-auto ring-2 ring-border"
+                className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover mx-auto ring-2 ring-border"
               />
             ) : (
-              <div className="h-24 w-24 rounded-2xl bg-primary/15 grid place-items-center text-[32px] font-black text-primary mx-auto">
+              <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-primary/15 grid place-items-center text-[24px] sm:text-[28px] font-black text-primary mx-auto">
                 {(name || "?")[0]}
               </div>
             )}
@@ -458,20 +567,20 @@ function ProfilePage() {
               <TrainerRankBadge rank={trainerRank} />
             )}
           </div>
-          <p className="mt-3 text-[15px] font-extrabold text-ink">{name || "이름 없음"}</p>
-          <span className="mt-1 inline-flex items-center px-2.5 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-extrabold">
+          <p className="mt-2 text-[14px] font-extrabold text-ink">{name || "이름 없음"}</p>
+          <span className="mt-1 inline-flex items-center px-2.5 h-5 rounded-full bg-primary/10 text-primary text-[10.5px] font-extrabold">
             {role === "trainer" ? "트레이너" : "회원"}
           </span>
           {editMode && (
-            <button className="mt-4 w-full h-10 rounded-xl bg-white border border-border-strong text-[12px] font-bold text-ink hover:bg-muted">
+            <button className="mt-3 w-full h-9 rounded-xl bg-white border border-border-strong text-[11.5px] font-bold text-ink hover:bg-muted">
               사진 변경
             </button>
           )}
         </div>
 
         {/* Info / Form */}
-        <div className="rounded-2xl border border-border bg-white p-5 sm:p-6">
-          <div className="grid sm:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-border bg-white p-4 sm:p-5">
+          <div className="grid sm:grid-cols-2 gap-3">
             <Field label="이름" value={name} onChange={setName} editable={editMode} />
             <Field
               label="이메일"
@@ -496,7 +605,7 @@ function ProfilePage() {
                   담당 트레이너
                 </span>
                 {assignedTrainer ? (
-                  <div className="mt-1.5 flex h-11 items-center gap-2.5 rounded-xl border border-border bg-surface-muted px-3.5">
+                  <div className="mt-1 flex h-10 items-center gap-2.5 rounded-xl border border-border bg-surface-muted px-3">
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white text-[11px] font-black text-primary ring-1 ring-border">
                       {assignedTrainer.name[0]}
                     </span>
@@ -514,7 +623,7 @@ function ProfilePage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-1.5 flex h-11 items-center rounded-xl border border-border bg-surface-muted px-3.5 text-[12px] text-ink-soft">
+                  <div className="mt-1 flex h-10 items-center rounded-xl border border-border bg-surface-muted px-3 text-[12px] text-ink-soft">
                     연결된 담당 트레이너가 없습니다.
                   </div>
                 )}
@@ -522,16 +631,16 @@ function ProfilePage() {
             )}
           </div>
           {editMode && (
-            <div className="mt-6 flex items-center gap-2">
+            <div className="mt-4 flex items-center gap-2">
               <button
                 onClick={save}
-                className="h-11 px-5 rounded-full bg-primary text-white text-[13px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-110 shadow-pop"
+                className="h-10 px-4 rounded-full bg-primary text-white text-[12.5px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-110 shadow-pop"
               >
                 <Check className="h-4 w-4" /> 저장하기
               </button>
               <button
                 onClick={() => setEditMode(false)}
-                className="h-11 px-4 rounded-full bg-white border border-border text-ink text-[13px] font-bold"
+                className="h-10 px-4 rounded-full bg-white border border-border text-ink text-[12.5px] font-bold"
               >
                 취소
               </button>
@@ -923,8 +1032,10 @@ function TrainerWeeklySchedule({
 
   activeSessions.forEach((session) => {
     const date = new Date(session.scheduledAt);
-    const day = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
-    const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    const day = session.dayKey ?? ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+    const time =
+      session.timeLabel ??
+      `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
     times.add(time);
     const key = `${day}-${time}`;
     sessionByCell.set(key, [...(sessionByCell.get(key) ?? []), session]);
@@ -933,37 +1044,38 @@ function TrainerWeeklySchedule({
   const sortedTimes = [...times].sort();
 
   const now = Date.now();
+  const todayKey = dayKeys[(new Date().getDay() + 6) % 7];
   return (
-    <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
+    <section className="mt-4 overflow-hidden rounded-2xl border border-black bg-ink text-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4 sm:px-6">
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
             <CalendarDays className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-white/55">
               {WEEK_OFFSET_LABELS[weekOffset] ?? `${weekOffset}주 뒤`}
             </p>
-            <h2 className="text-[16px] font-black text-ink">수업 운영 요약</h2>
+            <h2 className="text-[16px] font-black text-white">수업 운영 요약</h2>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-full border border-border-strong">
+          <div className="flex items-center rounded-full border border-white/15 bg-white/5">
             <button
               onClick={() => onWeekOffsetChange(Math.max(0, weekOffset - 1))}
               disabled={weekOffset <= 0}
-              className="grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-muted disabled:opacity-30"
+              className="grid h-9 w-9 place-items-center rounded-full text-white/60 hover:bg-white/10 disabled:opacity-30"
               aria-label="이전 주"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="px-1 text-[11.5px] font-extrabold text-ink tabular-nums">
+            <span className="px-1 text-[11.5px] font-extrabold text-white tabular-nums">
               {WEEK_OFFSET_LABELS[weekOffset] ?? `${weekOffset}주 뒤`}
             </span>
             <button
               onClick={() => onWeekOffsetChange(Math.min(4, weekOffset + 1))}
               disabled={weekOffset >= 4}
-              className="grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-muted disabled:opacity-30"
+              className="grid h-9 w-9 place-items-center rounded-full text-white/60 hover:bg-white/10 disabled:opacity-30"
               aria-label="다음 주"
             >
               <ChevronRight className="h-4 w-4" />
@@ -972,7 +1084,7 @@ function TrainerWeeklySchedule({
           <Link
             to="/schedule"
             search={{ week: weekOffset }}
-            className="inline-flex h-9 items-center rounded-full border border-border-strong px-3.5 text-[11.5px] font-extrabold text-ink hover:bg-muted"
+            className="inline-flex h-9 items-center rounded-full border border-white/15 px-3.5 text-[11.5px] font-extrabold text-white hover:bg-white/10"
           >
             자세히 보기
           </Link>
@@ -985,36 +1097,67 @@ function TrainerWeeklySchedule({
         <ScheduleMetric label="예정" value={`${upcomingCount}회`} icon={<Clock3 className="h-3.5 w-3.5" />} accent />
       </div>
 
-      <div className="border-t border-border px-5 pb-6 pt-4 sm:px-6">
+      <div className="border-t border-white/10 px-5 pb-6 pt-4 sm:px-6">
         <div className="mb-3 flex items-center gap-2">
-          <UsersRound className="h-4 w-4 text-ink" />
-          <h3 className="text-[13px] font-black text-ink">
-            확정된 {WEEK_OFFSET_LABELS[weekOffset] ?? `${weekOffset}주 뒤`} 타임테이블
+          <UsersRound className="h-4 w-4 text-primary" />
+          <h3 className="text-[13px] font-black text-white">
+            확정된 <span className="text-primary">{WEEK_OFFSET_LABELS[weekOffset] ?? `${weekOffset}주 뒤`}</span> 타임테이블
           </h3>
         </div>
         {sortedTimes.length ? (
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03]">
             <div className="min-w-[680px]">
-              <div className="grid grid-cols-[64px_repeat(7,minmax(76px,1fr))] bg-surface-muted">
-                <div className="px-2 py-2.5 text-center text-[10px] font-bold text-ink-soft">시간</div>
+              <div className="grid grid-cols-[54px_repeat(7,minmax(76px,1fr))] border-b border-white/10 bg-white/5">
+                <div className="px-2 py-2.5 text-center text-[10px] font-bold text-white/50">시간</div>
                 {dayKeys.map((day) => (
-                  <div key={day} className="border-l border-border px-2 py-2.5 text-center text-[11px] font-black text-ink">{day}</div>
+                  <div
+                    key={day}
+                    className={`border-l px-2 py-2.5 text-center text-[11px] font-black ${
+                      weekOffset === 0 && day === todayKey
+                        ? "border-primary text-primary ring-1 ring-inset ring-primary"
+                        : "border-white/10 text-white/90"
+                    }`}
+                  >
+                    {day}
+                  </div>
                 ))}
               </div>
               {sortedTimes.map((time) => (
-                <div key={time} className="grid min-h-14 grid-cols-[64px_repeat(7,minmax(76px,1fr))] border-t border-border">
-                  <div className="grid place-items-center bg-surface-muted/60 text-[10.5px] font-bold text-ink-soft">{time}</div>
+                <div key={time} className="grid min-h-12 grid-cols-[54px_repeat(7,minmax(76px,1fr))] border-b border-white/10 last:border-b-0">
+                  <div className="grid place-items-center bg-white/5 text-[11px] font-bold text-white/50">{time}</div>
                   {dayKeys.map((day) => {
                     const cellSessions = sessionByCell.get(`${day}-${time}`) ?? [];
                     return (
-                      <div key={day} className="flex flex-col justify-center gap-1 border-l border-border p-1.5">
+                      <div
+                        key={day}
+                        className={`flex flex-col justify-center gap-1 border-l p-1.5 ${
+                          weekOffset === 0 && day === todayKey
+                            ? "border-primary ring-1 ring-inset ring-primary/80"
+                            : "border-white/10"
+                        }`}
+                      >
                         {cellSessions.map((session) => (
                           <span
                             key={session.id}
-                            className={`truncate rounded-md px-1.5 py-1 text-center text-[10.5px] font-extrabold ${new Date(session.scheduledAt).getTime() < now ? "bg-muted text-ink-soft" : "bg-primary/10 text-primary"}`}
+                            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-md px-1.5 py-1 text-[10.5px] font-extrabold ${
+                              new Date(session.scheduledAt).getTime() < now
+                                ? "bg-white/5 text-white/50"
+                                : "bg-primary/15 text-primary"
+                            }`}
                             title={`${session.counterpart} 회원`}
                           >
-                            {session.counterpart}
+                            {session.avatarUrl ? (
+                              <img
+                                src={session.avatarUrl}
+                                alt=""
+                                className="h-4 w-4 shrink-0 rounded-full object-cover"
+                              />
+                            ) : (
+                              <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-white/15 text-[8px] text-white">
+                                {session.counterpart[0]}
+                              </span>
+                            )}
+                            <span className="truncate">{session.counterpart}</span>
                           </span>
                         ))}
                       </div>
@@ -1025,7 +1168,7 @@ function TrainerWeeklySchedule({
             </div>
           </div>
         ) : (
-          <div className="flex min-h-24 items-center justify-center gap-2 rounded-xl bg-surface-muted px-4 text-[12px] font-semibold text-ink-soft">
+          <div className="flex min-h-24 items-center justify-center gap-2 rounded-xl bg-white/5 px-4 text-[12px] font-semibold text-white/55">
             <CalendarClock className="h-4 w-4" />{" "}
             {WEEK_OFFSET_LABELS[weekOffset] ?? `${weekOffset}주 뒤`}에 확정된 수업이 없습니다.
           </div>
@@ -1068,6 +1211,8 @@ function StudentWeeklyInsight({
   const intervalDays = nextDate && recentDate
     ? Math.max(0, Math.round((nextDate.getTime() - recentDate.getTime()) / 86_400_000))
     : null;
+  const daysUntilLabel =
+    daysUntil === null ? null : daysUntil === 0 ? "오늘" : `${daysUntil}일 남음`;
   const formatLong = (date: Date) =>
     new Intl.DateTimeFormat("ko-KR", {
       month: "long",
@@ -1079,7 +1224,7 @@ function StudentWeeklyInsight({
 
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-white">
-      <div className="relative overflow-hidden bg-ink px-5 py-6 text-white sm:px-7">
+      <div className="relative overflow-hidden bg-ink px-5 py-5 text-white sm:px-7 sm:py-6">
         <div className="absolute right-0 top-0 h-full w-40 bg-primary/20 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -1099,9 +1244,9 @@ function StudentWeeklyInsight({
               <h2 className="mt-3 text-[20px] font-black">예정된 PT가 없어요.</h2>
             )}
           </div>
-          {daysUntil !== null && (
-            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-primary text-center text-[17px] font-black shadow-pop">
-              D-{daysUntil}
+          {daysUntilLabel && (
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary px-1 text-center text-[11px] font-black leading-tight shadow-pop sm:h-16 sm:w-16 sm:text-[13px]">
+              {daysUntilLabel}
             </span>
           )}
         </div>
@@ -1257,8 +1402,8 @@ function ScheduleMetric({
   accent?: boolean;
 }) {
   return (
-    <div className={`rounded-xl px-3 py-3 ${accent ? "bg-primary text-white" : "bg-surface-muted text-ink"}`}>
-      <div className={`flex items-center gap-1 text-[10.5px] font-bold ${accent ? "text-white/80" : "text-ink-soft"}`}>
+    <div className={`rounded-xl px-3 py-3 ${accent ? "bg-primary text-white" : "bg-white/5 text-white"}`}>
+      <div className={`flex items-center gap-1 text-[10.5px] font-bold ${accent ? "text-white/80" : "text-white/55"}`}>
         {icon} {label}
       </div>
       <p className="mt-1 text-[18px] font-black tabular-nums">{value}</p>
@@ -1290,10 +1435,10 @@ function Field({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="mt-1.5 h-11 w-full px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[14px] font-semibold text-ink"
+          className="mt-1 h-10 w-full px-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] font-semibold text-ink"
         />
       ) : (
-        <p className="mt-1.5 h-11 px-3.5 rounded-xl bg-surface-muted border border-border flex items-center text-[14px] font-semibold text-ink">
+        <p className="mt-1 h-10 px-3 rounded-xl bg-surface-muted border border-border flex items-center text-[13px] font-semibold text-ink">
           {value || <span className="text-ink-soft font-normal">—</span>}
         </p>
       )}

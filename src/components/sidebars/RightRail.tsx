@@ -33,6 +33,19 @@ type PopularTrainer = {
   created_at: string;
 };
 
+type AppAd = {
+  id: string;
+  audience: "all" | "student" | "trainer";
+  placement: string;
+  label: string;
+  title: string;
+  description: string;
+  cta_label: string;
+  cta_href: string;
+  tone: "dark" | "primary" | "light";
+  action: "link" | "copy_invite";
+};
+
 export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const metaRole = (user?.user_metadata as { role?: string } | undefined)?.role as
@@ -56,6 +69,7 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
 
   const [toast, setToast] = useState<string | null>(null);
   const [popularTrainers, setPopularTrainers] = useState<PopularTrainer[]>([]);
+  const [ads, setAds] = useState<AppAd[]>([]);
 
   useEffect(() => {
     if (!user || String(user.id).startsWith("virtual-")) {
@@ -111,6 +125,53 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
       cancelled = true;
     };
   }, [mobileMenu]);
+
+  useEffect(() => {
+    if (!mobileMenu || !roleResolved) return;
+    let cancelled = false;
+    const fallbackAds: AppAd[] = [
+      {
+        id: "trainer-pro",
+        audience: "trainer",
+        placement: "mobile_menu",
+        label: "AD",
+        title: "픽짐피티 Pro\n첫 달 50% 할인",
+        description: "학생 40명과 알림톡 600건을 포함해요.",
+        cta_label: "요금제 보기",
+        cta_href: "/pricing",
+        tone: "light",
+        action: "link",
+      },
+      {
+        id: "trainer-invite",
+        audience: "trainer",
+        placement: "mobile_menu",
+        label: "EVENT",
+        title: "동료쌤 초대 +\nBasic 14일 무료",
+        description: "초대한 쌤이 첫 일정을 만들면 두 분 모두 14일 무료.",
+        cta_label: "트레이너 초대 링크 복사",
+        cta_href: "",
+        tone: "primary",
+        action: "copy_invite",
+      },
+    ];
+
+    supabase
+      .from("app_ads" as never)
+      .select("id,audience,placement,label,title,description,cta_label,cta_href,tone,action")
+      .eq("is_active", true)
+      .eq("placement", "mobile_menu")
+      .order("priority", { ascending: true })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        const rows = error ? fallbackAds : ((data ?? []) as unknown as AppAd[]);
+        setAds(rows.filter((ad) => ad.audience === "all" || ad.audience === role));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mobileMenu, role, roleResolved]);
   const fireToast = (t: string) => {
     setToast(t);
     setTimeout(() => setToast(null), 3000);
@@ -269,64 +330,101 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
       )}
 
       {mobileMenu ? (
-        <div className="rounded-2xl border border-border bg-card p-3.5">
+        <div className="overflow-hidden rounded-2xl border border-border bg-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3.5 pt-3.5">
               <Trophy className="h-4 w-4 text-primary" />
               <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
-                인기 트레이너
+                인기 트레이너 TOP 5
               </p>
             </div>
-            <span className="text-[10px] text-muted-foreground">TOP 5</span>
+            <span className="px-3.5 pt-3.5 text-[10px] text-muted-foreground">실시간</span>
           </div>
-          <ol className="mt-3 space-y-1">
-            {popularTrainers.map((trainer, index) => (
-              <li key={trainer.id}>
-                <Link
-                  to="/booking"
-                  search={{ trainer: trainer.id }}
-                  className="flex items-center gap-2.5 rounded-xl px-1.5 py-2 hover:bg-muted"
-                >
-                  <span
-                    className={`grid h-6 w-6 place-items-center rounded-md text-[11px] font-black ${index === 0 ? "bg-primary text-white" : "bg-muted text-ink-soft"}`}
-                  >
-                    {index + 1}
+          {popularTrainers.length ? (
+            <div className="px-3 pb-3 pt-3">
+              <Link
+                to="/booking"
+                search={{ trainer: popularTrainers[0].id }}
+                className="flex items-center gap-2 rounded-[14px] border border-primary/10 bg-[#FFF1F8] p-2 transition hover:border-primary/25"
+              >
+                <span className="relative shrink-0">
+                  {popularTrainers[0].avatar_url ? (
+                    <img
+                      src={popularTrainers[0].avatar_url}
+                      alt=""
+                      className="h-11 w-11 rounded-full object-cover ring-2 ring-white"
+                    />
+                  ) : (
+                    <span
+                      className="grid h-11 w-11 place-items-center rounded-full text-[14px] font-black text-white ring-2 ring-white"
+                      style={{ backgroundColor: popularTrainers[0].theme_from || "#FF008C" }}
+                    >
+                      {popularTrainers[0].name[0]}
+                    </span>
+                  )}
+                  <TrainerRankBadge rank={1} className="ring-[#FFF1F8]" />
+                  <VerifiedBadge />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-black text-ink">
+                    {popularTrainers[0].name} 트레이너
                   </span>
-                  <span className="relative shrink-0">
-                    {trainer.avatar_url ? (
-                      <img
-                        src={trainer.avatar_url}
-                        alt=""
-                        className="h-9 w-9 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span
-                        className="grid h-9 w-9 place-items-center rounded-full text-[12px] font-black text-white"
-                        style={{ backgroundColor: trainer.theme_from || "#FF008C" }}
-                      >
-                        {trainer.name[0]}
+                  <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                    {popularTrainers[0].gym || "소속 센터 준비 중"}
+                  </span>
+                </span>
+                <span className="text-right">
+                  <span className="block text-[11px] font-black text-ink">1위</span>
+                  <span className="block text-[10.5px] font-bold text-primary">예약 화면</span>
+                </span>
+              </Link>
+              <ol className="mt-1">
+                {popularTrainers.slice(1).map((trainer, index) => (
+                  <li key={trainer.id}>
+                    <Link
+                      to="/booking"
+                      search={{ trainer: trainer.id }}
+                      className="grid grid-cols-[24px_34px_1fr_auto] items-center gap-2 rounded-xl px-1 py-2 transition hover:bg-muted/70"
+                    >
+                      <span className="grid h-6 w-6 place-items-center rounded-md bg-muted text-[11px] font-black text-ink-soft">
+                        {index + 2}
                       </span>
-                    )}
-                    {index < 3 && (
-                      <TrainerRankBadge rank={(index + 1) as 1 | 2 | 3} />
-                    )}
-                    {index === 0 && (
-                      <VerifiedBadge />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-extrabold text-ink">
-                      {trainer.name} 트레이너
-                    </span>
-                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                      {trainer.gym || "소속 센터 준비 중"}
-                    </span>
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              </li>
-            ))}
-          </ol>
+                      <span className="relative">
+                        {trainer.avatar_url ? (
+                          <img
+                            src={trainer.avatar_url}
+                            alt=""
+                            className="h-8 w-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span
+                            className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-black text-white"
+                            style={{ backgroundColor: trainer.theme_from || "#FF008C" }}
+                          >
+                            {trainer.name[0]}
+                          </span>
+                        )}
+                        {index < 2 && (
+                          <TrainerRankBadge rank={(index + 2) as 2 | 3} />
+                        )}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                          {trainer.name}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                          {trainer.gym || "소속 센터 준비 중"}
+                        </span>
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : (
+            <div className="m-3 h-28 animate-pulse rounded-xl bg-surface-muted" />
+          )}
         </div>
       ) : (
         <div className="rounded-2xl border border-border bg-card p-3.5">
@@ -365,46 +463,73 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
         </div>
       )}
 
-      {mobileMenu && (
-        <div className="rounded-2xl bg-white border border-border p-3.5">
-          <span className="inline-flex items-center px-2 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-black tracking-widest">
-            AD
-          </span>
-          <p className="mt-2 text-[15px] font-extrabold text-ink leading-tight">
-            픽짐피티 Pro
-            <br />첫 달 50% 할인
-          </p>
-          <p className="mt-1.5 text-[12px] text-ink-soft leading-relaxed">
-            학생 40명과 알림톡 600건을 포함해요.
-          </p>
-          <Link
-            to="/pricing"
-            className="mt-3 inline-flex h-9 items-center px-4 rounded-full bg-ink text-white text-[12px] font-bold w-full justify-center"
-          >
-            요금제 보기
-          </Link>
-        </div>
-      )}
-
-      {/* Promo / invite */}
-      <div className="rounded-2xl bg-white border border-border p-3.5">
-        <span className="inline-flex items-center px-2 h-5 rounded-full bg-ink text-white text-[10px] font-black tracking-widest">
-          EVENT
-        </span>
-        <p className="mt-3 text-[15px] font-extrabold text-ink leading-tight">
-          동료쌤 초대 +<br />
-          Basic 14일 무료
-        </p>
-        <p className="mt-2 text-[12px] text-ink-soft leading-relaxed">
-          초대한 쌤이 첫 일정을 만들면 두 분 모두 14일 무료.
-        </p>
-        <button
-          onClick={copyInvite}
-          className="mt-4 inline-flex h-9 items-center gap-1.5 px-4 rounded-full bg-primary text-white text-[12px] font-bold w-full justify-center hover:brightness-110"
-        >
-          <Copy className="h-3.5 w-3.5" /> 트레이너 초대 링크 복사
-        </button>
-      </div>
+      {mobileMenu
+        ? ads.map((ad) => {
+            const toneClass =
+              ad.tone === "primary"
+                ? "border-primary/30 bg-primary/[0.05]"
+                : ad.tone === "dark"
+                  ? "border-ink bg-ink text-white"
+                  : "border-border bg-white";
+            const labelClass =
+              ad.tone === "dark"
+                ? "bg-white/10 text-white"
+                : ad.tone === "primary"
+                  ? "bg-ink text-white"
+                  : "bg-primary/10 text-primary";
+            const titleClass = ad.tone === "dark" ? "text-white" : "text-ink";
+            const bodyClass = ad.tone === "dark" ? "text-white/65" : "text-ink-soft";
+            return (
+              <div key={ad.id} className={`rounded-2xl border p-3.5 ${toneClass}`}>
+                <span
+                  className={`inline-flex h-5 items-center rounded-full px-2 text-[10px] font-black tracking-widest ${labelClass}`}
+                >
+                  {ad.label}
+                </span>
+                <p className={`mt-2 whitespace-pre-line text-[15px] font-extrabold leading-tight ${titleClass}`}>
+                  {ad.title}
+                </p>
+                <p className={`mt-1.5 text-[12px] leading-relaxed ${bodyClass}`}>
+                  {ad.description}
+                </p>
+                {ad.action === "copy_invite" ? (
+                  <button
+                    onClick={copyInvite}
+                    className="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-bold text-white hover:brightness-110"
+                  >
+                    <Copy className="h-3.5 w-3.5" /> {ad.cta_label}
+                  </button>
+                ) : (
+                  <Link
+                    to={ad.cta_href || "/pricing"}
+                    className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-full bg-ink px-4 text-[12px] font-bold text-white"
+                  >
+                    {ad.cta_label}
+                  </Link>
+                )}
+              </div>
+            );
+          })
+        : role === "trainer" && (
+            <div className="rounded-2xl bg-white border border-border p-3.5">
+              <span className="inline-flex items-center px-2 h-5 rounded-full bg-ink text-white text-[10px] font-black tracking-widest">
+                EVENT
+              </span>
+              <p className="mt-3 text-[15px] font-extrabold text-ink leading-tight">
+                동료쌤 초대 +<br />
+                Basic 14일 무료
+              </p>
+              <p className="mt-2 text-[12px] text-ink-soft leading-relaxed">
+                초대한 쌤이 첫 일정을 만들면 두 분 모두 14일 무료.
+              </p>
+              <button
+                onClick={copyInvite}
+                className="mt-4 inline-flex h-9 items-center gap-1.5 px-4 rounded-full bg-primary text-white text-[12px] font-bold w-full justify-center hover:brightness-110"
+              >
+                <Copy className="h-3.5 w-3.5" /> 트레이너 초대 링크 복사
+              </button>
+            </div>
+          )}
 
       {/* Notice */}
       {!mobileMenu && (
