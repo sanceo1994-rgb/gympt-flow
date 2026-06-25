@@ -8,11 +8,11 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 
 import appCss from "../styles.css?url";
 
 const SupportFab = lazy(() => import("@/components/SupportFab").then((m) => ({ default: m.SupportFab })));
-const PersonaSwitcher = lazy(() => import("@/components/PersonaSwitcher").then((m) => ({ default: m.PersonaSwitcher })));
 
 function FloatingTools() {
   const [mounted, setMounted] = useState(false);
@@ -20,7 +20,6 @@ function FloatingTools() {
   if (!mounted) return null;
   return (
     <Suspense fallback={null}>
-      <PersonaSwitcher />
       <SupportFab />
     </Suspense>
   );
@@ -99,6 +98,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/pickgympt-tab-transparent.png" },
+      { rel: "shortcut icon", type: "image/png", href: "/pickgympt-tab-transparent.png" },
+      { rel: "apple-touch-icon", sizes: "192x192", href: "/pickgympt-touch-transparent.png" },
       { rel: "preconnect", href: "https://cdn.jsdelivr.net" },
     ],
   }),
@@ -127,6 +129,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AnalyticsProvider />
       <Outlet />
       <FloatingTools />
     </QueryClientProvider>

@@ -20,9 +20,13 @@ function createSupabaseClient() {
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
-      storage: typeof window !== 'undefined' ? localStorage : undefined,
+      // sessionStorage (not localStorage) so each browser tab/window keeps its
+      // own independent login — needed for testing multiple accounts side by
+      // side. Trade-off: login does not persist across a tab close or restart.
+      storage: typeof window !== 'undefined' ? sessionStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
+      flowType: 'pkce',
     }
   });
 }

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhoneNumber } from "@/lib/phone";
 
 export const Route = createFileRoute("/signup-email")({
   head: () => ({ meta: [{ title: "이메일로 가입 — 픽짐피티 PickGymPT" }] }),
@@ -12,6 +13,7 @@ function SignupEmail() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,7 +25,7 @@ function SignupEmail() {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email, password: pw,
-          options: { data: { name }, emailRedirectTo: window.location.origin + "/" },
+          options: { data: { name, phone: formatPhoneNumber(phone) }, emailRedirectTo: window.location.origin + "/" },
         });
         if (error) throw error;
         navigate({ to: "/" });
@@ -50,10 +52,16 @@ function SignupEmail() {
 
         <div className="mt-6 grid gap-2.5">
           {mode === "signup" && (
+            <>
             <div>
               <label className="text-[11px] font-bold text-ink-soft">이름</label>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="홍길동" className="mt-1 h-12 w-full px-4 rounded-xl bg-surface-muted border border-border focus:border-primary outline-none text-[14px] font-semibold" />
             </div>
+            <div>
+              <label className="text-[11px] font-bold text-ink-soft">전화번호</label>
+              <input inputMode="numeric" value={phone} onChange={(e) => setPhone(formatPhoneNumber(e.target.value))} placeholder="010-0000-0000" className="mt-1 h-12 w-full px-4 rounded-xl bg-surface-muted border border-border focus:border-primary outline-none text-[14px] font-semibold tabular-nums" />
+            </div>
+            </>
           )}
           <div>
             <label className="text-[11px] font-bold text-ink-soft">이메일</label>
@@ -67,7 +75,7 @@ function SignupEmail() {
 
         {err && <p className="mt-3 text-[12px] text-destructive font-bold">{err}</p>}
 
-        <button onClick={submit} disabled={busy || !email || !pw || (mode === "signup" && !name)} className="mt-5 h-14 w-full rounded-2xl bg-primary text-white text-[15px] font-extrabold disabled:opacity-50">
+        <button onClick={submit} disabled={busy || !email || !pw || (mode === "signup" && (!name || phone.replace(/\D/g, "").length !== 11))} className="mt-5 h-14 w-full rounded-2xl bg-primary text-white text-[15px] font-extrabold disabled:opacity-50">
           {busy ? "처리 중..." : mode === "signup" ? "가입하고 시작하기" : "로그인"}
         </button>
 

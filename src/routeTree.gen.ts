@@ -21,6 +21,8 @@ import { Route as BookingRouteImport } from './routes/booking'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoTrainerRouteImport } from './routes/demo.trainer'
 import { Route as DemoStudentRouteImport } from './routes/demo.student'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AccountDeleteRouteImport } from './routes/account.delete'
 
 const TeamRoute = TeamRouteImport.update({
   id: '/team',
@@ -82,6 +84,16 @@ const DemoStudentRoute = DemoStudentRouteImport.update({
   path: '/demo/student',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountDeleteRoute = AccountDeleteRouteImport.update({
+  id: '/account/delete',
+  path: '/account/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +106,8 @@ export interface FileRoutesByFullPath {
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
+  '/account/delete': typeof AccountDeleteRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/demo/student': typeof DemoStudentRoute
   '/demo/trainer': typeof DemoTrainerRoute
 }
@@ -108,6 +122,8 @@ export interface FileRoutesByTo {
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
+  '/account/delete': typeof AccountDeleteRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/demo/student': typeof DemoStudentRoute
   '/demo/trainer': typeof DemoTrainerRoute
 }
@@ -123,6 +139,8 @@ export interface FileRoutesById {
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
   '/team': typeof TeamRoute
+  '/account/delete': typeof AccountDeleteRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/demo/student': typeof DemoStudentRoute
   '/demo/trainer': typeof DemoTrainerRoute
 }
@@ -139,6 +157,8 @@ export interface FileRouteTypes {
     | '/signup-email'
     | '/students'
     | '/team'
+    | '/account/delete'
+    | '/auth/callback'
     | '/demo/student'
     | '/demo/trainer'
   fileRoutesByTo: FileRoutesByTo
@@ -153,6 +173,8 @@ export interface FileRouteTypes {
     | '/signup-email'
     | '/students'
     | '/team'
+    | '/account/delete'
+    | '/auth/callback'
     | '/demo/student'
     | '/demo/trainer'
   id:
@@ -167,6 +189,8 @@ export interface FileRouteTypes {
     | '/signup-email'
     | '/students'
     | '/team'
+    | '/account/delete'
+    | '/auth/callback'
     | '/demo/student'
     | '/demo/trainer'
   fileRoutesById: FileRoutesById
@@ -182,6 +206,8 @@ export interface RootRouteChildren {
   SignupEmailRoute: typeof SignupEmailRoute
   StudentsRoute: typeof StudentsRoute
   TeamRoute: typeof TeamRoute
+  AccountDeleteRoute: typeof AccountDeleteRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   DemoStudentRoute: typeof DemoStudentRoute
   DemoTrainerRoute: typeof DemoTrainerRoute
 }
@@ -272,6 +298,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoStudentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/delete': {
+      id: '/account/delete'
+      path: '/account/delete'
+      fullPath: '/account/delete'
+      preLoaderRoute: typeof AccountDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -286,6 +326,8 @@ const rootRouteChildren: RootRouteChildren = {
   SignupEmailRoute: SignupEmailRoute,
   StudentsRoute: StudentsRoute,
   TeamRoute: TeamRoute,
+  AccountDeleteRoute: AccountDeleteRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   DemoStudentRoute: DemoStudentRoute,
   DemoTrainerRoute: DemoTrainerRoute,
 }

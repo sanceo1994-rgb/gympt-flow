@@ -31,7 +31,7 @@ function Pricing() {
             {p.hot && <span className="absolute -top-3 left-1/2 -translate-x-1/2 chip bg-primary text-white">가장 인기</span>}
             {p.proBadge && (
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-gradient-to-r from-primary to-[#FF6BA8] text-white text-[11px] font-black tracking-wide shadow-pink">
-                ✨ PRO 전용 특별 뱃지
+                ✨ 특별 뱃지 제공
               </span>
             )}
             <p className={`text-[13px] font-bold ${p.hot ? "text-white/70" : "text-ink-soft"}`}>{p.name}</p>

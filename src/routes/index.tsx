@@ -7,6 +7,8 @@ import iconChat from "@/assets/icon-chat.png";
 import stepOpen from "@/assets/step-open.png";
 import stepPick from "@/assets/step-pick.png";
 import stepAi from "@/assets/step-ai.png";
+import roleTrainer from "@/assets/role-trainer.png";
+import roleStudent from "@/assets/role-student.png";
 import { Badge } from "@/components/Badge";
 import { Reveal } from "@/components/Reveal";
 
@@ -27,6 +29,7 @@ function Landing() {
       <SocialBar />
       <HowItWorks />
       <Benefits />
+      <Testimonials />
       <AISection />
       <MockPreview />
       <PricingPreview />
@@ -63,27 +66,31 @@ function Hero() {
                 무료로 시작하기 <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-[12px] font-bold text-ink-soft mr-1">로그인 없이 미리 체험:</span>
-              <Link
-                to="/demo/student"
-                className="inline-flex h-10 items-center px-4 rounded-full bg-card border border-border-strong text-ink text-[12.5px] font-bold hover:bg-muted hover:-translate-y-0.5 transition-transform"
-              >
-                🧑‍🎓 학생 화면 체험
-              </Link>
-              <Link
-                to="/demo/trainer"
-                className="inline-flex h-10 items-center px-4 rounded-full bg-card border border-border-strong text-ink text-[12.5px] font-bold hover:bg-muted hover:-translate-y-0.5 transition-transform"
-              >
-                💪 트레이너 화면 체험
-              </Link>
-            </div>
           </Reveal>
           <Reveal variant="fade" delay={720}>
             <div className="mt-6 flex items-center gap-4 text-[12px] text-muted-foreground">
               <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> 카드등록 없이 시작</span>
               <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> 학생 3명 무료</span>
               <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> 1분이면 셋업</span>
+            </div>
+          </Reveal>
+          <Reveal variant="fade-up" delay={820}>
+            <div className="mt-4 w-full rounded-2xl bg-ink px-4 py-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <span className="text-[11px] font-bold text-white mr-1">로그인 없이 미리 체험:</span>
+                <Link
+                  to="/demo/student"
+                  className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
+                >
+                  🧑‍🎓 학생 화면 체험
+                </Link>
+                <Link
+                  to="/demo/trainer"
+                  className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
+                >
+                  💪 트레이너 화면 체험
+                </Link>
+              </div>
             </div>
           </Reveal>
         </div>
@@ -237,6 +244,47 @@ function Bullet({ children, color = false }: { children: React.ReactNode; color?
       <Check className={`mt-0.5 h-4 w-4 ${color ? "text-primary" : "text-primary"}`} />
       <span>{children}</span>
     </li>
+  );
+}
+
+function Testimonials() {
+  const quotes = [
+    {
+      avatar: roleTrainer,
+      role: "트레이너용",
+      name: "박재현 트레이너",
+      sub: "하이엔드 강남점 · 회원 32명",
+      quote: "매주 카톡으로 한 명씩 시간 묻던 게 진짜 일이었는데, 이제 링크 하나 보내면 끝나요. 진짜 너무 편해요.",
+    },
+    {
+      avatar: roleStudent,
+      role: "학생용",
+      name: "김지원 회원",
+      sub: "PT 8개월차",
+      quote: "되는 시간 3개만 골라두면 트레이너님이 알아서 확정해주셔서 편해요. 단톡방에서 시간 경쟁할 필요가 없어요.",
+    },
+  ];
+  return (
+    <section className="mt-14">
+      <Reveal variant="fade-up"><SectionHead eyebrow="실제 후기" title="써본 분들의 한마디" /></Reveal>
+      <div className="mt-6 grid md:grid-cols-2 gap-3">
+        {quotes.map((q, i) => (
+          <Reveal key={q.name} variant={i === 0 ? "slide-left" : "slide-right"} delay={i * 130}>
+            <div className="panel p-6 h-full relative overflow-hidden">
+              <span className="chip">{q.role}</span>
+              <p className="mt-4 text-[15px] text-ink leading-relaxed text-pretty">“{q.quote}”</p>
+              <div className="mt-5 flex items-center gap-3">
+                <img src={q.avatar} alt="" className="h-12 w-12 object-contain shrink-0" loading="lazy" />
+                <div>
+                  <p className="font-extrabold text-ink text-[14px]">{q.name}</p>
+                  <p className="text-[12px] text-muted-foreground">{q.sub}</p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    </section>
   );
 }
 

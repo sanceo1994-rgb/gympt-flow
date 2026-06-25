@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Camera } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
@@ -7,6 +7,9 @@ import studentImg from "@/assets/role-student.png";
 import { OTTER_PRESETS, otterDataUrl } from "@/components/OtterPicker";
 import { useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhoneNumber } from "@/lib/phone";
+import { needsDisplayNameRepair, pickDisplayName } from "@/lib/display-name";
+import { trackEvent } from "@/lib/analytics";
 
 
 
@@ -17,12 +20,6 @@ export const Route = createFileRoute("/login")({
 
 type Step = "method" | "email" | "consent" | "role" | "confirm" | "preview" | "done";
 type Role = "trainer" | "student";
-
-const KAKAO_MOCK = {
-  name: "박재현",
-  email: "jaehyun.park@kakao.com",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jaehyun&backgroundColor=ffd5dc",
-};
 
 const PALETTES: { id: string; label: string; from: string; to: string }[] = [
   { id: "pink", label: "픽짐 핑크", from: "#FF4E97", to: "#FF6FB1" },
@@ -39,7 +36,7 @@ function Login() {
   const [method, setMethod] = useState<"kakao" | "email">("kakao");
   const [agree, setAgree] = useState({ tos: false, priv: false, age: false });
   const [role, setRole] = useState<Role | null>(null);
-  const [profile, setProfile] = useState({ name: "", email: "", avatar: "" });
+  const [profile, setProfile] = useState({ name: "", email: "", phone: "", avatar: "" });
   const [emailPw, setEmailPw] = useState({ email: "", password: "", confirm: "" });
   const [inviteCode, setInviteCode] = useState("");
   // Trainer mini-hompy customization
@@ -56,18 +53,43 @@ function Login() {
   const allOk = agree.tos && agree.priv && agree.age;
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
 
-  const startMethod = (m: "kakao" | "email") => {
+  useEffect(() => {
+    const pending = sessionStorage.getItem("gympt-kakao-onboarding");
+    if (!pending) return;
+    try {
+      const kakaoProfile = JSON.parse(pending) as typeof profile;
+      setMethod("kakao");
+      setProfile(kakaoProfile);
+      setStep("consent");
+    } catch {
+      setEmailErr("카카오 프로필을 불러오지 못했습니다. 다시 로그인해주세요.");
+    } finally {
+      sessionStorage.removeItem("gympt-kakao-onboarding");
+    }
+  }, []);
+
+  const startMethod = async (m: "kakao" | "email") => {
     setMethod(m);
     setEmailErr(null);
     if (m === "email") {
       setEmailMode(null);
       setStep("email");
     } else {
-      setStep("consent");
+      setEmailBusy(true);
+      sessionStorage.removeItem("gympt-kakao-onboarding");
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "kakao",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        setEmailBusy(false);
+        setEmailErr(error.message);
+      }
     }
   };
 
-  // Detect existing user vs new signup from a tiny localStorage "users" registry
   const submitEmail = async () => {
     setEmailErr(null);
     if (!emailPw.email || !emailPw.password) {
@@ -80,18 +102,54 @@ function Login() {
         email: emailPw.email,
         password: emailPw.password,
       });
+      if (error) {
+        const { data: exists } = await supabase.rpc("email_exists", { check_email: emailPw.email });
+        if (exists) {
+          setEmailBusy(false);
+          setEmailErr("비밀번호가 올바르지 않습니다");
+          return;
+        }
+      }
+
       if (!error && data.user) {
+        const [trainerResult, profileResult] = await Promise.all([
+          supabase.from("trainers").select("name").eq("user_id", data.user.id).maybeSingle(),
+          supabase.from("profiles").select("display_name").eq("id", data.user.id).maybeSingle(),
+        ]);
+        const metadataName = data.user.user_metadata?.name;
+        const metadataFullName = data.user.user_metadata?.full_name;
+        const trainerName = trainerResult.data?.name;
+        const profileName = profileResult.data?.display_name;
         const displayName =
-          (data.user.user_metadata?.name as string | undefined) ||
-          (data.user.user_metadata?.full_name as string | undefined) ||
-          data.user.email?.split("@")[0] ||
-          "회원";
+          pickDisplayName(
+            trainerName,
+            profileName,
+            metadataName,
+            metadataFullName,
+            data.user.email?.split("@")[0],
+          ) ?? "회원";
+
+        const hasRepairableValue = [trainerName, profileName, metadataName, metadataFullName].some(
+          (value) => needsDisplayNameRepair(value, displayName),
+        );
+        if (hasRepairableValue) {
+          await Promise.allSettled([
+            supabase.auth.updateUser({ data: { name: displayName, full_name: displayName } }),
+            supabase.from("trainers").update({ name: displayName }).eq("user_id", data.user.id),
+            supabase.from("profiles").update({ display_name: displayName }).eq("id", data.user.id),
+          ]);
+        }
         try {
           localStorage.removeItem("gympt-user");
           localStorage.removeItem("gympt-users");
           window.dispatchEvent(new Event("gympt-auth"));
         } catch {}
         setWelcome(`${displayName} 로그인`);
+        trackEvent("Authentication Completed", {
+          method: "email",
+          flow: "login",
+          role: data.user.user_metadata?.role ?? "unknown",
+        });
         setTimeout(() => {
           setWelcome(null);
           navigate({ to: "/profile" });
@@ -102,31 +160,125 @@ function Login() {
       setEmailBusy(false);
     }
 
-    setEmailErr("등록된 계정이 아니거나 비밀번호가 맞지 않습니다. 신규 가입은 회원가입 화면에서 진행해주세요.");
-    setEmailMode("login");
-    return;
+    // No matching credentials: continue into signup onboarding.
+    setEmailMode("signup");
+    setProfile({ name: "", email: emailPw.email, phone: "", avatar: "" });
+    setEmailPw((p) => ({ ...p, confirm: "" }));
+    setStep("consent");
   };
 
   const afterConsent = () => {
-    if (method === "kakao") setProfile(KAKAO_MOCK);
     setStep("role");
   };
 
-  const completeSignup = () => {
-    const user = { ...profile, role };
-    try {
-      localStorage.setItem("gympt-user", JSON.stringify(user));
-      // Append to registry so this email can log in next time
-      if (method === "email" && emailPw.email && emailPw.password) {
-        let users: Array<{ email: string; password: string; name: string; role: Role; avatar?: string }> = [];
-        try { users = JSON.parse(localStorage.getItem("gympt-users") || "[]"); } catch {}
-        if (!users.find((u) => u.email.toLowerCase() === emailPw.email.toLowerCase())) {
-          users.push({ email: profile.email, password: emailPw.password, name: profile.name, role: role as Role, avatar: profile.avatar });
-          localStorage.setItem("gympt-users", JSON.stringify(users));
-        }
+  const completeSignup = async () => {
+    if (!role) return;
+    setEmailErr(null);
+    setEmailBusy(true);
+
+    if (method === "email") {
+      const selectedPalette = PALETTES.find((item) => item.id === palette) ?? PALETTES[0];
+      const { error } = await supabase.auth.signUp({
+        email: profile.email,
+        password: emailPw.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/profile`,
+          data: {
+            name: profile.name,
+            phone: formatPhoneNumber(profile.phone),
+            role,
+            avatar_url: profile.avatar || null,
+            gym: role === "trainer" ? trainerGym : null,
+            intro: role === "trainer" ? trainerIntro : null,
+            specs: role === "trainer" ? trainerSpecs : [],
+            theme_from: selectedPalette.from,
+            theme_to: selectedPalette.to,
+          },
+        },
+      });
+
+      if (error) {
+        setEmailBusy(false);
+        setEmailErr(error.message);
+        setStep("confirm");
+        return;
       }
-      window.dispatchEvent(new Event("gympt-auth"));
-    } catch {}
+    } else {
+      const selectedPalette = PALETTES.find((item) => item.id === palette) ?? PALETTES[0];
+      const { data: userResult, error: userError } = await supabase.auth.getUser();
+      const kakaoUser = userResult.user;
+      if (userError || !kakaoUser) {
+        setEmailBusy(false);
+        setEmailErr("카카오 로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+        setStep("method");
+        return;
+      }
+
+      const normalizedPhone = formatPhoneNumber(profile.phone);
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          name: profile.name,
+          full_name: profile.name,
+          phone: normalizedPhone,
+          role,
+          avatar_url: profile.avatar || null,
+          gym: role === "trainer" ? trainerGym : null,
+          intro: role === "trainer" ? trainerIntro : null,
+          theme_from: selectedPalette.from,
+          theme_to: selectedPalette.to,
+        },
+      });
+      if (metadataError) {
+        setEmailBusy(false);
+        setEmailErr(metadataError.message);
+        setStep("confirm");
+        return;
+      }
+
+      const writes = [
+        supabase.from("profiles").upsert({
+          id: kakaoUser.id,
+          display_name: profile.name,
+          email: profile.email || kakaoUser.email || null,
+          avatar_url: profile.avatar || null,
+        }),
+        supabase.from("user_roles").upsert(
+          { user_id: kakaoUser.id, role },
+          { onConflict: "user_id,role", ignoreDuplicates: true },
+        ),
+      ];
+      if (role === "trainer") {
+        writes.push(
+          supabase.from("trainers").upsert(
+            {
+              user_id: kakaoUser.id,
+              name: profile.name,
+              gym: trainerGym || null,
+              intro: trainerIntro || null,
+              avatar_url: profile.avatar || null,
+              theme_from: selectedPalette.from,
+              theme_to: selectedPalette.to,
+            },
+            { onConflict: "user_id" },
+          ),
+        );
+      }
+      const writeResults = await Promise.all(writes);
+      const writeError = writeResults.find((result) => result.error)?.error;
+      if (writeError) {
+        setEmailBusy(false);
+        setEmailErr(writeError.message);
+        setStep("confirm");
+        return;
+      }
+    }
+
+    setEmailBusy(false);
+    trackEvent("Authentication Completed", {
+      method,
+      flow: "signup",
+      role,
+    });
     setWelcome(profile.name || "회원");
     setTimeout(() => {
       setWelcome(null);
@@ -196,10 +348,14 @@ function Login() {
 
                 <button
                   onClick={() => startMethod("kakao")}
-                  className="mt-6 h-14 w-full rounded-2xl bg-[#FEE500] text-[#191600] text-[15px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95"
+                  disabled={emailBusy}
+                  className="mt-6 h-14 w-full rounded-2xl bg-[#FEE500] text-[#191600] text-[15px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
-                  <MessageCircle className="h-4 w-4 fill-[#191600]" /> 카카오로 시작하기
+                  <MessageCircle className="h-4 w-4 fill-[#191600]" />
+                  {emailBusy ? "카카오로 이동 중..." : "카카오로 시작하기"}
                 </button>
+
+                {emailErr && <p className="mt-3 text-[12px] font-bold text-destructive">{emailErr}</p>}
 
                 <div className="mt-5 flex items-center gap-3">
                   <div className="h-px flex-1 bg-border" />
@@ -226,7 +382,13 @@ function Login() {
                   이메일을 입력하면 <b className="text-ink">기존 회원은 로그인</b>, <b className="text-ink">처음이라면 가입</b>으로 자동 분기해드려요.
                 </p>
 
-                <div className="mt-5 grid gap-3">
+                <form
+                  className="mt-5 grid gap-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!emailBusy && emailPw.email && emailPw.password) void submitEmail();
+                  }}
+                >
                   <Field
                     label="이메일"
                     type="email"
@@ -234,24 +396,34 @@ function Login() {
                     onChange={(v) => { setEmailPw((p) => ({ ...p, email: v })); setEmailErr(null); setEmailMode(null); }}
                     placeholder="you@example.com"
                   />
-                  <Field
-                    label="비밀번호"
-                    type="password"
-                    value={emailPw.password}
-                    onChange={(v) => { setEmailPw((p) => ({ ...p, password: v })); setEmailErr(null); }}
-                    placeholder="8자 이상"
-                  />
-                </div>
+                  <div>
+                    <Field
+                      label="비밀번호"
+                      type="password"
+                      value={emailPw.password}
+                      onChange={(v) => { setEmailPw((p) => ({ ...p, password: v })); setEmailErr(null); }}
+                      placeholder="영문+숫자+특수문자, 8자 이상"
+                    />
+                    {emailPw.password.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <PwRule ok={emailPw.password.length >= 8} label="8자 이상" />
+                        <PwRule ok={/[a-zA-Z]/.test(emailPw.password)} label="영문" />
+                        <PwRule ok={/\d/.test(emailPw.password)} label="숫자" />
+                        <PwRule ok={/[^a-zA-Z0-9]/.test(emailPw.password)} label="특수문자" />
+                      </div>
+                    )}
+                  </div>
 
-                {emailErr && <p className="mt-3 text-[12px] font-bold text-destructive">{emailErr}</p>}
+                  {emailErr && <p className="text-[12px] font-bold text-destructive">{emailErr}</p>}
 
-                <button
-                  onClick={submitEmail}
-                  disabled={emailBusy || !emailPw.email || !emailPw.password}
-                  className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
-                >
-                  계속하기 <ArrowRight className="h-4 w-4" />
-                </button>
+                  <button
+                    type="submit"
+                    disabled={emailBusy || !emailPw.email || !emailPw.password}
+                    className="mt-3 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
+                  >
+                    계속하기 <ArrowRight className="h-4 w-4" />
+                  </button>
+                </form>
 
                 <p className="mt-4 text-center text-[11.5px] text-ink-soft">
                   비밀번호를 잊으셨나요? <a className="text-primary font-bold hover:underline" href="#">재설정</a>
@@ -368,6 +540,7 @@ function Login() {
                 <div className="mt-5 grid gap-3">
                   <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" hint="실명을 입력하면 트레이너/회원이 더 원활하게 알아볼 수 있어요" />
                   <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
+                  <Field label="전화번호" type="tel" value={profile.phone} onChange={(v) => setProfile((p) => ({ ...p, phone: formatPhoneNumber(v) }))} placeholder="010-0000-0000" />
                   {method === "email" && (
                     <>
                       <div>
@@ -496,12 +669,12 @@ function Login() {
 
                 <button
                   onClick={() => role === "trainer" ? setStep("preview") : completeSignup()}
-                  disabled={!profile.name || !profile.email || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
+                  disabled={!profile.name || !profile.email || profile.phone.replace(/\D/g, "").length !== 11 || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
                   {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
                 </button>
-                <p className="mt-3 text-center text-[11px] text-ink-soft">DB 연결은 추후 적용됩니다 — 지금은 가상 회원가입으로 진행돼요.</p>
+                <p className="mt-3 text-center text-[11px] text-ink-soft">가입 정보는 안전하게 계정에 저장됩니다.</p>
               </div>
             )}
 
