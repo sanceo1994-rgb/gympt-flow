@@ -15,37 +15,14 @@ another agent's changes just because they are uncommitted.
 ## Current database state
 
 - Linked Supabase project: `symnrjcgtltcgizwbaax`
-- Remote migration history currently contains `20260617092000`,
-  `20260619100000` through `20260619140000`, `20260620124907`,
-  `20260620130114`, `20260620132111`, and `20260620132655`.
-- Core tables exist remotely even though the initial four local migration
-  versions are not recorded.
-- `20260618113000` is not recorded, but trainer theme columns exist remotely.
-- `pt_sessions` is absent, so `20260618143000` is not fully applied.
-- `student_selections` exists, but `20260618190000` and its seed state have not
-  been proven fully applied.
-- `20260619100000_link_student_roster_signup.sql`,
-  `20260619110000_seed_ended_dummy_students.sql`, and
-  `20260619120000_allow_student_schedule_bootstrap.sql` were applied by another
-  active Claude session using a manual technique: temporarily moving every
-  unresolved older migration file out of `supabase/migrations/` into a sibling
-  `.migrations-holdout/` directory, running raw `supabase db push --yes` so only
-  the new, already-audited file is applied, then moving the held-out files back.
-  This achieves the same end state as the guarded script (only intentionally
-  reviewed migrations get applied) without touching the still-unresolved older
-  gap. Preserve and commit all three migration files.
-- The still-unresolved gap is unchanged: `20260512065037`, `20260512065104`,
-  `20260512065136`, `20260512123636`, `20260618113000`, `20260618143000`,
-  `20260618190000`. Do not run `npm run db:push` (or raw `supabase db push`
-  without the holdout technique above) until each of these is audited
-  statement-by-statement against the live schema.
-- `20260619130000_fix_student_schedule_bootstrap_join.sql` is also applied.
-- `20260620132111_roster_phone_identity.sql` is applied through the CLI holdout
-  procedure. New roster rows may omit email.
-- `20260620132655_link_existing_student_on_roster_insert.sql` is applied. Phone
-  matching may grant roster access only when the number comes from Supabase
-  Auth's verified `auth.users.phone`; manually entered user metadata is never
-  used as an authorization signal. UUID and existing email linkage remain.
+- Last checked with `npm run db:status` on 2026-06-26.
+- Remote migration history now matches every local migration from
+  `20260512065037` through `20260622015032`; the workflow reports no unexplained
+  historical migration gap.
+- `20260623093000_add_app_ads.sql` exists locally but is not recorded remotely.
+  It is the only push-pending migration version from the latest status check.
+- Continue using `npm run db:status`, `npm run db:push:dry`, and
+  `npm run db:push` for database work. Do not bypass the guarded npm workflow.
 
 ## Important: weekly_schedules/time_slots schema has drifted beyond any migration file
 
