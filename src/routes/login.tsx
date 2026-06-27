@@ -51,6 +51,10 @@ function Login() {
   const [emailMode, setEmailMode] = useState<"login" | "signup" | null>(null);
   const [emailErr, setEmailErr] = useState<string | null>(null);
   const [emailBusy, setEmailBusy] = useState(false);
+  // Kakao often doesn't share a real email, so the bridge falls back to a
+  // synthetic one — without this check, a returning member who previously
+  // signed up by email would silently get a second, disconnected account.
+  const [phoneDuplicate, setPhoneDuplicate] = useState(false);
 
   const allOk = agree.tos && agree.priv && agree.age;
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
@@ -69,6 +73,32 @@ function Login() {
       sessionStorage.removeItem("gympt-kakao-onboarding");
     }
   }, []);
+
+  // Only relevant for the Kakao signup path — email signup already has its
+  // own "existing account → login" branch in submitEmail().
+  useEffect(() => {
+    if (method !== "kakao") {
+      setPhoneDuplicate(false);
+      return;
+    }
+    const digits = profile.phone.replace(/\D/g, "");
+    if (digits.length !== 11) {
+      setPhoneDuplicate(false);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void supabase
+        .rpc("phone_exists" as never, { check_phone: profile.phone } as never)
+        .then(({ data }) => {
+          if (!cancelled) setPhoneDuplicate(Boolean(data));
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [method, profile.phone]);
 
   // After a Kakao SDK login establishes a Supabase session in-page (no
   // redirect happened), branch the same way /auth/callback does: existing
@@ -141,6 +171,17 @@ function Login() {
       return;
     } catch (sdkError) {
       console.warn("카카오 SDK 로그인에 실패해 OAuth 리다이렉트로 대체합니다.", sdkError);
+      // TEMPORARY debug aid: surface the bridge error on screen instead of
+      // silently falling back, since the page redirect below makes the
+      // console warning above disappear before it can be read. Remove this
+      // block once the bridge failure is diagnosed and fixed.
+      if (localStorage.getItem("gympt-kakao-debug") === "1") {
+        setEmailBusy(false);
+        setEmailErr(
+          `[디버그] 브리지 실패: ${sdkError instanceof Error ? sdkError.message : String(sdkError)}`,
+        );
+        return;
+      }
     }
 
     const { error } = await supabase.auth.signInWithOAuth({
@@ -618,7 +659,28 @@ function Login() {
                 <div className="mt-5 grid gap-3">
                   <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" hint="실명을 입력하면 트레이너/회원이 더 원활하게 알아볼 수 있어요" />
                   <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
-                  <Field label="전화번호" type="tel" value={profile.phone} onChange={(v) => setProfile((p) => ({ ...p, phone: formatPhoneNumber(v) }))} placeholder="010-0000-0000" />
+                  <div>
+                    <Field label="전화번호" type="tel" value={profile.phone} onChange={(v) => setProfile((p) => ({ ...p, phone: formatPhoneNumber(v) }))} placeholder="010-0000-0000" />
+                    {method === "kakao" && phoneDuplicate && (
+                      <div className="mt-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+                        <p className="text-[12px] font-bold text-destructive leading-snug">
+                          이 번호로 이미 가입된 계정이 있어요. 카카오로 계속하면 별도 계정이 새로
+                          만들어져요.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMethod("email");
+                            setEmailMode(null);
+                            setStep("email");
+                          }}
+                          className="mt-2 h-9 px-3.5 rounded-full bg-ink text-white text-[12px] font-extrabold"
+                        >
+                          이메일로 로그인하기
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   {method === "email" && (
                     <>
                       <div>
@@ -747,7 +809,7 @@ function Login() {
 
                 <button
                   onClick={() => role === "trainer" ? setStep("preview") : completeSignup()}
-                  disabled={!profile.name || !profile.email || profile.phone.replace(/\D/g, "").length !== 11 || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
+                  disabled={!profile.name || !profile.email || profile.phone.replace(/\D/g, "").length !== 11 || (method === "kakao" && phoneDuplicate) || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
                   {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}

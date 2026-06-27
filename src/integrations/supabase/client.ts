@@ -26,7 +26,12 @@ function createSupabaseClient() {
       storage: typeof window !== 'undefined' ? sessionStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
-      flowType: 'pkce',
+      // Implicit (not PKCE): Kakao's PC-app handoff can land the OAuth
+      // redirect in a different browser tab/window, and the PKCE
+      // code_verifier lives in this tab's sessionStorage — a different tab
+      // can't see it, so the code exchange fails with "PKCE code verifier
+      // not found in storage". Implicit flow needs no stored verifier.
+      flowType: 'implicit',
     }
   });
 }

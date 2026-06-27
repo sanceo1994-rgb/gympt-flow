@@ -30,7 +30,7 @@ using (
 
 drop trigger if exists app_ads_touch on public.app_ads;
 create trigger app_ads_touch before update on public.app_ads
-for each row execute function public.update_updated_at_column();
+for each row execute function public.touch_updated_at();
 
 create index if not exists app_ads_active_placement_idx
 on public.app_ads(placement, audience, priority)

@@ -19,16 +19,24 @@ function KakaoCallback() {
     let cancelled = false;
 
     async function finishLogin() {
-      const params = new URLSearchParams(window.location.search);
-      const providerError = params.get("error_description") || params.get("error");
+      // Implicit flow: Supabase Auth redirects back with the session in the
+      // URL hash (#access_token=...), not a ?code= query param. Errors can
+      // land in either spot depending on where the redirect chain broke.
+      const queryParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const providerError =
+        queryParams.get("error_description") ||
+        queryParams.get("error") ||
+        hashParams.get("error_description") ||
+        hashParams.get("error");
       if (providerError) throw new Error(providerError);
 
-      const code = params.get("code");
-      if (!code) throw new Error("카카오에서 인증 코드를 받지 못했습니다.");
-
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      // supabase-js parses the hash and establishes the session during
+      // client init; getSession() awaits that before returning.
+      const { data: sessionResult, error } = await supabase.auth.getSession();
       if (error) throw error;
-      const user = data.user;
+      const user = sessionResult.session?.user;
+      if (!user) throw new Error("카카오에서 로그인 정보를 받지 못했습니다.");
 
       const [{ data: roles }, { data: trainer }] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", user.id).limit(1),
