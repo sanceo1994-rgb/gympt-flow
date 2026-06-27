@@ -24,8 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
-import { awardPoints, getMyWeekPoints } from "@/lib/points.functions";
 import { pickDisplayName } from "@/lib/display-name";
 import { TrainerRankBadge } from "@/components/TrainerRankBadge";
 import { useTrainerRank } from "@/hooks/use-trainer-rank";
@@ -135,6 +133,12 @@ function nextWeekStart() {
   monday.setHours(0, 0, 0, 0);
   monday.setDate(monday.getDate() - mondayDistance + 7);
   return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+}
+
+function currentPointWeekStartISO(date = new Date()) {
+  const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+  return monday.toISOString().slice(0, 10);
 }
 
 type BookingSchedule = {
@@ -251,8 +255,6 @@ function heatLevel(n: number, isMine: boolean) {
 function Booking() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const award = useServerFn(awardPoints);
-  const fetchPts = useServerFn(getMyWeekPoints);
 
   const userRole = (user?.user_metadata as { role?: string } | undefined)?.role;
   const isTrainerRole = userRole === "trainer";
@@ -292,6 +294,13 @@ function Booking() {
       return d;
     });
   }, [locationSearch]);
+  const weekRangeLabel = useMemo(() => {
+    const start = weekDates[0];
+    const end = weekDates[6];
+    return `${start.getMonth() + 1}.${start.getDate()} (${DAYS[start.getDay()]}) - ${
+      end.getMonth() + 1
+    }.${end.getDate()} (${DAYS[end.getDay()]})`;
+  }, [weekDates]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -484,12 +493,32 @@ function Booking() {
   };
 
   useEffect(() => {
-    if (user && !String(user.id).startsWith("virtual-")) {
-      fetchPts()
-        .then((r) => setWeekPoints(r.total))
-        .catch(() => {});
+    if (!user || String(user.id).startsWith("virtual-")) {
+      setWeekPoints(0);
+      return;
     }
-  }, [user, fetchPts]);
+
+    let cancelled = false;
+    const weekStart = currentPointWeekStartISO();
+    supabase
+      .from("points" as never)
+      .select("amount")
+      .eq("user_id", user.id)
+      .eq("week_start", weekStart)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setWeekPoints(0);
+          return;
+        }
+        const rows = (data ?? []) as unknown as { amount: number }[];
+        setWeekPoints(Math.min(10, rows.reduce((sum, row) => sum + (row.amount ?? 0), 0)));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const requireAuth = (fn: () => void) => {
     if (!user) {
@@ -570,10 +599,66 @@ function Booking() {
   const hasEmpty = useMemo(() => selectedList.some((k) => !demand[k]), [selectedList, demand]);
   const fivePlus = selectedList.length >= 5;
 
-  const showPointToast = (amount: number, reason: string) => {
+  const showPointToast = (amount: number, reason: string, nextTotal?: number) => {
     setToast({ title: `+${amount}P 적립!`, sub: reason });
     setTimeout(() => setToast(null), 3000);
-    setWeekPoints((p) => Math.min(10, p + amount));
+    if (typeof nextTotal === "number") setWeekPoints(nextTotal);
+    else setWeekPoints((p) => Math.min(10, p + amount));
+  };
+
+  const awardPointReason = async (
+    reason: "empty_slot" | "five_or_more",
+    label: string,
+    delay: number,
+  ) => {
+    if (!user || String(user.id).startsWith("virtual-")) return;
+    try {
+      const weekStart = currentPointWeekStartISO();
+      const { data: existingRows, error: existingError } = await supabase
+        .from("points" as never)
+        .select("amount,reason")
+        .eq("user_id", user.id)
+        .eq("week_start", weekStart);
+      if (existingError) throw existingError;
+
+      const existing = (existingRows ?? []) as unknown as { amount: number; reason: string }[];
+      const currentTotal = existing.reduce((sum, row) => sum + (row.amount ?? 0), 0);
+      if (currentTotal >= 10 || existing.some((row) => row.reason === reason)) {
+        setWeekPoints(Math.min(10, currentTotal));
+        return;
+      }
+
+      const amount = Math.min(10 - currentTotal, 10);
+      if (amount <= 0) return;
+
+      const { error: insertError } = await supabase.from("points" as never).insert({
+        user_id: user.id,
+        amount,
+        reason,
+        week_start: weekStart,
+      } as never);
+      if (insertError) throw insertError;
+
+      const { data: refreshedRows, error: refreshError } = await supabase
+        .from("points" as never)
+        .select("amount")
+        .eq("user_id", user.id)
+        .eq("week_start", weekStart);
+      if (refreshError) throw refreshError;
+
+      const refreshedTotal = ((refreshedRows ?? []) as unknown as { amount: number }[]).reduce(
+        (sum, row) => sum + (row.amount ?? 0),
+        0,
+      );
+      const nextTotal = Math.min(10, refreshedTotal);
+      setWeekPoints(nextTotal);
+      if (refreshedTotal > currentTotal) {
+        setTimeout(() => showPointToast(amount, label, nextTotal), delay);
+      }
+    } catch {
+      setToast({ title: "포인트 저장에 실패했어요", sub: "잠시 후 다시 시도해주세요." });
+      setTimeout(() => setToast(null), 2600);
+    }
   };
 
   const handleSubmit = () =>
@@ -593,18 +678,11 @@ function Booking() {
       });
 
       if (!unavailable && user && !String(user.id).startsWith("virtual-")) {
-        try {
-          if (hasEmpty) {
-            const r = await award({ data: { reason: "empty_slot" } });
-            if (r.awarded > 0)
-              setTimeout(() => showPointToast(r.awarded, "비어있던 시간을 골라줬어요 ☕"), 1200);
-          }
-          if (fivePlus) {
-            const r = await award({ data: { reason: "five_or_more" } });
-            if (r.awarded > 0)
-              setTimeout(() => showPointToast(r.awarded, "5개 이상 골라줬어요 ☕"), 1800);
-          }
-        } catch {}
+        if (hasEmpty) {
+          void awardPointReason("empty_slot", "\ube44\uc5b4\uc788\ub358 \uc2dc\uac04\uc744 \uace8\ub77c\uc92c\uc5b4\uc694", 1200);
+        } else if (fivePlus) {
+          void awardPointReason("five_or_more", "5\uac1c \uc774\uc0c1 \uace8\ub77c\uc92c\uc5b4\uc694", 1800);
+        }
       } else if (!unavailable && (hasEmpty || fivePlus)) {
         // virtual user: simulate point gain locally
         const gain = Math.min(10, hasEmpty ? 10 : 0);
@@ -805,12 +883,12 @@ function Booking() {
           <div className="mt-4 rounded-2xl bg-surface-muted border border-border px-5 py-4 flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">
-                조율 주차
+                {"\uc870\uc728 \uc8fc\ucc28"}
               </p>
               <p className="mt-0.5 whitespace-nowrap">
-                <span className="text-[18px] font-black text-ink">다음 주</span>
-                <span className="text-[13px] font-medium text-ink-soft ml-1.5">
-                  · 5.18 (월) – 5.24 (일)
+                <span className="text-[18px] font-black text-ink">{"\ub2e4\uc74c \uc8fc"}</span>
+                <span className="ml-1.5 text-[13px] font-medium text-ink-soft">
+                  {"\u00b7"} {weekRangeLabel}
                 </span>
               </p>
             </div>
@@ -839,8 +917,8 @@ function Booking() {
 
           {/* Unified responsive timetable — 7 days × hours, larger touch cells on mobile */}
           <div className={`pb-32 ${unavailable ? "opacity-40 pointer-events-none" : ""}`}>
-            <div className="mt-4 rounded-2xl border border-border overflow-hidden">
-              <div className="grid grid-cols-[36px_repeat(7,1fr)] sm:grid-cols-[44px_repeat(7,1fr)] bg-surface-muted border-b border-border">
+            <div className="-mx-5 mt-4 overflow-hidden border-y border-border sm:mx-0 sm:rounded-2xl sm:border">
+              <div className="grid grid-cols-[30px_repeat(7,minmax(0,1fr))] bg-surface-muted border-b border-border sm:grid-cols-[44px_repeat(7,1fr)]">
                 <div className="p-1.5 sm:p-2 text-[10px] text-muted-foreground font-bold text-center">
                   시간
                 </div>
@@ -855,7 +933,7 @@ function Booking() {
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-[36px_repeat(7,1fr)] sm:grid-cols-[44px_repeat(7,1fr)]">
+              <div className="grid grid-cols-[30px_repeat(7,minmax(0,1fr))] sm:grid-cols-[44px_repeat(7,1fr)]">
                 {HOURS.map((h) => (
                   <React.Fragment key={h}>
                     <div className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums">
@@ -967,7 +1045,7 @@ function Booking() {
 
       {/* Owner (trainer) preview bar — disables submission */}
       {isOwnerTrainer && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
+        <div data-bottom-floating className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
           <div className="rounded-2xl bg-ink text-white shadow-pink p-3 flex items-center gap-3">
             <span className="h-10 w-10 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
               <Lock className="h-5 w-5" />
@@ -997,7 +1075,7 @@ function Booking() {
             ? "🎉 축하해요! 아무도 선택 안 한 시간을 골라주셔서 10포인트를 선물받습니다!"
             : "🎉 축하해요! 5개 이상 시간을 선택하셔서 10포인트를 선물받습니다!";
           return (
-            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
+            <div data-bottom-floating className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(720px,calc(100vw-24px))]">
               {willEarn && (
                 <div className="absolute -top-9 left-1/2 -translate-x-1/2 z-10 w-[min(680px,calc(100vw-32px))]">
                   <div className="rounded-full bg-emerald-500 text-white text-[12px] font-extrabold px-4 h-8 inline-flex items-center justify-center w-full shadow-pop whitespace-nowrap overflow-hidden">

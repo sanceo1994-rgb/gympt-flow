@@ -163,16 +163,6 @@
   }
 }
 
-/* Pretendard via CDN */
-@font-face {
-  font-family: "Pretendard Variable";
-  font-weight: 45 920;
-  font-style: normal;
-  font-display: swap;
-  src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/woff2/PretendardVariable.woff2")
-    format("woff2-variations");
-}
-
 /* Utility classes */
 @layer utilities {
   .text-balance {
@@ -291,6 +281,32 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+
+  .support-fab-button {
+    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .support-fab-panel {
+    bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  }
+
+  body:has([data-bottom-floating]) .support-fab-button {
+    bottom: calc(6.25rem + env(safe-area-inset-bottom));
+  }
+
+  body:has([data-bottom-floating]) .support-fab-panel {
+    bottom: calc(9.75rem + env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 640px) {
+    .support-fab-button {
+      bottom: 1.25rem;
+    }
+
+    .support-fab-panel {
+      bottom: 6rem;
+    }
   }
 }
 

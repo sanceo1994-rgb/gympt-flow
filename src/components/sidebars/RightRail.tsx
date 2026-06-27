@@ -46,6 +46,16 @@ type AppAd = {
   action: "link" | "copy_invite";
 };
 
+function currentWeekStartISO() {
+  const monday = new Date();
+  const mondayDistance = (monday.getDay() + 6) % 7;
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - mondayDistance);
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(
+    monday.getDate(),
+  ).padStart(2, "0")}`;
+}
+
 export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const metaRole = (user?.user_metadata as { role?: string } | undefined)?.role as
@@ -70,6 +80,7 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
   const [toast, setToast] = useState<string | null>(null);
   const [popularTrainers, setPopularTrainers] = useState<PopularTrainer[]>([]);
   const [ads, setAds] = useState<AppAd[]>([]);
+  const [studentPoints, setStudentPoints] = useState({ week: 0, total: 0 });
 
   useEffect(() => {
     if (!user || String(user.id).startsWith("virtual-")) {
@@ -125,6 +136,34 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
       cancelled = true;
     };
   }, [mobileMenu]);
+
+  useEffect(() => {
+    if (!user || role !== "student" || String(user.id).startsWith("virtual-")) {
+      setStudentPoints({ week: 0, total: 0 });
+      return;
+    }
+
+    let cancelled = false;
+    const weekStart = currentWeekStartISO();
+    supabase
+      .from("points" as never)
+      .select("amount,week_start")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const rows = (data ?? []) as unknown as { amount: number; week_start: string }[];
+        setStudentPoints({
+          total: rows.reduce((sum, row) => sum + (row.amount ?? 0), 0),
+          week: rows
+            .filter((row) => row.week_start === weekStart)
+            .reduce((sum, row) => sum + (row.amount ?? 0), 0),
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, role]);
 
   useEffect(() => {
     if (!mobileMenu || !roleResolved) return;
@@ -298,6 +337,19 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
               </>
             ) : (
               <>
+                <div className="col-span-2 rounded-xl bg-ink px-3 py-2 text-white">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-extrabold">
+                      <Trophy className="h-3.5 w-3.5 text-primary" /> 내 포인트
+                    </span>
+                    <span className="text-[12px] font-black tabular-nums">
+                      {studentPoints.total}P
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[10.5px] font-bold text-white/60">
+                    이번 주 {studentPoints.week}P 적립
+                  </p>
+                </div>
                 <Link
                   to="/pt-history"
                   className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink"

@@ -16,16 +16,11 @@ export function TrainerRankBadge({
     <span
       title={`인기 트레이너 ${rank}위`}
       className={cn(
-        "absolute -left-[10%] -top-[10%] z-10 grid h-[38%] w-[38%] place-items-center overflow-hidden rounded-full bg-black ring-[2px] ring-white shadow-sm",
+        "absolute -left-[6%] -top-[6%] z-10 grid h-[30%] w-[30%] place-items-center overflow-visible rounded-full bg-black ring-[2px] ring-white shadow-sm",
         className,
       )}
     >
-      <img
-        src={medal}
-        alt=""
-        aria-hidden="true"
-        className="h-[68%] w-[68%] object-contain"
-      />
+      <img src={medal} alt="" aria-hidden="true" className="h-[58%] w-[58%] object-contain" />
       <span className="sr-only">인기 트레이너 {rank}위</span>
     </span>
   );

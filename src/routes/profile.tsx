@@ -51,6 +51,11 @@ type WeeklySession = {
   note?: string | null;
 };
 
+type PointsSummary = {
+  total: number;
+  week: number;
+};
+
 type TrainerSessionRow = {
   id: string;
   scheduled_at: string;
@@ -72,6 +77,12 @@ type StudentSessionRow = {
 
 function relationOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function effectiveSessionStatus(status: string, scheduledAt: string) {
+  if (status === "cancelled") return "cancelled";
+  if (status === "completed") return "completed";
+  return new Date(scheduledAt).getTime() < Date.now() ? "completed" : "scheduled";
 }
 
 function formatLocalDate(date: Date) {
@@ -122,6 +133,7 @@ function ProfilePage() {
   >([]);
   const [weeklySessions, setWeeklySessions] = useState<WeeklySession[]>([]);
   const [recentSession, setRecentSession] = useState<WeeklySession | null>(null);
+  const [pointsSummary, setPointsSummary] = useState<PointsSummary>({ total: 0, week: 0 });
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [trainerWeekOffset, setTrainerWeekOffset] = useState(0);
 
@@ -196,6 +208,7 @@ function ProfilePage() {
       weekStart.setDate(weekStart.getDate() - mondayDistance);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
+      const weekStartText = formatLocalDate(weekStart);
       const trainerWeekStart = new Date(weekStart);
       trainerWeekStart.setDate(trainerWeekStart.getDate() + trainerWeekOffset * 7);
       const trainerWeekEnd = new Date(trainerWeekStart);
@@ -219,6 +232,20 @@ function ProfilePage() {
       if (!cancelled && profileRow) {
         setName(pickDisplayName(profileRow.display_name, meta.name, user.email?.split("@")[0]) ?? "");
         setEmail(profileRow.email ?? user.email ?? "");
+      }
+
+      const { data: pointRows } = await supabase
+        .from("points" as never)
+        .select("amount,week_start")
+        .eq("user_id", user.id);
+      if (!cancelled) {
+        const rows = (pointRows ?? []) as unknown as { amount: number; week_start: string }[];
+        setPointsSummary({
+          total: rows.reduce((sum, row) => sum + (row.amount ?? 0), 0),
+          week: rows
+            .filter((row) => row.week_start === weekStartText)
+            .reduce((sum, row) => sum + (row.amount ?? 0), 0),
+        });
       }
 
       const { data: trainerRow } = await supabase
@@ -425,14 +452,14 @@ function ProfilePage() {
             .from("pt_sessions")
             .select("id,scheduled_at,status,note,trainers(name,gym)")
             .eq("student_user_id", user.id)
-            .eq("status", "scheduled")
+            .neq("status", "cancelled")
             .gte("scheduled_at", new Date().toISOString())
             .order("scheduled_at", { ascending: true }),
           supabase
             .from("pt_sessions")
             .select("id,scheduled_at,status,note,trainers(name,gym)")
             .eq("student_user_id", user.id)
-            .eq("status", "completed")
+            .neq("status", "cancelled")
             .lte("scheduled_at", new Date().toISOString())
             .order("scheduled_at", { ascending: false })
             .limit(1)
@@ -445,7 +472,7 @@ function ProfilePage() {
               return {
                 id: session.id,
                 scheduledAt: session.scheduled_at,
-                status: session.status,
+                status: effectiveSessionStatus(session.status, session.scheduled_at),
                 counterpart: pickDisplayName(trainer?.name) ?? "트레이너",
                 gym: trainer?.gym ?? null,
                 note: session.note,
@@ -459,7 +486,7 @@ function ProfilePage() {
               ? {
                   id: recentRow.id,
                   scheduledAt: recentRow.scheduled_at,
-                  status: recentRow.status,
+                  status: effectiveSessionStatus(recentRow.status, recentRow.scheduled_at),
                   counterpart: pickDisplayName(recentTrainer?.name) ?? "트레이너",
                   gym: recentTrainer?.gym ?? null,
                   note: recentRow.note,
@@ -545,18 +572,18 @@ function ProfilePage() {
         )}
       </div>
 
-      <div className="mt-3 grid lg:grid-cols-[220px_1fr] gap-3">
+      <div className="mt-2 grid gap-2 lg:grid-cols-[220px_1fr] lg:gap-3">
         {/* Avatar card */}
-        <div className="rounded-2xl border border-border bg-white p-3.5 text-center">
+        <div className="rounded-2xl border border-border bg-white p-2.5 text-center sm:p-3.5">
           <div className="relative inline-block">
             {meta.avatar_url ? (
               <img
                 src={meta.avatar_url}
                 alt=""
-                className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover mx-auto ring-2 ring-border"
+                className="h-12 w-12 rounded-xl object-cover mx-auto ring-2 ring-border sm:h-16 sm:w-16 lg:h-20 lg:w-20 lg:rounded-2xl"
               />
             ) : (
-              <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-primary/15 grid place-items-center text-[24px] sm:text-[28px] font-black text-primary mx-auto">
+              <div className="h-12 w-12 rounded-xl bg-primary/15 grid place-items-center text-[20px] sm:h-16 sm:w-16 lg:h-20 lg:w-20 lg:rounded-2xl sm:text-[24px] lg:text-[28px] font-black text-primary mx-auto">
                 {(name || "?")[0]}
               </div>
             )}
@@ -566,6 +593,14 @@ function ProfilePage() {
             {role === "trainer" && trainerRank && (
               <TrainerRankBadge rank={trainerRank} />
             )}
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <span className="inline-flex h-7 items-center rounded-full bg-primary/10 px-2.5 text-[11.5px] font-extrabold text-primary">
+                이번 주 {pointsSummary.week}P
+              </span>
+              <span className="inline-flex h-7 items-center rounded-full bg-surface-muted px-2.5 text-[11.5px] font-extrabold text-ink">
+                누적 {pointsSummary.total}P
+              </span>
+            </div>
           </div>
           <p className="mt-2 text-[14px] font-extrabold text-ink">{name || "이름 없음"}</p>
           <span className="mt-1 inline-flex items-center px-2.5 h-5 rounded-full bg-primary/10 text-primary text-[10.5px] font-extrabold">
@@ -579,8 +614,8 @@ function ProfilePage() {
         </div>
 
         {/* Info / Form */}
-        <div className="rounded-2xl border border-border bg-white p-4 sm:p-5">
-          <div className="grid sm:grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-border bg-white p-3 sm:p-5">
+          <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
             <Field label="이름" value={name} onChange={setName} editable={editMode} />
             <Field
               label="이메일"
@@ -654,6 +689,7 @@ function ProfilePage() {
         role={role}
         sessions={weeklySessions}
         recentSession={recentSession}
+        pointsSummary={pointsSummary}
         loading={sessionsLoading}
         pendingRequests={pendingRequests}
         trainerId={assignedTrainer?.id}
@@ -969,6 +1005,7 @@ function WeeklyScheduleSummary({
   role,
   sessions,
   recentSession,
+  pointsSummary,
   loading,
   pendingRequests,
   trainerId,
@@ -978,6 +1015,7 @@ function WeeklyScheduleSummary({
   role: "trainer" | "student";
   sessions: WeeklySession[];
   recentSession: WeeklySession | null;
+  pointsSummary: PointsSummary;
   loading: boolean;
   pendingRequests: { scheduleId: string; weekStart: string; responded: boolean }[];
   trainerId?: string;
@@ -1006,6 +1044,7 @@ function WeeklyScheduleSummary({
     <StudentWeeklyInsight
       sessions={sessions}
       recentSession={recentSession}
+      pointsSummary={pointsSummary}
       pendingRequests={pendingRequests}
       trainerId={trainerId}
     />
@@ -1192,11 +1231,13 @@ function relativeWeekLabel(weekStart: string) {
 function StudentWeeklyInsight({
   sessions,
   recentSession,
+  pointsSummary,
   pendingRequests,
   trainerId,
 }: {
   sessions: WeeklySession[];
   recentSession: WeeklySession | null;
+  pointsSummary: PointsSummary;
   pendingRequests: { scheduleId: string; weekStart: string; responded: boolean }[];
   trainerId?: string;
 }) {
@@ -1212,7 +1253,7 @@ function StudentWeeklyInsight({
     ? Math.max(0, Math.round((nextDate.getTime() - recentDate.getTime()) / 86_400_000))
     : null;
   const daysUntilLabel =
-    daysUntil === null ? null : daysUntil === 0 ? "오늘" : `${daysUntil}일 남음`;
+    daysUntil === null ? null : daysUntil === 0 ? "??" : `${daysUntil}? ??`;
   const formatLong = (date: Date) =>
     new Intl.DateTimeFormat("ko-KR", {
       month: "long",
@@ -1226,7 +1267,7 @@ function StudentWeeklyInsight({
     <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-white">
       <div className="relative overflow-hidden bg-ink px-5 py-5 text-white sm:px-7 sm:py-6">
         <div className="absolute right-0 top-0 h-full w-40 bg-primary/20 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
+        <div className="relative flex items-start justify-between gap-4 pr-12 sm:pr-0">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10.5px] font-bold text-white/80">
               <CalendarDays className="h-3.5 w-3.5 text-primary" /> 다음 PT 일정
@@ -1245,7 +1286,7 @@ function StudentWeeklyInsight({
             )}
           </div>
           {daysUntilLabel && (
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary px-1 text-center text-[11px] font-black leading-tight shadow-pop sm:h-16 sm:w-16 sm:text-[13px]">
+            <span className="absolute right-0 top-0 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary px-1 text-center text-[10px] font-black leading-tight shadow-pop sm:static sm:h-16 sm:w-16 sm:text-[13px]">
               {daysUntilLabel}
             </span>
           )}
@@ -1345,11 +1386,21 @@ function StudentWeeklyInsight({
                   className="group relative mt-2 min-h-[154px] rounded-2xl border border-border bg-white px-5 pb-5 pt-8 shadow-[0_8px_24px_rgba(17,24,39,0.07)] transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_30px_rgba(17,24,39,0.10)]"
                 >
                   <span
-                    className={`absolute left-1/2 top-0 inline-flex h-7 min-w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-4 text-[10.5px] font-black text-white shadow-sm ${
+                    className={`absolute left-1/2 top-0 inline-flex h-7 min-w-28 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-1.5 rounded-full px-4 text-[10.5px] font-black text-white shadow-sm ${
                       req.responded ? "bg-emerald-500" : "bg-amber-500"
                     }`}
                   >
-                    {req.responded ? "선택 완료" : "시간 선택 요청"}
+                    {req.responded ? (
+                      <>
+                        <Check className="h-3 w-3" />
+                        시간 선택 완료
+                      </>
+                    ) : (
+                      <>
+                        <CalendarClock className="h-3 w-3" />
+                        시간 선택 필요
+                      </>
+                    )}
                   </span>
                   <div className="flex items-center gap-3 border-b border-border pb-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/[0.08]">

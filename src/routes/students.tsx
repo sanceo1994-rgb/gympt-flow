@@ -513,7 +513,7 @@ function StudentsPage() {
       </div>
 
       <Sheet open={adding} onOpenChange={(v) => !v && setAdding(false)}>
-        <SheetContent side="right" className="w-full sm:!max-w-[56vw] overflow-y-auto">
+        <SheetContent side="right" className="w-[88vw] sm:!max-w-[56vw] overflow-y-auto">
           <SheetHeader>
             <span className="inline-flex w-fit chip bg-primary/10 text-primary">
               <Plus className="h-3 w-3" /> 일괄 등록
@@ -600,7 +600,7 @@ function StudentsPage() {
         open={Boolean(editingStudent)}
         onOpenChange={(open) => !open && setEditingStudent(null)}
       >
-        <SheetContent side="right" className="w-full sm:!max-w-[56vw] overflow-y-auto">
+        <SheetContent side="right" className="w-[88vw] sm:!max-w-[56vw] overflow-y-auto">
           <SheetHeader>
             <span className="inline-flex w-fit chip bg-primary/10 text-primary">
               <Pencil className="h-3 w-3" /> 학생 편집
@@ -688,7 +688,7 @@ function StudentsPage() {
       </AlertDialog>
 
       {pendingDelete && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md">
+        <div data-bottom-floating className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md">
           <div className="h-14 rounded-2xl bg-ink text-white px-4 shadow-pop flex items-center justify-between gap-4">
             <span className="text-[13px] font-bold truncate">
               {pendingDelete.name} 학생이 삭제되었습니다.
