@@ -917,8 +917,8 @@ function Booking() {
 
           {/* Unified responsive timetable — 7 days × hours, larger touch cells on mobile */}
           <div className={`pb-32 ${unavailable ? "opacity-40 pointer-events-none" : ""}`}>
-            <div className="-mx-5 mt-4 overflow-hidden border-y border-border sm:mx-0 sm:rounded-2xl sm:border">
-              <div className="grid grid-cols-[30px_repeat(7,minmax(0,1fr))] bg-surface-muted border-b border-border sm:grid-cols-[44px_repeat(7,1fr)]">
+            <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+              <div className="grid grid-cols-[32px_repeat(7,minmax(0,1fr))] bg-surface-muted border-b border-border sm:grid-cols-[44px_repeat(7,1fr)]">
                 <div className="p-1.5 sm:p-2 text-[10px] text-muted-foreground font-bold text-center">
                   시간
                 </div>
@@ -933,7 +933,7 @@ function Booking() {
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-[30px_repeat(7,minmax(0,1fr))] sm:grid-cols-[44px_repeat(7,1fr)]">
+              <div className="grid grid-cols-[32px_repeat(7,minmax(0,1fr))] sm:grid-cols-[44px_repeat(7,1fr)]">
                 {HOURS.map((h) => (
                   <React.Fragment key={h}>
                     <div className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums">
