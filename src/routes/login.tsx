@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Camera } from "lucide-react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { ArrowUp, ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Camera, Lock, Phone, UserRound } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPhoneNumber } from "@/lib/phone";
 import { needsDisplayNameRepair, pickDisplayName } from "@/lib/display-name";
 import { trackEvent } from "@/lib/analytics";
+import { kakaoSdkLogin } from "@/lib/kakao-sdk";
+import { kakaoBridgeLogin } from "@/lib/kakao-bridge.functions";
 
 
 
@@ -68,25 +70,88 @@ function Login() {
     }
   }, []);
 
+  // After a Kakao SDK login establishes a Supabase session in-page (no
+  // redirect happened), branch the same way /auth/callback does: existing
+  // members skip straight to /profile, new members continue onboarding.
+  const completeKakaoSdkSession = async () => {
+    const { data: userResult, error: userError } = await supabase.auth.getUser();
+    const kakaoUser = userResult.user;
+    if (userError || !kakaoUser) throw new Error("카카오 로그인 세션을 확인하지 못했습니다.");
+
+    const [{ data: roles }, { data: trainer }] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", kakaoUser.id).limit(1),
+      supabase.from("trainers").select("id").eq("user_id", kakaoUser.id).maybeSingle(),
+    ]);
+
+    if (trainer || (roles ?? []).length > 0) {
+      trackEvent("Authentication Completed", {
+        method: "kakao",
+        flow: "login",
+        role: trainer ? "trainer" : (roles?.[0]?.role ?? "unknown"),
+      });
+      setEmailBusy(false);
+      setWelcome(
+        pickDisplayName(kakaoUser.user_metadata?.name, kakaoUser.user_metadata?.full_name) ?? "회원",
+      );
+      setTimeout(() => {
+        setWelcome(null);
+        navigate({ to: "/profile" });
+      }, 800);
+      return;
+    }
+
+    const metadata = kakaoUser.user_metadata ?? {};
+    setMethod("kakao");
+    setProfile({
+      name: pickDisplayName(metadata.name, metadata.full_name, metadata.nickname) ?? "",
+      email: kakaoUser.email ?? "",
+      phone: "",
+      avatar: metadata.avatar_url || metadata.picture || "",
+    });
+    setEmailBusy(false);
+    setStep("consent");
+  };
+
   const startMethod = async (m: "kakao" | "email") => {
     setMethod(m);
     setEmailErr(null);
     if (m === "email") {
       setEmailMode(null);
       setStep("email");
-    } else {
-      setEmailBusy(true);
-      sessionStorage.removeItem("gympt-kakao-onboarding");
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "kakao",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+      return;
+    }
+
+    setEmailBusy(true);
+    sessionStorage.removeItem("gympt-kakao-onboarding");
+
+    // Try the in-page Kakao SDK flow first — on PC this hands off to a
+    // running KakaoTalk desktop app, on mobile it switches to the KakaoTalk
+    // app, both without ever showing an ID/password form. Only fall back to
+    // the full-page OAuth redirect if the SDK is unavailable or fails.
+    try {
+      const accessToken = await kakaoSdkLogin();
+      const { email, tokenHash } = await kakaoBridgeLogin({ data: { accessToken } });
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        email,
+        token_hash: tokenHash,
+        type: "magiclink",
       });
-      if (error) {
-        setEmailBusy(false);
-        setEmailErr(error.message);
-      }
+      if (otpError) throw otpError;
+      await completeKakaoSdkSession();
+      return;
+    } catch (sdkError) {
+      console.warn("카카오 SDK 로그인에 실패해 OAuth 리다이렉트로 대체합니다.", sdkError);
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "kakao",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) {
+      setEmailBusy(false);
+      setEmailErr(error.message);
     }
   };
 
@@ -478,6 +543,19 @@ function Login() {
 
             {step === "confirm" && (
               <div className="mt-6">
+                {method === "email" && (
+                  <MobileEmailSignupConfirm
+                    profile={profile}
+                    setProfile={setProfile}
+                    emailPw={emailPw}
+                    setEmailPw={setEmailPw}
+                    role={role}
+                    emailBusy={emailBusy}
+                    onTrainerNext={() => setStep("preview")}
+                    onComplete={completeSignup}
+                  />
+                )}
+                <div className={method === "email" ? "hidden sm:block" : ""}>
                 <h2 className="text-[22px] font-black leading-tight">가입 정보를 확인해주세요</h2>
                 <p className="mt-2 text-[13px] text-ink-soft">
                   {method === "kakao" ? "카카오에서 받아온 정보예요. 필요하면 수정할 수 있어요." : "기본 정보를 입력해주세요."}
@@ -675,6 +753,7 @@ function Login() {
                   {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
                 </button>
                 <p className="mt-3 text-center text-[11px] text-ink-soft">가입 정보는 안전하게 계정에 저장됩니다.</p>
+                </div>
               </div>
             )}
 
@@ -730,6 +809,160 @@ function Stepper({ step }: { step: Step }) {
       <span className="ml-2 text-[11px] font-bold text-ink-soft tabular-nums">{idx + 1} / {order.length}</span>
     </div>
   );
+}
+
+function MobileEmailSignupConfirm({
+  profile,
+  setProfile,
+  emailPw,
+  setEmailPw,
+  role,
+  emailBusy,
+  onTrainerNext,
+  onComplete,
+}: {
+  profile: { name: string; email: string; phone: string; avatar: string };
+  setProfile: Dispatch<SetStateAction<{ name: string; email: string; phone: string; avatar: string }>>;
+  emailPw: { email: string; password: string; confirm: string };
+  setEmailPw: Dispatch<SetStateAction<{ email: string; password: string; confirm: string }>>;
+  role: Role | null;
+  emailBusy: boolean;
+  onTrainerNext: () => void;
+  onComplete: () => void;
+}) {
+  const [active, setActive] = useState<"name" | "phone" | "email" | "password" | "confirm">("name");
+  const steps = [
+    { key: "name" as const, label: "이름", icon: UserRound, value: profile.name, valid: profile.name.trim().length > 0 },
+    { key: "phone" as const, label: "전화번호", icon: Phone, value: profile.phone, valid: profile.phone.replace(/\D/g, "").length === 11 },
+    { key: "email" as const, label: "이메일", icon: Mail, value: profile.email, valid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim()) },
+    { key: "password" as const, label: "비밀번호", icon: Lock, value: emailPw.password, valid: pwStrong(emailPw.password) },
+    { key: "confirm" as const, label: "비밀번호 확인", icon: Check, value: emailPw.confirm, valid: emailPw.confirm.length > 0 && emailPw.password === emailPw.confirm },
+  ];
+  const currentIndex = Math.max(0, steps.findIndex((step) => step.key === active));
+  const current = steps[currentIndex] ?? steps[0];
+  const doneCount = steps.filter((step) => step.valid).length;
+  const canSubmit = steps.every((step) => step.valid);
+  const Icon = current.icon;
+
+  const setValue = (value: string) => {
+    if (current.key === "name") setProfile((p) => ({ ...p, name: value }));
+    if (current.key === "phone") setProfile((p) => ({ ...p, phone: formatPhoneNumber(value) }));
+    if (current.key === "email") setProfile((p) => ({ ...p, email: value.trim() }));
+    if (current.key === "password") setEmailPw((p) => ({ ...p, password: value }));
+    if (current.key === "confirm") setEmailPw((p) => ({ ...p, confirm: value }));
+  };
+
+  const moveNext = () => {
+    if (!current.valid) return;
+    const next = steps[currentIndex + 1];
+    if (next) setActive(next.key);
+    else if (role === "trainer") onTrainerNext();
+    else onComplete();
+  };
+
+  return (
+    <div className="sm:hidden">
+      <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-primary/10 px-2.5 text-[11px] font-extrabold text-primary">
+        <Sparkles className="h-3.5 w-3.5" />
+        빠른 가입
+      </span>
+      <h2 className="mt-3 text-[25px] font-black leading-tight tracking-tight">
+        입력한 정보를
+        <br />
+        바로 확인하며 가입해요
+      </h2>
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-muted">
+        <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+      </div>
+
+      <div className="mt-5 grid gap-2.5">
+        {steps.map((step) => {
+          const StepIcon = step.icon;
+          return (
+            <button
+              key={step.key}
+              type="button"
+              onClick={() => setActive(step.key)}
+              className={`flex min-h-14 items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition ${
+                active === step.key
+                  ? "border-primary bg-primary/[0.04]"
+                  : step.valid
+                    ? "border-border bg-white"
+                    : "border-transparent bg-surface-muted"
+              }`}
+            >
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${step.valid ? "bg-primary text-white" : "bg-white text-ink-soft"}`}>
+                {step.valid ? <Check className="h-4 w-4" strokeWidth={3.5} /> : <StepIcon className="h-4 w-4" />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] font-extrabold text-ink-soft">{step.label}</span>
+                <span className={`mt-0.5 block truncate text-[14px] font-black ${step.valid ? "text-ink" : "text-ink-soft"}`}>
+                  {step.valid ? (step.key.includes("password") || step.key === "confirm" ? "입력 완료" : step.value) : "아직 입력 전"}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 rounded-[26px] bg-ink p-4 text-white shadow-pop">
+        <div className="flex items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-primary">
+            <Icon className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-[12px] font-extrabold text-white/55">{current.label}</p>
+            <p className="mt-0.5 text-[19px] font-black leading-tight">{mobileQuestion(current.key)}</p>
+          </div>
+        </div>
+        <input
+          autoFocus
+          type={current.key === "password" || current.key === "confirm" ? "password" : current.key === "email" ? "email" : "text"}
+          inputMode={current.key === "phone" ? "numeric" : current.key === "email" ? "email" : "text"}
+          value={current.value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") moveNext();
+          }}
+          placeholder={mobilePlaceholder(current.key)}
+          className="mt-4 h-14 w-full rounded-2xl border border-white/10 bg-white px-4 text-[17px] font-black text-ink outline-none placeholder:text-ink-soft/45 focus:ring-4 focus:ring-primary/30"
+        />
+        {current.key === "password" && emailPw.password.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <PwRule ok={emailPw.password.length >= 8} label="8자 이상" />
+            <PwRule ok={/[a-zA-Z]/.test(emailPw.password)} label="영문" />
+            <PwRule ok={/\d/.test(emailPw.password)} label="숫자" />
+            <PwRule ok={/[^a-zA-Z0-9]/.test(emailPw.password)} label="특수문자" />
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={moveNext}
+          disabled={emailBusy || !current.valid}
+          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-extrabold text-white shadow-pop disabled:opacity-40"
+        >
+          {emailBusy ? "처리 중..." : currentIndex === steps.length - 1 ? (role === "trainer" ? "프로필 미리보기" : "회원가입 완료") : "다음"}
+          {!emailBusy && currentIndex < steps.length - 1 && <ArrowUp className="h-4 w-4 rotate-90" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function mobileQuestion(key: "name" | "phone" | "email" | "password" | "confirm") {
+  if (key === "name") return "어떻게 불러드릴까요?";
+  if (key === "phone") return "연락받을 번호는요?";
+  if (key === "email") return "로그인 이메일은요?";
+  if (key === "password") return "비밀번호를 정해주세요";
+  return "비밀번호를 한 번 더 입력해주세요";
+}
+
+function mobilePlaceholder(key: "name" | "phone" | "email" | "password" | "confirm") {
+  if (key === "name") return "홍길동";
+  if (key === "phone") return "010-0000-0000";
+  if (key === "email") return "you@example.com";
+  if (key === "password") return "영문+숫자+특수문자, 8자 이상";
+  return "비밀번호 확인";
 }
 
 function TrainerPreview({

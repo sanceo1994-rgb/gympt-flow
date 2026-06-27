@@ -555,7 +555,7 @@ function DemoTrainerSchedule() {
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <div className="flex gap-1.5 overflow-x-auto">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           {[0, 1, 2, 3, 4].map((o) => {
             const active = weekOffset === o;
             return (
@@ -589,7 +589,7 @@ function DemoTrainerSchedule() {
           <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-border bg-surface-muted">
             <div className="flex items-center gap-2">
               <UserRoundSearch className="h-4 w-4 shrink-0 text-ink" />
-              <span className="text-[13px] font-black text-ink">아직 응답하지 않은 회원</span>
+              <span className="text-[13px] font-black text-ink">미응답 회원</span>
               <span className="text-[12px] font-bold text-destructive tabular-nums">
                 {halfPending.length}명
               </span>
@@ -602,7 +602,7 @@ function DemoTrainerSchedule() {
               }}
               className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95"
             >
-              <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" /> 전체 카톡 재알림
+              <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" /> 전체 재알림
             </button>
           </div>
           <ul className="divide-y divide-border">
@@ -1102,7 +1102,7 @@ function DemoTrainerSchedule() {
           }
         }}
       >
-        <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
+        <SheetContent side="right" className="w-[88vw] sm:!max-w-[50vw] overflow-y-auto">
           <SheetHeader>
             <span className="inline-flex w-fit chip bg-primary/10 text-primary">
               <Pencil className="h-3 w-3" /> 일정 조정
@@ -1271,7 +1271,7 @@ function DemoTrainerSchedule() {
 
       {/* Memo panel — body-part picker + note */}
       <Sheet open={!!memoFor} onOpenChange={(v) => !v && resetMemo()}>
-        <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
+        <SheetContent side="right" className="w-[88vw] sm:!max-w-[50vw] overflow-y-auto">
           <SheetHeader>
             <span className="inline-flex w-fit chip bg-primary/10 text-primary">
               <Pencil className="h-3 w-3" /> 수업 메모
@@ -1357,7 +1357,7 @@ function DemoTrainerSchedule() {
 
       {/* Right-side panel — invite or confirm */}
       <Sheet open={!!panel} onOpenChange={(v) => !v && setPanel(null)}>
-        <SheetContent side="right" className="w-full sm:!max-w-[50vw] overflow-y-auto">
+        <SheetContent side="right" className="w-[88vw] sm:!max-w-[50vw] overflow-y-auto">
           <SheetHeader>
             <span className="inline-flex w-fit chip bg-primary/10 text-primary">
               {panel === "invite" ? (
