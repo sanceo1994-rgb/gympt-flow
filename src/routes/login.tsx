@@ -12,6 +12,7 @@ import { needsDisplayNameRepair, pickDisplayName } from "@/lib/display-name";
 import { trackEvent } from "@/lib/analytics";
 import { kakaoSdkLogin } from "@/lib/kakao-sdk";
 import { kakaoBridgeLogin } from "@/lib/kakao-bridge.functions";
+import { requestPhoneOtp, verifyPhoneOtp, confirmUserPhone } from "@/lib/phone-otp.functions";
 
 
 
@@ -55,8 +56,14 @@ function Login() {
   // synthetic one — without this check, a returning member who previously
   // signed up by email would silently get a second, disconnected account.
   const [phoneDuplicate, setPhoneDuplicate] = useState(false);
+  // Tracks the exact number that passed OTP verification — recomputed
+  // against the current phone field so editing the number after verifying
+  // correctly un-verifies it instead of leaving a stale "verified" badge.
+  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
 
   const allOk = agree.tos && agree.priv && agree.age;
+  const phoneVerified =
+    verifiedPhone !== null && verifiedPhone.replace(/\D/g, "") === profile.phone.replace(/\D/g, "");
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
 
   useEffect(() => {
@@ -284,14 +291,15 @@ function Login() {
 
     if (method === "email") {
       const selectedPalette = PALETTES.find((item) => item.id === palette) ?? PALETTES[0];
-      const { error } = await supabase.auth.signUp({
+      const normalizedPhone = formatPhoneNumber(profile.phone);
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email: profile.email,
         password: emailPw.password,
         options: {
           emailRedirectTo: `${window.location.origin}/profile`,
           data: {
             name: profile.name,
-            phone: formatPhoneNumber(profile.phone),
+            phone: normalizedPhone,
             role,
             avatar_url: profile.avatar || null,
             gym: role === "trainer" ? trainerGym : null,
@@ -302,6 +310,10 @@ function Login() {
           },
         },
       });
+
+      if (!error && signUpData.user) {
+        await confirmUserPhone({ data: { userId: signUpData.user.id, phone: normalizedPhone } }).catch(() => {});
+      }
 
       if (error) {
         setEmailBusy(false);
@@ -340,6 +352,7 @@ function Login() {
         setStep("confirm");
         return;
       }
+      await confirmUserPhone({ data: { userId: kakaoUser.id, phone: normalizedPhone } }).catch(() => {});
 
       const writes = [
         supabase.from("profiles").upsert({
@@ -594,6 +607,8 @@ function Login() {
                     emailBusy={emailBusy}
                     onTrainerNext={() => setStep("preview")}
                     onComplete={completeSignup}
+                    phoneVerified={phoneVerified}
+                    onPhoneVerified={() => setVerifiedPhone(profile.phone)}
                   />
                 )}
                 <div className={method === "email" ? "hidden sm:block" : ""}>
@@ -680,6 +695,11 @@ function Login() {
                         </button>
                       </div>
                     )}
+                    <PhoneVerifyPanel
+                      phone={profile.phone}
+                      verified={phoneVerified}
+                      onVerified={() => setVerifiedPhone(profile.phone)}
+                    />
                   </div>
                   {method === "email" && (
                     <>
@@ -809,7 +829,7 @@ function Login() {
 
                 <button
                   onClick={() => role === "trainer" ? setStep("preview") : completeSignup()}
-                  disabled={!profile.name || !profile.email || profile.phone.replace(/\D/g, "").length !== 11 || (method === "kakao" && phoneDuplicate) || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
+                  disabled={!profile.name || !profile.email || !phoneVerified || (method === "kakao" && phoneDuplicate) || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
                   {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
@@ -882,6 +902,8 @@ function MobileEmailSignupConfirm({
   emailBusy,
   onTrainerNext,
   onComplete,
+  phoneVerified,
+  onPhoneVerified,
 }: {
   profile: { name: string; email: string; phone: string; avatar: string };
   setProfile: Dispatch<SetStateAction<{ name: string; email: string; phone: string; avatar: string }>>;
@@ -891,11 +913,13 @@ function MobileEmailSignupConfirm({
   emailBusy: boolean;
   onTrainerNext: () => void;
   onComplete: () => void;
+  phoneVerified: boolean;
+  onPhoneVerified: () => void;
 }) {
   const [active, setActive] = useState<"name" | "phone" | "email" | "password" | "confirm">("name");
   const steps = [
     { key: "name" as const, label: "이름", icon: UserRound, value: profile.name, valid: profile.name.trim().length > 0 },
-    { key: "phone" as const, label: "전화번호", icon: Phone, value: profile.phone, valid: profile.phone.replace(/\D/g, "").length === 11 },
+    { key: "phone" as const, label: "전화번호", icon: Phone, value: profile.phone, valid: phoneVerified },
     { key: "email" as const, label: "이메일", icon: Mail, value: profile.email, valid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim()) },
     { key: "password" as const, label: "비밀번호", icon: Lock, value: emailPw.password, valid: pwStrong(emailPw.password) },
     { key: "confirm" as const, label: "비밀번호 확인", icon: Check, value: emailPw.confirm, valid: emailPw.confirm.length > 0 && emailPw.password === emailPw.confirm },
@@ -996,6 +1020,9 @@ function MobileEmailSignupConfirm({
             <PwRule ok={/\d/.test(emailPw.password)} label="숫자" />
             <PwRule ok={/[^a-zA-Z0-9]/.test(emailPw.password)} label="특수문자" />
           </div>
+        )}
+        {current.key === "phone" && (
+          <PhoneVerifyPanel phone={profile.phone} verified={phoneVerified} onVerified={onPhoneVerified} tone="dark" />
         )}
         <button
           type="button"
@@ -1148,6 +1175,118 @@ function Field({ label, value, onChange, placeholder, type = "text", hint }: { l
         className="mt-1.5 h-11 w-full px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[14px] font-semibold text-ink"
       />
     </label>
+  );
+}
+
+// SMS OTP gate shown under the phone field. Tracks its own request/verify
+// state; tells the parent step once the code is confirmed via onVerified.
+function PhoneVerifyPanel({
+  phone,
+  verified,
+  onVerified,
+  tone = "light",
+}: {
+  phone: string;
+  verified: boolean;
+  onVerified: () => void;
+  tone?: "light" | "dark";
+}) {
+  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const phoneValid = phone.replace(/\D/g, "").length === 11;
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const send = async () => {
+    setErr(null);
+    setBusy(true);
+    try {
+      await requestPhoneOtp({ data: { phone } });
+      setSent(true);
+      setCooldown(60);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "???? ??? ?????.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verify = async () => {
+    setErr(null);
+    setBusy(true);
+    try {
+      await verifyPhoneOtp({ data: { phone, code } });
+      onVerified();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "???? ??? ?????.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const dark = tone === "dark";
+
+  if (verified) {
+    return (
+      <p className={`mt-2 inline-flex items-center gap-1 text-[11.5px] font-bold ${dark ? "text-emerald-300" : "text-emerald-600"}`}>
+        <Check className="h-3.5 w-3.5" /> ???? ?? ??
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      {!sent ? (
+        <button
+          type="button"
+          onClick={send}
+          disabled={!phoneValid || busy}
+          className={`h-9 px-3.5 rounded-full text-[12px] font-extrabold disabled:opacity-40 ${dark ? "bg-white/15 text-white" : "bg-ink text-white"}`}
+        >
+          {busy ? "?? ?..." : "???? ??"}
+        </button>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="???? 6??"
+            inputMode="numeric"
+            className={
+              dark
+                ? "h-10 w-32 px-3 rounded-xl border border-white/15 bg-white/10 outline-none text-[13px] font-bold text-white placeholder:text-white/40 tabular-nums focus:border-white/40"
+                : "h-10 w-32 px-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] font-bold text-ink tabular-nums"
+            }
+          />
+          <button
+            type="button"
+            onClick={verify}
+            disabled={busy || code.length < 4}
+            className="h-10 px-3.5 rounded-xl bg-primary text-white text-[12px] font-extrabold disabled:opacity-40"
+          >
+            ??
+          </button>
+          <button
+            type="button"
+            onClick={send}
+            disabled={busy || cooldown > 0}
+            className={`h-10 px-2.5 rounded-xl text-[11.5px] font-bold disabled:opacity-40 ${dark ? "text-white/60" : "text-ink-soft"}`}
+          >
+            {cooldown > 0 ? `??? ${cooldown}s` : "???"}
+          </button>
+        </div>
+      )}
+      {err && (
+        <p className={`mt-1.5 text-[11.5px] font-bold ${dark ? "text-rose-300" : "text-destructive"}`}>{err}</p>
+      )}
+    </div>
   );
 }
 

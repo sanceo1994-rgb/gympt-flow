@@ -91,6 +91,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "운동은 선생님이, 일정은 픽짐피티가. 학생은 원하는 시간을 고르고, AI가 가장 많은 수업이 가능한 최적 시간표를 만들어드려요." },
       { name: "author", content: "PickGymPT" },
       { name: "theme-color", content: "#FF2D8D" },
+      { name: "color-scheme", content: "light only" },
       { property: "og:title", content: "픽짐피티 PickGymPT — PT 트레이너의 똑똑한 일정 비서" },
       { property: "og:description", content: "선착순이 아니라, 모두에게 더 잘 맞는 시간표." },
       { property: "og:type", content: "website" },
