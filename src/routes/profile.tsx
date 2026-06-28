@@ -30,6 +30,7 @@ import {
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeDisplayName, pickDisplayName } from "@/lib/display-name";
+import { formatPhoneNumber } from "@/lib/phone";
 import { TrainerRankBadge } from "@/components/TrainerRankBadge";
 import { useTrainerRank } from "@/hooks/use-trainer-rank";
 import { trackEvent } from "@/lib/analytics";
@@ -105,6 +106,7 @@ function ProfilePage() {
     avatar_url?: string;
     role?: string;
     verified?: boolean;
+    phone?: string;
   };
   const [role, setRole] = useState<"trainer" | "student">(
     (meta.role as "trainer" | "student" | undefined) ?? "student",
@@ -116,7 +118,7 @@ function ProfilePage() {
   const [editMode, setEditMode] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("010-1234-5678");
+  const [phone, setPhone] = useState("");
   const [gym, setGym] = useState("하이엔드 피트니스 강남점");
   const [intro, setIntro] = useState(
     role === "trainer" ? "8년차 퍼스널 트레이너. 평생 가져갈 운동 습관을 만들어드려요." : "",
@@ -194,6 +196,7 @@ function ProfilePage() {
   useEffect(() => {
     setName(meta.name ?? "");
     setEmail(user?.email ?? "");
+    setPhone(meta.phone ? formatPhoneNumber(meta.phone) : "");
   }, [user]);
 
   useEffect(() => {
@@ -513,7 +516,10 @@ function ProfilePage() {
     }
     try {
       if (user) {
-        await supabase.auth.updateUser({ data: { name: normalizedName, full_name: normalizedName } });
+        const normalizedPhone = formatPhoneNumber(phone);
+        await supabase.auth.updateUser({
+          data: { name: normalizedName, full_name: normalizedName, phone: normalizedPhone },
+        });
         await supabase.from("profiles").update({ display_name: normalizedName, email }).eq("id", user.id);
 
         if (role === "trainer") {
@@ -627,7 +633,7 @@ function ProfilePage() {
             <Field
               label="휴대폰"
               value={phone}
-              onChange={setPhone}
+              onChange={(v) => setPhone(formatPhoneNumber(v))}
               placeholder="010-0000-0000"
               editable={editMode}
             />
