@@ -297,7 +297,6 @@ function DemoTrainerSchedule() {
     scope: "individual" | "remind";
   } | null>(null);
   const [inviteIntent, setInviteIntent] = useState(false);
-  const [requestSentWeek, setRequestSentWeek] = useState<number | null>(null);
 
   // Right-side panel for "요청 보내기" / "확정 알림"
   const [panel, setPanel] = useState<null | "invite" | "confirm">(null);
@@ -489,7 +488,6 @@ function DemoTrainerSchedule() {
           ? `전원에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`
           : `${count}명에게 ${WEEK_LABELS[panelWeek]} 응답 요청 발송 ✓`,
       );
-      setRequestSentWeek(panelWeek);
     } else {
       fireToast(all ? `전원에게 확정 알림 발송 ✓` : `${count}명에게 확정 알림 발송 ✓`);
     }
@@ -523,7 +521,7 @@ function DemoTrainerSchedule() {
       </div>
 
       {/* DASHBOARD */}
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="mt-6 grid grid-cols-3 gap-1.5 sm:gap-3">
         <KpiCard
           icon={<Users className="h-4 w-4" />}
           label="관리 회원"
@@ -1469,24 +1467,80 @@ function DemoTrainerSchedule() {
 
       <div className="h-32" aria-hidden="true" />
 
-      {/* Floating invite bar — primary CTA, hidden when pendingClose bar overlays it */}
+      {/* Floating invite bar — primary CTA, hidden when pendingClose bar overlays it.
+          Demo-only: each week shows a different stage of the real flow (확정 / 진행 중 / 요청 보내기)
+          so visitors can see all three without needing real data. */}
       {pendingClose.size === 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[min(720px,calc(100vw-24px))]">
-          {requestSentWeek === weekOffset ? (
-            <div className="rounded-2xl bg-ink text-white shadow-pop p-3 flex items-center gap-2.5">
-              <span className="h-11 w-11 rounded-xl bg-primary/20 text-primary grid place-items-center shrink-0">
-                <Sparkles className="h-5 w-5" />
+          {weekOffset === 0 ? (
+            <div
+              className="flex flex-wrap items-center gap-[14px] rounded-[18px] px-[18px] py-[15px]"
+              style={{ background: "#0e6b46", border: "1px solid rgba(255,255,255,.12)", boxShadow: "0 16px 40px -22px rgba(8,52,34,.7)" }}
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-white">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e6b46" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12.5l4.2 4.2L19 7" />
+                </svg>
               </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-extrabold leading-tight">
-                  {WEEK_LABELS[weekOffset]} 응답 현황 · {STUDENTS.length}명에게 알림 발송됨
+              <p className="min-w-[160px] flex-1 text-[16px] font-bold leading-tight tracking-tight text-white">
+                {WEEK_LABELS[weekOffset]} 일정 확정이 완료됐어요
+              </p>
+              <div className="flex flex-wrap justify-end gap-1.5 sm:gap-2">
+                <span className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] pl-1 pr-2.5 text-[11.5px] font-semibold tracking-tight sm:h-[34px] sm:gap-2 sm:rounded-[11px] sm:pl-1.5 sm:pr-3.5 sm:text-[13px]" style={{ background: "rgba(255,255,255,.13)", color: "rgba(255,255,255,.92)" }}>
+                  <ToastPeopleIcon compact />
+                  {stats.responded}/{stats.total}명
+                  <span className="hidden sm:inline">&nbsp;응답</span>
+                </span>
+                <span className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] pl-1 pr-2.5 text-[11.5px] font-semibold tracking-tight sm:h-[34px] sm:gap-2 sm:rounded-[11px] sm:pl-1.5 sm:pr-3.5 sm:text-[13px]" style={{ background: "rgba(255,255,255,.13)", color: "rgba(255,255,255,.92)" }}>
+                  <ToastCalendarIcon compact />
+                  {AI_RESULT_INIT.length}명 확정
+                </span>
+                <span className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] pl-1 pr-2.5 text-[11.5px] font-bold tracking-tight text-white sm:h-[34px] sm:gap-2 sm:rounded-[11px] sm:pl-1.5 sm:pr-3.5 sm:text-[13px]">
+                  <ToastClockIcon compact />
+                  <span className="hidden sm:inline">약&nbsp;</span>
+                  {AI_RESULT_INIT.length * 15}분 절약
+                </span>
+              </div>
+              <p className="hidden basis-full pl-[54px] text-[12.5px] font-medium leading-[1.5] tracking-tight sm:block" style={{ color: "rgba(255,255,255,.62)" }}>
+                확정 후 새롭게 변경된 사항은 ‘02 학생 응답’에서 수동 일정 조정 후 개별 통지로
+                직접 안내해주세요.
+              </p>
+            </div>
+          ) : weekOffset === 1 ? (
+            <div
+              className="flex flex-wrap items-center gap-[14px] rounded-[18px] px-4 py-[15px]"
+              style={{ background: "#b46213", border: "1px solid rgba(255,255,255,.14)", boxShadow: "0 16px 42px -20px rgba(120,66,8,.7)" }}
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] sm:h-[46px] sm:w-[46px] sm:rounded-[14px]" style={{ background: "rgba(255,255,255,.14)" }}>
+                <ToastHourglassIcon />
+              </span>
+              <div className="min-w-0 flex-1">
+                <span className="inline-flex h-[19px] items-center gap-1 rounded-md px-2 sm:h-[21px] sm:gap-1.5 sm:rounded-[7px] sm:px-2.5" style={{ background: "rgba(255,255,255,.16)" }}>
+                  <span className="h-1.5 w-1.5 rounded-full animate-pulse-dot" style={{ background: "#ffd54a" }} />
+                  <span className="text-[10px] font-extrabold tracking-wide sm:text-[11px]" style={{ color: "#ffe9bf" }}>
+                    진행 중 · 응답 받는 중
+                  </span>
+                </span>
+                <p className="mt-[7px] text-[14.5px] font-bold leading-tight tracking-tight text-white sm:text-[16px]">
+                  <span className="sm:hidden">{WEEK_LABELS[weekOffset]} 응답 현황 · {STUDENTS.length}명 발송됨</span>
+                  <span className="hidden sm:inline">
+                    {WEEK_LABELS[weekOffset]} 응답 현황 · {STUDENTS.length}명에게 알림 발송됨
+                  </span>
                 </p>
-                <p className="text-[11px] text-white/70 mt-0.5 leading-snug tabular-nums">
-                  <b className="text-white">
-                    {STUDENTS.filter((s) => s.status !== "응답대기").length}명
-                  </b>{" "}
-                  시간 선택 완료 · <b className="text-primary">{AI_RESULT_INIT.length}명</b> 자동
-                  배정됨 · <b className="text-white">{pendingResponders.length}명</b> 응답 대기
+                <p className="mt-1 text-[11.5px] font-medium leading-[1.45] tracking-tight tabular-nums sm:text-[12.5px] sm:leading-[1.5]" style={{ color: "rgba(255,255,255,.72)" }}>
+                  <span className="sm:hidden">
+                    {STUDENTS.filter((s) => s.status !== "응답대기").length}명 선택 · {AI_RESULT_INIT.length}명 배정 ·{" "}
+                    <span className="font-bold" style={{ color: "#ffdf9e" }}>
+                      {pendingResponders.length}명 대기
+                    </span>
+                  </span>
+                  <span className="hidden sm:inline">
+                    {STUDENTS.filter((s) => s.status !== "응답대기").length}명 시간 선택 완료 ·{" "}
+                    {AI_RESULT_INIT.length}명 자동 배정됨 ·{" "}
+                    <span className="font-bold" style={{ color: "#ffdf9e" }}>
+                      {pendingResponders.length}명 응답 대기
+                    </span>
+                  </span>
                 </p>
               </div>
               <button
@@ -1495,30 +1549,44 @@ function DemoTrainerSchedule() {
                   setPanelWeek(weekOffset);
                   setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
                 }}
-                className="h-11 px-4 rounded-xl bg-primary text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-110"
+                className="inline-flex h-[42px] w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white px-[18px] text-[14px] font-bold sm:w-auto"
+                style={{ color: "#b46213" }}
               >
                 <Check className="h-3.5 w-3.5" /> 확정 알림 보내기
               </button>
             </div>
           ) : (
-            <div className="rounded-2xl bg-primary text-white shadow-pop p-3 flex items-center gap-2.5">
-              <span className="h-11 w-11 rounded-xl bg-[#FEE500] grid place-items-center shrink-0">
-                <MessageCircle className="h-5 w-5 fill-[#191600] text-[#191600]" />
+            <div
+              className="flex flex-wrap items-center gap-[14px] rounded-[18px] px-4 py-[15px]"
+              style={{ background: "#1f54e6", border: "1px solid rgba(255,255,255,.14)", boxShadow: "0 16px 42px -20px rgba(20,52,150,.75)" }}
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] sm:h-[46px] sm:w-[46px] sm:rounded-[14px]" style={{ background: "rgba(255,255,255,.14)" }}>
+                <ToastBellIcon />
               </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-extrabold leading-tight">
-                  가장 먼저 할 일 · {WEEK_LABELS[weekOffset]} 가능 시간을 학생에게 물어보세요
+              <div className="min-w-0 flex-1">
+                <span className="inline-flex h-[19px] items-center gap-1 rounded-md px-2 sm:h-[21px] sm:gap-1.5 sm:rounded-[7px]" style={{ background: "#ffd54a" }}>
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#1f54e6" }} />
+                  <span className="text-[10px] font-extrabold tracking-wide sm:text-[11px]" style={{ color: "#1a2e6e" }}>
+                    STEP 1 · 먼저 할 일
+                  </span>
+                </span>
+                <p className="mt-[7px] text-[14.5px] font-bold leading-tight tracking-tight text-white sm:text-[16px]">
+                  학생들에게 시간 선택을 먼저 요청하세요
                 </p>
-                <p className="text-[11px] text-white/80 mt-0.5 leading-snug">
-                  응답이 모여야 AI가 최적 시간표를 짤 수 있어요. 지금 바로 카톡으로 한 번에 요청
-                  보내기!
+                <p className="mt-1 hidden text-[12.5px] font-medium leading-[1.5] tracking-tight sm:block" style={{ color: "rgba(255,255,255,.72)" }}>
+                  응답이 모여야 {WEEK_LABELS[weekOffset]} 일정을 확정할 수 있어요.
                 </p>
               </div>
               <button
                 onClick={() => setInviteIntent(true)}
-                className="h-11 px-4 rounded-xl bg-ink text-white text-[13px] font-extrabold inline-flex items-center gap-1 shrink-0 hover:brightness-125"
+                className="inline-flex h-[42px] w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white px-[18px] text-[14px] font-bold sm:w-auto"
+                style={{ color: "#1f54e6" }}
               >
-                <Send className="h-3.5 w-3.5" /> 요청 보내기
+                <span className="sm:hidden">시간 선택 요청 보내기</span>
+                <span className="hidden sm:inline">시간 선택 요청</span>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1f54e6" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h13M12 5.5l6.5 6.5L12 18.5" />
+                </svg>
               </button>
             </div>
           )}
@@ -1660,24 +1728,28 @@ function KpiCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}
+      className={`min-w-0 rounded-xl sm:rounded-2xl border p-2.5 sm:p-4 ${accent ? "bg-ink text-white border-ink" : "bg-white border-border"}`}
     >
       <div
-        className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${accent ? "text-primary" : "text-ink-soft"}`}
+        className={`flex items-center gap-1 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider truncate ${accent ? "text-primary" : "text-ink-soft"}`}
       >
-        {icon}
-        {label}
+        <span className="hidden sm:inline-flex shrink-0">{icon}</span>
+        <span className="truncate">{label}</span>
       </div>
-      <div className="mt-2 flex items-baseline gap-1">
-        <span className="text-[28px] font-black tabular-nums leading-none">{value}</span>
+      <div className="mt-1 sm:mt-2 flex min-w-0 flex-wrap items-baseline gap-0.5 sm:gap-1">
+        <span className="text-[17px] sm:text-[28px] font-black tabular-nums leading-none">
+          {value}
+        </span>
         {suffix && (
-          <span className={`text-[12px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}>
+          <span
+            className={`truncate text-[9.5px] sm:text-[12px] font-bold ${accent ? "text-white/70" : "text-ink-soft"}`}
+          >
             {suffix}
           </span>
         )}
         {detail && (
           <span
-            className={`ml-1 text-[10px] font-semibold ${accent ? "text-white/55" : "text-muted-foreground"}`}
+            className={`hidden sm:inline ml-1 text-[10px] font-semibold ${accent ? "text-white/55" : "text-muted-foreground"}`}
           >
             · {detail}
           </span>
@@ -1706,6 +1778,127 @@ function SectionHeader({
       </div>
       {subtitle && <p className="text-[12px] text-ink-soft">{subtitle}</p>}
     </div>
+  );
+}
+
+function ToastPeopleIcon({ compact }: { compact?: boolean }) {
+  return (
+    <span
+      className={`relative shrink-0 ${compact ? "h-[22px] w-[22px] sm:h-[30px] sm:w-[30px]" : "h-[30px] w-[30px]"}`}
+      style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.35))" }}
+    >
+      <span
+        className={`absolute left-0 top-0 h-[30px] w-[30px] origin-top-left ${compact ? "scale-[0.7333] sm:scale-100" : ""}`}
+      >
+        <span className="absolute left-0 top-3 h-[11px] w-[14px] rounded-[7px_7px_4px_4px]" style={{ background: "linear-gradient(160deg, #9be7c4, #3fc78a)" }} />
+        <span className="absolute left-[1px] top-[5px] h-[9px] w-[9px] rounded-full" style={{ background: "linear-gradient(160deg, #b6f0d6, #45c98c)" }} />
+        <span
+          className="absolute left-2 top-[14px] h-[13px] w-5 rounded-[10px_10px_5px_5px]"
+          style={{ background: "linear-gradient(160deg, #8fc2ff, #3f86f2)", boxShadow: "inset 0 1.5px 1px rgba(255,255,255,.5)" }}
+        />
+        <span
+          className="absolute left-[11.5px] top-[3px] h-[13px] w-[13px] rounded-full"
+          style={{ background: "linear-gradient(160deg, #a9d2ff, #4a8df4)", boxShadow: "inset 0 1.5px 1px rgba(255,255,255,.55)" }}
+        />
+      </span>
+    </span>
+  );
+}
+
+function ToastCalendarIcon({ compact }: { compact?: boolean }) {
+  return (
+    <span
+      className={`relative shrink-0 ${compact ? "h-[22px] w-[22px] sm:h-[30px] sm:w-[30px]" : "h-[30px] w-[30px]"}`}
+      style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.35))" }}
+    >
+      <span
+        className={`absolute left-0 top-0 h-[30px] w-[30px] origin-top-left ${compact ? "scale-[0.7333] sm:scale-100" : ""}`}
+      >
+        <span
+          className="absolute left-[3px] top-[6px] h-[21px] w-6 rounded-lg"
+          style={{ background: "linear-gradient(160deg, #b9aaff, #7a5cf0)", boxShadow: "inset 0 -3px 5px rgba(70,40,150,.4)" }}
+        />
+        <span className="absolute left-[3px] top-[6px] h-2 w-6 rounded-t-lg" style={{ background: "linear-gradient(160deg, #6f54e0, #5a40c8)" }} />
+        <span className="absolute left-[6px] top-4 h-[9px] w-[18px] rounded-[3px]" style={{ background: "linear-gradient(160deg, #ffffff, #eef0fb)" }} />
+        <span className="absolute left-[9px] top-[17px] h-2 w-3 flex items-center justify-center">
+          <svg width="12" height="8" viewBox="0 0 12 8" fill="none" stroke="#2ec27a" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1.5 4.2l2.6 2.6L10.5 1.2" />
+          </svg>
+        </span>
+        <span className="absolute left-[9px] top-[2px] h-[6px] w-[3.5px] rounded-sm" style={{ background: "linear-gradient(180deg, #f0f1f6, #c7c9d6)" }} />
+        <span className="absolute left-[18px] top-[2px] h-[6px] w-[3.5px] rounded-sm" style={{ background: "linear-gradient(180deg, #f0f1f6, #c7c9d6)" }} />
+      </span>
+    </span>
+  );
+}
+
+function ToastClockIcon({ compact }: { compact?: boolean }) {
+  return (
+    <span
+      className={`relative shrink-0 ${compact ? "h-[22px] w-[22px] sm:h-[30px] sm:w-[30px]" : "h-[30px] w-[30px]"}`}
+      style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.35))" }}
+    >
+      <span
+        className={`absolute left-0 top-0 h-[30px] w-[30px] origin-top-left ${compact ? "scale-[0.7333] sm:scale-100" : ""}`}
+      >
+        <span
+          className="absolute left-[2px] top-[2px] h-[26px] w-[26px] rounded-full"
+          style={{ background: "linear-gradient(160deg, #ffd79a, #f59e1f)", boxShadow: "inset 0 -3px 6px rgba(150,80,0,.4), inset 0 2px 2px rgba(255,255,255,.55)" }}
+        />
+        <span className="absolute left-[6px] top-[6px] h-[18px] w-[18px] rounded-full" style={{ background: "linear-gradient(160deg, #fff7e6, #ffe6bd)" }} />
+        <span className="absolute left-[14.2px] top-[9px] h-[7px] w-[1.8px] rounded-sm" style={{ background: "#c47a08" }} />
+        <span className="absolute left-[15px] top-[14px] h-[1.8px] w-[6px] rounded-sm" style={{ background: "#c47a08" }} />
+        <span
+          className="absolute left-[18px] top-[17px] h-[11px] w-[11px] rounded-full flex items-center justify-center"
+          style={{ background: "linear-gradient(160deg, #79e6a8, #25b46c)", boxShadow: "inset 0 1px 1px rgba(255,255,255,.5)" }}
+        >
+          <svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="#ffffff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 2v7M3 6l3 3 3-3" />
+          </svg>
+        </span>
+      </span>
+    </span>
+  );
+}
+
+function ToastBellIcon() {
+  return (
+    <span className="relative shrink-0 h-[30px] w-[30px]" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.3))" }}>
+      <span
+        className="absolute left-[5px] top-1 h-[18px] w-5 rounded-[11px_11px_6px_6px]"
+        style={{ background: "linear-gradient(160deg, #ffd98e, #f7ab1f)", boxShadow: "inset 0 -3px 5px rgba(160,90,0,.4), inset 0 2px 1.5px rgba(255,255,255,.6)" }}
+      />
+      <span className="absolute left-1 top-[18px] h-1.5 w-[22px] rounded-md" style={{ background: "linear-gradient(160deg, #ffcf7a, #ef9e12)" }} />
+      <span className="absolute left-[12.5px] top-[1px] h-[5px] w-[5px] rounded-full" style={{ background: "linear-gradient(160deg, #ffe3a6, #f3a417)" }} />
+      <span className="absolute left-3 top-[23px] h-[6px] w-[6px] rounded-full" style={{ background: "linear-gradient(160deg, #ffe3a6, #ef9e12)" }} />
+      <span
+        className="absolute left-[19px] top-0 h-[11px] w-[11px] rounded-full"
+        style={{ background: "linear-gradient(160deg, #ff8d8d, #f0463f)", boxShadow: "inset 0 1px 1px rgba(255,255,255,.5)" }}
+      />
+    </span>
+  );
+}
+
+function ToastHourglassIcon() {
+  return (
+    <span className="relative shrink-0 h-[30px] w-[30px] animate-hourglass-flip" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.3))" }}>
+      <span
+        className="absolute left-[7px] top-1 h-[22px] w-4"
+        style={{
+          clipPath: "polygon(0 0, 100% 0, 58% 50%, 100% 100%, 0 100%, 42% 50%)",
+          background: "linear-gradient(160deg, #fff5de, #ffe6b3)",
+          boxShadow: "inset 0 2px 1px rgba(255,255,255,.6)",
+        }}
+      />
+      <span
+        className="absolute left-[8px] top-[2px] h-[2.5px] w-[14px] rounded-full"
+        style={{ background: "linear-gradient(160deg, #c47a08, #8a5300)" }}
+      />
+      <span
+        className="absolute left-[8px] top-[23.5px] h-[2.5px] w-[14px] rounded-full"
+        style={{ background: "linear-gradient(160deg, #c47a08, #8a5300)" }}
+      />
+    </span>
   );
 }
 

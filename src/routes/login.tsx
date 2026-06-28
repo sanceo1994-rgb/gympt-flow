@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { ArrowUp, ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Camera, Lock, Phone, UserRound } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
+import logo from "@/assets/pickgympt-logo.png";
 import { OTTER_PRESETS, otterDataUrl } from "@/components/OtterPicker";
+import { AvatarBuilder, AVATAR_COLORS, AVATAR_ICONS, avatarDataUrl } from "@/components/AvatarBuilder";
 import { useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhoneNumber } from "@/lib/phone";
@@ -13,6 +15,7 @@ import { trackEvent } from "@/lib/analytics";
 import { kakaoSdkLogin } from "@/lib/kakao-sdk";
 import { kakaoBridgeLogin } from "@/lib/kakao-bridge.functions";
 import { requestPhoneOtp, verifyPhoneOtp, confirmUserPhone } from "@/lib/phone-otp.functions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 
 
@@ -32,6 +35,16 @@ const PALETTES: { id: string; label: string; from: string; to: string }[] = [
   { id: "violet", label: "바이올렛", from: "#6D28D9", to: "#C084FC" },
 ];
 
+function clearLocalLoginState() {
+  try {
+    localStorage.removeItem("gympt-user");
+    localStorage.removeItem("gympt-users");
+    sessionStorage.removeItem("gympt-kakao-onboarding");
+  } catch {
+    // Storage can be unavailable in restricted browser contexts.
+  }
+}
+
 function Login() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("method");
@@ -40,6 +53,8 @@ function Login() {
   const [agree, setAgree] = useState({ tos: false, priv: false, age: false });
   const [role, setRole] = useState<Role | null>(null);
   const [profile, setProfile] = useState({ name: "", email: "", phone: "", avatar: "" });
+  const [desktopAvatarColorId, setDesktopAvatarColorId] = useState(AVATAR_COLORS[0].id);
+  const [desktopAvatarIconId, setDesktopAvatarIconId] = useState(AVATAR_ICONS[0].id);
   const [emailPw, setEmailPw] = useState({ email: "", password: "", confirm: "" });
   const [inviteCode, setInviteCode] = useState("");
   // Trainer mini-hompy customization
@@ -64,7 +79,19 @@ function Login() {
   const allOk = agree.tos && agree.priv && agree.age;
   const phoneVerified =
     verifiedPhone !== null && verifiedPhone.replace(/\D/g, "") === profile.phone.replace(/\D/g, "");
+  const desktopPhoneOtp = usePhoneOtp(profile.phone, phoneVerified, () => setVerifiedPhone(profile.phone));
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
+
+  useEffect(() => {
+    if (step !== "confirm") return;
+    if (method === "kakao" && profile.avatar && !profile.avatar.startsWith("data:image/svg+xml")) {
+      return;
+    }
+    const color = AVATAR_COLORS.find((c) => c.id === desktopAvatarColorId) ?? AVATAR_COLORS[0];
+    const icon = AVATAR_ICONS.find((i) => i.id === desktopAvatarIconId) ?? AVATAR_ICONS[0];
+    const nextAvatar = avatarDataUrl(color.hex, icon);
+    setProfile((current) => (current.avatar === nextAvatar ? current : { ...current, avatar: nextAvatar }));
+  }, [desktopAvatarColorId, desktopAvatarIconId, method, profile.avatar, step]);
 
   useEffect(() => {
     const pending = sessionStorage.getItem("gympt-kakao-onboarding");
@@ -149,7 +176,7 @@ function Login() {
     setStep("consent");
   };
 
-  const startMethod = async (m: "kakao" | "email") => {
+  const startMethod = async (m: "kakao" | "email", kakaoMode: "quick" | "account" = "quick") => {
     setMethod(m);
     setEmailErr(null);
     if (m === "email") {
@@ -159,42 +186,41 @@ function Login() {
     }
 
     setEmailBusy(true);
-    sessionStorage.removeItem("gympt-kakao-onboarding");
+    clearLocalLoginState();
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
 
-    // Try the in-page Kakao SDK flow first — on PC this hands off to a
-    // running KakaoTalk desktop app, on mobile it switches to the KakaoTalk
-    // app, both without ever showing an ID/password form. Only fall back to
-    // the full-page OAuth redirect if the SDK is unavailable or fails.
-    try {
-      const accessToken = await kakaoSdkLogin();
-      const { email, tokenHash } = await kakaoBridgeLogin({ data: { accessToken } });
-      const { error: otpError } = await supabase.auth.verifyOtp({
-        email,
-        token_hash: tokenHash,
-        type: "magiclink",
-      });
-      if (otpError) throw otpError;
-      await completeKakaoSdkSession();
-      return;
-    } catch (sdkError) {
-      console.warn("카카오 SDK 로그인에 실패해 OAuth 리다이렉트로 대체합니다.", sdkError);
-      // TEMPORARY debug aid: surface the bridge error on screen instead of
-      // silently falling back, since the page redirect below makes the
-      // console warning above disappear before it can be read. Remove this
-      // block once the bridge failure is diagnosed and fixed.
-      if (localStorage.getItem("gympt-kakao-debug") === "1") {
-        setEmailBusy(false);
-        setEmailErr(
-          `[디버그] 브리지 실패: ${sdkError instanceof Error ? sdkError.message : String(sdkError)}`,
-        );
+    // Quick mode uses the Kakao JS SDK first. On PC this can hand off to a
+    // running KakaoTalk desktop app; if the handoff is unavailable, we fall
+    // back to the normal web OAuth page. Account mode skips the SDK and forces
+    // Kakao to ask which account to use, which is safer on shared PCs.
+    if (kakaoMode === "quick") {
+      try {
+        const accessToken = await kakaoSdkLogin();
+        const { email, tokenHash } = await kakaoBridgeLogin({ data: { accessToken } });
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          email,
+          token_hash: tokenHash,
+          type: "magiclink",
+        });
+        if (otpError) throw otpError;
+        await completeKakaoSdkSession();
         return;
+      } catch (sdkError) {
+        console.warn("Kakao SDK login failed; falling back to OAuth redirect.", sdkError);
+        if (localStorage.getItem("gympt-kakao-debug") === "1") {
+          setEmailBusy(false);
+          setEmailErr(
+            `[debug] Kakao bridge failed: ${sdkError instanceof Error ? sdkError.message : String(sdkError)}`,
+          );
+          return;
+        }
       }
     }
-
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: kakaoMode === "account" ? { prompt: "login" } : undefined,
       },
     });
     if (error) {
@@ -312,7 +338,13 @@ function Login() {
       });
 
       if (!error && signUpData.user) {
-        await confirmUserPhone({ data: { userId: signUpData.user.id, phone: normalizedPhone } }).catch(() => {});
+        // Best-effort: account creation already succeeded, so a failure here
+        // (e.g. OTP verification window expired) shouldn't block signup — but
+        // it must not be swallowed silently, or "phone never lands in
+        // auth.users" becomes undiagnosable.
+        await confirmUserPhone({ data: { userId: signUpData.user.id, phone: normalizedPhone } }).catch((e) =>
+          console.error("[phone] confirmUserPhone failed (email signup):", e instanceof Error ? e.message : e),
+        );
       }
 
       if (error) {
@@ -352,7 +384,9 @@ function Login() {
         setStep("confirm");
         return;
       }
-      await confirmUserPhone({ data: { userId: kakaoUser.id, phone: normalizedPhone } }).catch(() => {});
+      await confirmUserPhone({ data: { userId: kakaoUser.id, phone: normalizedPhone } }).catch((e) =>
+        console.error("[phone] confirmUserPhone failed (kakao signup):", e instanceof Error ? e.message : e),
+      );
 
       const writes = [
         supabase.from("profiles").upsert({
@@ -437,9 +471,8 @@ function Login() {
 
       {/* RIGHT — stepped flow */}
       <main className="bg-white flex flex-col px-6 sm:px-10 pt-8 pb-10 lg:pt-14 relative">
-        <Link to="/" className="lg:hidden flex items-center gap-2 mb-4 self-start">
-          <div className="h-8 w-8 rounded-xl bg-primary grid place-items-center text-white font-black text-[13px]">G</div>
-          <span className="font-extrabold text-ink text-[14px]">픽짐피티 PickGymPT</span>
+        <Link to="/" className="lg:hidden flex items-center mb-4 self-start">
+          <img src={logo} alt="픽짐피티" className="h-[66px] w-auto max-w-full object-contain" />
         </Link>
         {step !== "method" && step !== "done" && (
           <button
@@ -466,12 +499,20 @@ function Login() {
                 <p className="mt-2 text-[13px] text-ink-soft">처음이세요? 가입과 동시에 시작돼요. 이미 계정이 있으면 같은 입력으로 바로 로그인.</p>
 
                 <button
-                  onClick={() => startMethod("kakao")}
+                  onClick={() => startMethod("kakao", "quick")}
                   disabled={emailBusy}
                   className="mt-6 h-14 w-full rounded-2xl bg-[#FEE500] text-[#191600] text-[15px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
                   <MessageCircle className="h-4 w-4 fill-[#191600]" />
                   {emailBusy ? "카카오로 이동 중..." : "카카오로 시작하기"}
+                </button>
+
+                <button
+                  onClick={() => startMethod("kakao", "account")}
+                  disabled={emailBusy}
+                  className="mt-2 h-10 w-full rounded-xl border border-border bg-white text-[12px] font-extrabold text-ink-soft hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+                >
+                  다른 카카오 계정으로 로그인
                 </button>
 
                 {emailErr && <p className="mt-3 text-[12px] font-bold text-destructive">{emailErr}</p>}
@@ -580,7 +621,7 @@ function Login() {
                 <p className="mt-2 text-[13px] text-ink-soft">나중에 언제든 바꿀 수 있어요.</p>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
-                  <RoleCard title="트레이너" sub="회원 일정 자동 조율" img={trainerImg} imgClass="h-[141px] w-[141px]" active={role === "trainer"} onClick={() => setRole("trainer")} />
+                  <RoleCard title="트레이너" sub="회원 일정 자동 조율" img={trainerImg} active={role === "trainer"} onClick={() => setRole("trainer")} />
                   <RoleCard title="회원" sub="원하는 시간 선택" img={studentImg} active={role === "student"} onClick={() => setRole("student")} />
 
                 </div>
@@ -597,27 +638,58 @@ function Login() {
 
             {step === "confirm" && (
               <div className="mt-6">
-                {method === "email" && (
-                  <MobileEmailSignupConfirm
-                    profile={profile}
-                    setProfile={setProfile}
-                    emailPw={emailPw}
-                    setEmailPw={setEmailPw}
-                    role={role}
-                    emailBusy={emailBusy}
-                    onTrainerNext={() => setStep("preview")}
-                    onComplete={completeSignup}
-                    phoneVerified={phoneVerified}
-                    onPhoneVerified={() => setVerifiedPhone(profile.phone)}
-                  />
-                )}
-                <div className={method === "email" ? "hidden sm:block" : ""}>
+                <MobileSignupConfirm
+                  method={method}
+                  profile={profile}
+                  setProfile={setProfile}
+                  emailPw={emailPw}
+                  setEmailPw={setEmailPw}
+                  role={role}
+                  emailBusy={emailBusy}
+                  onTrainerNext={() => setStep("preview")}
+                  onComplete={completeSignup}
+                  phoneVerified={phoneVerified}
+                  onPhoneVerified={() => setVerifiedPhone(profile.phone)}
+                />
+                <div className="hidden sm:block">
                 <h2 className="text-[22px] font-black leading-tight">가입 정보를 확인해주세요</h2>
                 <p className="mt-2 text-[13px] text-ink-soft">
                   {method === "kakao" ? "카카오에서 받아온 정보예요. 필요하면 수정할 수 있어요." : "기본 정보를 입력해주세요."}
                 </p>
 
-                <div className="mt-5 flex items-start gap-3">
+                <div className="mt-5 rounded-[26px] border border-border bg-white p-4 shadow-pop">
+                  {method === "kakao" && profile.avatar && !profile.avatar.startsWith("data:image/svg+xml") ? (
+                    <div className="mb-5 flex items-center gap-3 rounded-2xl bg-surface-muted p-3">
+                      <img
+                        src={profile.avatar}
+                        alt=""
+                        className="h-16 w-16 rounded-2xl bg-muted object-cover ring-2 ring-border"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-black text-ink">카카오 프로필 사진</p>
+                        <p className="mt-1 text-[11.5px] font-semibold leading-snug text-ink-soft">
+                          기본값으로 이 사진을 사용해요. 아래에서 직접 만든 아이콘으로 바꿀 수도 있어요.
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                  <AvatarBuilder
+                    colorId={desktopAvatarColorId}
+                    iconId={desktopAvatarIconId}
+                    onChange={({ colorId, iconId }) => {
+                      setDesktopAvatarColorId(colorId);
+                      setDesktopAvatarIconId(iconId);
+                      const color = AVATAR_COLORS.find((c) => c.id === colorId) ?? AVATAR_COLORS[0];
+                      const icon = AVATAR_ICONS.find((i) => i.id === iconId) ?? AVATAR_ICONS[0];
+                      setProfile((p) => ({ ...p, avatar: avatarDataUrl(color.hex, icon) }));
+                    }}
+                  />
+                  <span className="mt-4 inline-flex chip bg-primary/10 text-primary">
+                    {role === "trainer" ? "?몃젅?대꼫" : "?뚯썝"}
+                  </span>
+                </div>
+
+                <div className="hidden">
                   <div className="relative shrink-0">
                     {profile.avatar ? (
                       <img src={profile.avatar} alt="" className="h-24 w-24 rounded-2xl bg-muted object-cover ring-2 ring-border" />
@@ -675,7 +747,15 @@ function Login() {
                   <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" hint="실명을 입력하면 트레이너/회원이 더 원활하게 알아볼 수 있어요" />
                   <Field label="이메일" type="email" value={profile.email} onChange={(v) => setProfile((p) => ({ ...p, email: v }))} placeholder="you@example.com" />
                   <div>
-                    <Field label="전화번호" type="tel" value={profile.phone} onChange={(v) => setProfile((p) => ({ ...p, phone: formatPhoneNumber(v) }))} placeholder="010-0000-0000" />
+                    <Field
+                      label="전화번호"
+                      type="tel"
+                      value={profile.phone}
+                      onChange={(v) => setProfile((p) => ({ ...p, phone: formatPhoneNumber(v) }))}
+                      placeholder="010-0000-0000"
+                      action={<PhoneVerifyTrigger otp={desktopPhoneOtp} />}
+                    />
+                    <PhoneVerifyCodeRow otp={desktopPhoneOtp} />
                     {method === "kakao" && phoneDuplicate && (
                       <div className="mt-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
                         <p className="text-[12px] font-bold text-destructive leading-snug">
@@ -695,11 +775,6 @@ function Login() {
                         </button>
                       </div>
                     )}
-                    <PhoneVerifyPanel
-                      phone={profile.phone}
-                      verified={phoneVerified}
-                      onVerified={() => setVerifiedPhone(profile.phone)}
-                    />
                   </div>
                   {method === "email" && (
                     <>
@@ -854,27 +929,64 @@ function Login() {
           </div>
       </main>
 
-      {/* Welcome top floating toast */}
+      {emailBusy && step === "method" && (
+        <AuthStatusOverlay
+          icon={<MessageCircle className="h-5 w-5 fill-current" />}
+          title="카카오 계정으로 이동하고 있어요"
+          description="PC에서는 매번 계정을 다시 확인하도록 연결했어요."
+          tone="kakao"
+        />
+      )}
+
       {welcome && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[80] w-[min(560px,calc(100vw-24px))] animate-in fade-in slide-in-from-top-2">
-          <div className="rounded-2xl bg-ink text-white shadow-pop border border-ink px-4 py-3 flex items-center gap-3">
-            <span className="h-10 w-10 rounded-xl bg-primary grid place-items-center shrink-0">
-              <Sparkles className="h-5 w-5 text-white" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-black leading-tight">🎉 {welcome}님, 회원가입을 축하해요!</p>
-              <p className="mt-0.5 text-[11.5px] text-white/70 leading-snug">
-                {role === "trainer"
-                  ? "내 미니홈피 링크를 학생들에게 공유하고 이번 주 일정부터 빠르게 조율해봐요."
-                  : "내 PT쌤에게 가능한 시간을 보내고 한 주를 깔끔하게 시작해봐요."}
-              </p>
-            </div>
-            <span className="hidden sm:inline-flex chip bg-white/15 text-white text-[10px]">/profile 이동중…</span>
-          </div>
-        </div>
+        <AuthStatusOverlay
+          icon={<Sparkles className="h-5 w-5" />}
+          title={`${welcome}님, 로그인 완료`}
+          description="내 정보 화면으로 이동하고 있어요."
+          tone="success"
+        />
       )}
 
 
+    </div>
+  );
+}
+
+function AuthStatusOverlay({
+  icon,
+  title,
+  description,
+  tone,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  tone: "kakao" | "success";
+}) {
+  return (
+    <div className="fixed inset-x-0 top-5 z-[80] mx-auto w-[min(420px,calc(100vw-24px))] animate-in fade-in slide-in-from-top-2">
+      <div className="rounded-2xl border border-border bg-white/95 p-3.5 shadow-pop backdrop-blur">
+        <div className="flex items-center gap-3">
+          <span
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${
+              tone === "kakao" ? "bg-[#FEE500] text-[#191600]" : "bg-primary text-white"
+            }`}
+          >
+            {icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-black leading-tight text-ink">{title}</p>
+            <p className="mt-0.5 text-[12px] font-semibold leading-snug text-ink-soft">{description}</p>
+          </div>
+          {tone === "kakao" ? (
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-ink/15 border-t-ink" />
+          ) : (
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/10 text-primary">
+              <Check className="h-3.5 w-3.5" />
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -893,7 +1005,8 @@ function Stepper({ step }: { step: Step }) {
   );
 }
 
-function MobileEmailSignupConfirm({
+function MobileSignupConfirm({
+  method,
   profile,
   setProfile,
   emailPw,
@@ -905,6 +1018,7 @@ function MobileEmailSignupConfirm({
   phoneVerified,
   onPhoneVerified,
 }: {
+  method: "kakao" | "email";
   profile: { name: string; email: string; phone: string; avatar: string };
   setProfile: Dispatch<SetStateAction<{ name: string; email: string; phone: string; avatar: string }>>;
   emailPw: { email: string; password: string; confirm: string };
@@ -916,19 +1030,63 @@ function MobileEmailSignupConfirm({
   phoneVerified: boolean;
   onPhoneVerified: () => void;
 }) {
-  const [active, setActive] = useState<"name" | "phone" | "email" | "password" | "confirm">("name");
+  type StepKey = "name" | "phone" | "email" | "password" | "confirm" | "avatar";
+  const [active, setActive] = useState<StepKey>("name");
+  const [avatarColorId, setAvatarColorId] = useState(AVATAR_COLORS[0].id);
+  const [avatarIconId, setAvatarIconId] = useState(AVATAR_ICONS[0].id);
+
+  // Profile pictures are the lowest-priority field and a camera-roll picker
+  // is extra friction on mobile, so it's a quick color+icon builder, asked
+  // last, after every required field is already filled.
+  useEffect(() => {
+    if (method === "kakao" && profile.avatar && !profile.avatar.startsWith("data:image/svg+xml")) {
+      return;
+    }
+    const color = AVATAR_COLORS.find((c) => c.id === avatarColorId) ?? AVATAR_COLORS[0];
+    const icon = AVATAR_ICONS.find((i) => i.id === avatarIconId) ?? AVATAR_ICONS[0];
+    const nextAvatar = avatarDataUrl(color.hex, icon);
+    setProfile((p) => (p.avatar === nextAvatar ? p : { ...p, avatar: nextAvatar }));
+  }, [avatarColorId, avatarIconId, method, profile.avatar, setProfile]);
+
+  // Kakao already has a password (and a real profile photo), so those steps
+  // only apply to email signup.
   const steps = [
     { key: "name" as const, label: "이름", icon: UserRound, value: profile.name, valid: profile.name.trim().length > 0 },
     { key: "phone" as const, label: "전화번호", icon: Phone, value: profile.phone, valid: phoneVerified },
     { key: "email" as const, label: "이메일", icon: Mail, value: profile.email, valid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim()) },
-    { key: "password" as const, label: "비밀번호", icon: Lock, value: emailPw.password, valid: pwStrong(emailPw.password) },
-    { key: "confirm" as const, label: "비밀번호 확인", icon: Check, value: emailPw.confirm, valid: emailPw.confirm.length > 0 && emailPw.password === emailPw.confirm },
+    ...(method === "email"
+      ? [
+          { key: "password" as const, label: "비밀번호", icon: Lock, value: emailPw.password, valid: pwStrong(emailPw.password) },
+          { key: "confirm" as const, label: "비밀번호 확인", icon: Check, value: emailPw.confirm, valid: emailPw.confirm.length > 0 && emailPw.password === emailPw.confirm },
+        ]
+      : []),
+    { key: "avatar" as const, label: "프로필 아이콘", icon: Camera, value: "", valid: true },
   ];
   const currentIndex = Math.max(0, steps.findIndex((step) => step.key === active));
   const current = steps[currentIndex] ?? steps[0];
   const doneCount = steps.filter((step) => step.valid).length;
-  const canSubmit = steps.every((step) => step.valid);
   const Icon = current.icon;
+  const phoneOtp = usePhoneOtp(profile.phone, phoneVerified, onPhoneVerified);
+
+  // Tracks fill order (newest first) so the summary list above the floating
+  // panel only ever shows what's actually been entered, stacking new entries
+  // on top and pushing earlier ones down — instead of a static checklist of
+  // every remaining field.
+  const [completionOrder, setCompletionOrder] = useState<StepKey[]>([]);
+  const validKey = steps.map((s) => `${s.key}:${s.valid}`).join("|");
+  useEffect(() => {
+    setCompletionOrder((prev) => {
+      let next = prev;
+      for (const step of steps) {
+        if (step.key === "avatar") continue;
+        const has = next.includes(step.key);
+        if (step.valid && !has) next = [step.key, ...next];
+        if (!step.valid && has) next = next.filter((k) => k !== step.key);
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validKey]);
 
   const setValue = (value: string) => {
     if (current.key === "name") setProfile((p) => ({ ...p, name: value }));
@@ -961,97 +1119,127 @@ function MobileEmailSignupConfirm({
         <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
       </div>
 
-      <div className="mt-5 grid gap-2.5">
-        {steps.map((step) => {
-          const StepIcon = step.icon;
-          return (
-            <button
-              key={step.key}
-              type="button"
-              onClick={() => setActive(step.key)}
-              className={`flex min-h-14 items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition ${
-                active === step.key
-                  ? "border-primary bg-primary/[0.04]"
-                  : step.valid
-                    ? "border-border bg-white"
-                    : "border-transparent bg-surface-muted"
-              }`}
-            >
-              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${step.valid ? "bg-primary text-white" : "bg-white text-ink-soft"}`}>
-                {step.valid ? <Check className="h-4 w-4" strokeWidth={3.5} /> : <StepIcon className="h-4 w-4" />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[11px] font-extrabold text-ink-soft">{step.label}</span>
-                <span className={`mt-0.5 block truncate text-[14px] font-black ${step.valid ? "text-ink" : "text-ink-soft"}`}>
-                  {step.valid ? (step.key.includes("password") || step.key === "confirm" ? "입력 완료" : step.value) : "아직 입력 전"}
+      {completionOrder.length > 0 && (
+        <div className="mt-5 grid gap-2">
+          {completionOrder.map((key) => {
+            const step = steps.find((s) => s.key === key);
+            if (!step) return null;
+            const StepIcon = step.icon;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActive(step.key)}
+                className="flex min-h-12 items-center gap-3 rounded-2xl border border-border bg-white px-3.5 py-2.5 text-left animate-in fade-in slide-in-from-top-2 duration-300"
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-white">
+                  <Check className="h-3.5 w-3.5" strokeWidth={3.5} />
                 </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-5 rounded-[26px] bg-ink p-4 text-white shadow-pop">
-        <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-primary">
-            <Icon className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-[12px] font-extrabold text-white/55">{current.label}</p>
-            <p className="mt-0.5 text-[19px] font-black leading-tight">{mobileQuestion(current.key)}</p>
-          </div>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10.5px] font-extrabold text-ink-soft">{step.label}</span>
+                  <span className="mt-0.5 block truncate text-[13px] font-black text-ink">
+                    {step.key === "password" || step.key === "confirm" ? "입력 완료" : step.value}
+                  </span>
+                </span>
+                <StepIcon className="h-4 w-4 shrink-0 text-ink-soft" />
+              </button>
+            );
+          })}
         </div>
-        <input
-          autoFocus
-          type={current.key === "password" || current.key === "confirm" ? "password" : current.key === "email" ? "email" : "text"}
-          inputMode={current.key === "phone" ? "numeric" : current.key === "email" ? "email" : "text"}
-          value={current.value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") moveNext();
-          }}
-          placeholder={mobilePlaceholder(current.key)}
-          className="mt-4 h-14 w-full rounded-2xl border border-white/10 bg-white px-4 text-[17px] font-black text-ink outline-none placeholder:text-ink-soft/45 focus:ring-4 focus:ring-primary/30"
-        />
-        {current.key === "password" && emailPw.password.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <PwRule ok={emailPw.password.length >= 8} label="8자 이상" />
-            <PwRule ok={/[a-zA-Z]/.test(emailPw.password)} label="영문" />
-            <PwRule ok={/\d/.test(emailPw.password)} label="숫자" />
-            <PwRule ok={/[^a-zA-Z0-9]/.test(emailPw.password)} label="특수문자" />
+      )}
+
+      {current.key === "avatar" ? (
+        <div key={current.key} className="mt-5 rounded-[26px] border border-border bg-white p-4 shadow-pop animate-in fade-in slide-in-from-right-3 duration-300">
+          <p className="text-[12px] font-extrabold text-ink-soft">{current.label}</p>
+          <p className="mt-0.5 text-[19px] font-black leading-tight text-ink">색상과 아이콘으로 나만의 아이콘을 만들어요</p>
+          <div className="mt-4">
+            <AvatarBuilder
+              colorId={avatarColorId}
+              iconId={avatarIconId}
+              onChange={({ colorId, iconId }) => {
+                setAvatarColorId(colorId);
+                setAvatarIconId(iconId);
+                const color = AVATAR_COLORS.find((c) => c.id === colorId) ?? AVATAR_COLORS[0];
+                const icon = AVATAR_ICONS.find((i) => i.id === iconId) ?? AVATAR_ICONS[0];
+                setProfile((p) => ({ ...p, avatar: avatarDataUrl(color.hex, icon) }));
+              }}
+            />
           </div>
-        )}
-        {current.key === "phone" && (
-          <PhoneVerifyPanel phone={profile.phone} verified={phoneVerified} onVerified={onPhoneVerified} tone="dark" />
-        )}
-        <button
-          type="button"
-          onClick={moveNext}
-          disabled={emailBusy || !current.valid}
-          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-extrabold text-white shadow-pop disabled:opacity-40"
-        >
-          {emailBusy ? "처리 중..." : currentIndex === steps.length - 1 ? (role === "trainer" ? "프로필 미리보기" : "회원가입 완료") : "다음"}
-          {!emailBusy && currentIndex < steps.length - 1 && <ArrowUp className="h-4 w-4 rotate-90" />}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={moveNext}
+            disabled={emailBusy}
+            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-extrabold text-white shadow-pop disabled:opacity-40"
+          >
+            {emailBusy ? "처리 중..." : role === "trainer" ? "프로필 미리보기" : "회원가입 완료"}
+          </button>
+        </div>
+      ) : (
+        <div key={current.key} className="mt-5 rounded-[26px] bg-ink p-4 text-white shadow-pop animate-in fade-in slide-in-from-right-3 duration-300">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-primary">
+              <Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[12px] font-extrabold text-white/55">{current.label}</p>
+                {current.key === "phone" && <PhoneVerifyTrigger otp={phoneOtp} tone="dark" />}
+              </div>
+              <p className="mt-0.5 text-[19px] font-black leading-tight">{mobileQuestion(current.key)}</p>
+            </div>
+          </div>
+          <input
+            autoFocus
+            type={current.key === "password" || current.key === "confirm" ? "password" : current.key === "email" ? "email" : "text"}
+            inputMode={current.key === "phone" ? "numeric" : current.key === "email" ? "email" : "text"}
+            value={current.value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") moveNext();
+            }}
+            placeholder={mobilePlaceholder(current.key)}
+            className="mt-4 h-14 w-full rounded-2xl border border-white/10 bg-white px-4 text-[17px] font-black text-ink outline-none placeholder:text-ink-soft/45 focus:ring-4 focus:ring-primary/30"
+          />
+          {current.key === "password" && emailPw.password.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <PwRule ok={emailPw.password.length >= 8} label="8자 이상" />
+              <PwRule ok={/[a-zA-Z]/.test(emailPw.password)} label="영문" />
+              <PwRule ok={/\d/.test(emailPw.password)} label="숫자" />
+              <PwRule ok={/[^a-zA-Z0-9]/.test(emailPw.password)} label="특수문자" />
+            </div>
+          )}
+          {current.key === "phone" && <PhoneVerifyCodeRow otp={phoneOtp} tone="dark" />}
+          <button
+            type="button"
+            onClick={moveNext}
+            disabled={emailBusy || !current.valid}
+            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-extrabold text-white shadow-pop disabled:opacity-40"
+          >
+            {emailBusy ? "처리 중..." : "다음"}
+            {!emailBusy && <ArrowUp className="h-4 w-4 rotate-90" />}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-function mobileQuestion(key: "name" | "phone" | "email" | "password" | "confirm") {
+function mobileQuestion(key: "name" | "phone" | "email" | "password" | "confirm" | "avatar") {
   if (key === "name") return "어떻게 불러드릴까요?";
   if (key === "phone") return "연락받을 번호는요?";
   if (key === "email") return "로그인 이메일은요?";
   if (key === "password") return "비밀번호를 정해주세요";
-  return "비밀번호를 한 번 더 입력해주세요";
+  if (key === "confirm") return "비밀번호를 한 번 더 입력해주세요";
+  return "";
 }
 
-function mobilePlaceholder(key: "name" | "phone" | "email" | "password" | "confirm") {
+function mobilePlaceholder(key: "name" | "phone" | "email" | "password" | "confirm" | "avatar") {
   if (key === "name") return "홍길동";
   if (key === "phone") return "010-0000-0000";
   if (key === "email") return "you@example.com";
   if (key === "password") return "영문+숫자+특수문자, 8자 이상";
-  return "비밀번호 확인";
+  if (key === "confirm") return "비밀번호 확인";
+  return "";
 }
 
 function TrainerPreview({
@@ -1141,14 +1329,14 @@ function CheckRow({ label, checked, onChange, link, bold }: { label: string; che
   );
 }
 
-function RoleCard({ title, sub, img, active, onClick, imgClass }: { title: string; sub: string; img: string; active: boolean; onClick: () => void; imgClass?: string }) {
+function RoleCard({ title, sub, img, active, onClick }: { title: string; sub: string; img: string; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
       className={`group relative rounded-2xl border-2 p-4 text-left transition bg-white ${active ? "border-primary shadow-pop -translate-y-0.5" : "border-border hover:border-ink/50"}`}
     >
       <div className="aspect-square w-full grid place-items-center overflow-hidden">
-        <img src={img} alt="" className={`${imgClass ?? "h-32 w-32"} object-contain drop-shadow-md`} />
+        <img src={img} alt="" className="h-32 w-32 object-contain drop-shadow-md" />
       </div>
       <h3 className="mt-1 text-[15px] font-black tracking-tight">{title}</h3>
       <p className="mt-0.5 text-[11.5px] text-ink-soft">{sub}</p>
@@ -1160,12 +1348,15 @@ function RoleCard({ title, sub, img, active, onClick, imgClass }: { title: strin
 }
 
 
-function Field({ label, value, onChange, placeholder, type = "text", hint }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; hint?: string }) {
+function Field({ label, value, onChange, placeholder, type = "text", hint, action }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; hint?: string; action?: ReactNode }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft inline-flex items-center gap-2 flex-wrap">
-        {label}
-        {hint && <span className="text-[10.5px] font-medium normal-case tracking-normal text-muted-foreground">· {hint}</span>}
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft inline-flex items-center gap-2 flex-wrap">
+          {label}
+          {hint && <span className="text-[10.5px] font-medium normal-case tracking-normal text-muted-foreground">· {hint}</span>}
+        </span>
+        {action}
       </span>
       <input
         type={type}
@@ -1178,25 +1369,36 @@ function Field({ label, value, onChange, placeholder, type = "text", hint }: { l
   );
 }
 
-// SMS OTP gate shown under the phone field. Tracks its own request/verify
-// state; tells the parent step once the code is confirmed via onVerified.
-function PhoneVerifyPanel({
-  phone,
-  verified,
-  onVerified,
-  tone = "light",
-}: {
-  phone: string;
-  verified: boolean;
-  onVerified: () => void;
-  tone?: "light" | "dark";
-}) {
+// Shared SMS OTP state for the phone field. The trigger/badge renders inline
+// at the top-right of the field (next to the label); the code-entry row
+// renders below the input once a code has been sent.
+function maskEmail(email: string): string {
+  const [name, domain] = email.split("@");
+  if (!name || !domain) return email;
+  const maskedName = name.length <= 2 ? `${name[0]}*` : `${name.slice(0, 2)}${"*".repeat(Math.max(name.length - 2, 3))}`;
+  const [domainName, ...domainRest] = domain.split(".");
+  const maskedDomain = domainName.length <= 2 ? `${domainName[0]}*` : `${domainName.slice(0, 2)}${"*".repeat(Math.max(domainName.length - 2, 3))}`;
+  return `${maskedName}@${maskedDomain}${domainRest.length ? "." + domainRest.join(".") : ""}`;
+}
+
+const PROVIDER_LABELS: Record<string, string> = { kakao: "카카오", email: "이메일" };
+
+function usePhoneOtp(phone: string, verified: boolean, onVerified: () => void) {
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [duplicate, setDuplicate] = useState<{ provider: string; email: string } | null>(null);
   const phoneValid = phone.replace(/\D/g, "").length === 11;
+
+  useEffect(() => {
+    setSent(false);
+    setCode("");
+    setErr(null);
+    setCooldown(0);
+    setDuplicate(null);
+  }, [phone]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -1208,11 +1410,22 @@ function PhoneVerifyPanel({
     setErr(null);
     setBusy(true);
     try {
+      const { data: existing } = await supabase
+        .rpc("phone_account_info" as never, { check_phone: phone } as never)
+        .maybeSingle();
+      const account = existing as { email: string | null; provider: string } | null;
+      if (account) {
+        setDuplicate({
+          provider: PROVIDER_LABELS[account.provider] ?? account.provider,
+          email: account.email ? maskEmail(account.email) : "정보 없음",
+        });
+        return;
+      }
       await requestPhoneOtp({ data: { phone } });
       setSent(true);
       setCooldown(60);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "???? ??? ?????.");
+      setErr(e instanceof Error ? e.message : "인증번호 발송에 실패했어요.");
     } finally {
       setBusy(false);
     }
@@ -1225,66 +1438,134 @@ function PhoneVerifyPanel({
       await verifyPhoneOtp({ data: { phone, code } });
       onVerified();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "???? ??? ?????.");
+      setErr(e instanceof Error ? e.message : "인증번호 확인에 실패했어요.");
     } finally {
       setBusy(false);
     }
   };
 
-  const dark = tone === "dark";
+  return {
+    sent,
+    code,
+    setCode,
+    busy,
+    err,
+    cooldown,
+    phoneValid,
+    verified,
+    send,
+    verify,
+    duplicate,
+    clearDuplicate: () => setDuplicate(null),
+  };
+}
 
-  if (verified) {
+// Small inline trigger for the field's label row — "인증요청" button that
+// turns into a "인증완료" badge, mirroring the usual phone-OTP form layout
+// (label left, verify action top-right, code row appears below the input).
+function PhoneVerifyTrigger({
+  otp,
+  tone = "light",
+}: {
+  otp: ReturnType<typeof usePhoneOtp>;
+  tone?: "light" | "dark";
+}) {
+  const dark = tone === "dark";
+  if (otp.verified) {
     return (
-      <p className={`mt-2 inline-flex items-center gap-1 text-[11.5px] font-bold ${dark ? "text-emerald-300" : "text-emerald-600"}`}>
-        <Check className="h-3.5 w-3.5" /> ???? ?? ??
-      </p>
+      <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${dark ? "text-emerald-300" : "text-emerald-600"}`}>
+        <Check className="h-3 w-3" /> 인증완료
+      </span>
     );
   }
+  return (
+    <>
+      <button
+        type="button"
+        onClick={otp.send}
+        disabled={!otp.phoneValid || otp.busy}
+        className={`h-6 px-2.5 rounded-full text-[10.5px] font-extrabold disabled:opacity-40 ${dark ? "bg-white/15 text-white" : "bg-ink text-white"}`}
+      >
+        {otp.busy && !otp.sent ? "발송 중..." : otp.sent ? "재전송" : "인증요청"}
+      </button>
+      <Dialog open={!!otp.duplicate} onOpenChange={(v) => !v && otp.clearDuplicate()}>
+        <DialogContent className="max-w-[420px] text-center">
+          <DialogHeader>
+            <DialogTitle className="text-center">
+              이미 가입한 계정입니다.
+              <br />
+              기존 계정으로 로그인 해주세요.
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 space-y-2 text-[13px]">
+            <div className="flex items-center justify-between">
+              <span className="text-ink-soft font-bold">가입 수단</span>
+              <span className="font-bold text-ink">{otp.duplicate?.provider}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-ink-soft font-bold">이메일 주소</span>
+              <span className="font-bold text-ink">{otp.duplicate?.email}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={otp.clearDuplicate}
+              className="w-full h-12 rounded-full bg-ink text-white text-[14px] font-extrabold"
+            >
+              확인
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
+// Code-entry row shown under the phone input once a code has been sent.
+function PhoneVerifyCodeRow({
+  otp,
+  tone = "light",
+}: {
+  otp: ReturnType<typeof usePhoneOtp>;
+  tone?: "light" | "dark";
+}) {
+  const dark = tone === "dark";
+  if (otp.verified || !otp.sent) {
+    return otp.err ? (
+      <p className={`mt-1.5 text-[11.5px] font-bold ${dark ? "text-rose-300" : "text-destructive"}`}>{otp.err}</p>
+    ) : null;
+  }
   return (
     <div className="mt-2">
-      {!sent ? (
+      <div className="flex items-center gap-2">
+        <input
+          value={otp.code}
+          onChange={(e) => otp.setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          placeholder="인증번호 6자리"
+          inputMode="numeric"
+          className={
+            dark
+              ? "h-10 w-32 px-3 rounded-xl border border-white/15 bg-white/10 outline-none text-[13px] font-bold text-white placeholder:text-white/40 tabular-nums focus:border-white/40"
+              : "h-10 w-32 px-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] font-bold text-ink tabular-nums"
+          }
+        />
         <button
           type="button"
-          onClick={send}
-          disabled={!phoneValid || busy}
-          className={`h-9 px-3.5 rounded-full text-[12px] font-extrabold disabled:opacity-40 ${dark ? "bg-white/15 text-white" : "bg-ink text-white"}`}
+          onClick={otp.verify}
+          disabled={otp.busy || otp.code.length < 4}
+          className="h-10 px-3.5 rounded-xl bg-primary text-white text-[12px] font-extrabold disabled:opacity-40"
         >
-          {busy ? "?? ?..." : "???? ??"}
+          확인
         </button>
-      ) : (
-        <div className="flex items-center gap-2">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="???? 6??"
-            inputMode="numeric"
-            className={
-              dark
-                ? "h-10 w-32 px-3 rounded-xl border border-white/15 bg-white/10 outline-none text-[13px] font-bold text-white placeholder:text-white/40 tabular-nums focus:border-white/40"
-                : "h-10 w-32 px-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] font-bold text-ink tabular-nums"
-            }
-          />
-          <button
-            type="button"
-            onClick={verify}
-            disabled={busy || code.length < 4}
-            className="h-10 px-3.5 rounded-xl bg-primary text-white text-[12px] font-extrabold disabled:opacity-40"
-          >
-            ??
-          </button>
-          <button
-            type="button"
-            onClick={send}
-            disabled={busy || cooldown > 0}
-            className={`h-10 px-2.5 rounded-xl text-[11.5px] font-bold disabled:opacity-40 ${dark ? "text-white/60" : "text-ink-soft"}`}
-          >
-            {cooldown > 0 ? `??? ${cooldown}s` : "???"}
-          </button>
-        </div>
-      )}
-      {err && (
-        <p className={`mt-1.5 text-[11.5px] font-bold ${dark ? "text-rose-300" : "text-destructive"}`}>{err}</p>
+        {otp.cooldown > 0 && (
+          <span className={`text-[11.5px] font-bold ${dark ? "text-white/60" : "text-ink-soft"}`}>
+            재전송 {otp.cooldown}s
+          </span>
+        )}
+      </div>
+      {otp.err && (
+        <p className={`mt-1.5 text-[11.5px] font-bold ${dark ? "text-rose-300" : "text-destructive"}`}>{otp.err}</p>
       )}
     </div>
   );

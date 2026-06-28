@@ -327,11 +327,11 @@
   }
 
   body:has([data-bottom-floating]) .support-fab-button {
-    bottom: calc(6.25rem + env(safe-area-inset-bottom));
+    bottom: calc(7.5rem + env(safe-area-inset-bottom));
   }
 
   body:has([data-bottom-floating]) .support-fab-panel {
-    bottom: calc(9.75rem + env(safe-area-inset-bottom));
+    bottom: calc(11rem + env(safe-area-inset-bottom));
   }
 
   @media (min-width: 640px) {

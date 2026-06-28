@@ -12,6 +12,14 @@ function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
 }
 
+// Supabase Auth's phone column requires E.164 (e.g. "+821012345678") — a bare
+// "01012345678" is rejected with "Invalid phone number format (E.164
+// required)". Korean mobile numbers drop the leading 0 under the +82 prefix.
+function toE164Kr(phone: string): string {
+  const digits = normalizePhone(phone);
+  return `+82${digits.replace(/^0/, "")}`;
+}
+
 function hashCode(code: string): string {
   return createHash("sha256").update(code).digest("hex");
 }
@@ -144,7 +152,7 @@ export const confirmUserPhone = createServerFn({ method: "POST" })
     }
 
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
-      phone,
+      phone: toE164Kr(phone),
       phone_confirm: true,
     });
     if (error) throw new Error(error.message);

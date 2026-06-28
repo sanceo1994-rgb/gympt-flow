@@ -12,6 +12,7 @@ import {
   Award,
   Coffee,
   Sparkles,
+  Camera,
 } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import {
@@ -91,6 +92,7 @@ type BookingTrainer = {
   instagram_url?: string | null;
   theme_from?: string | null;
   theme_to?: string | null;
+  gallery_urls?: string[] | null;
 };
 
 function requestedTrainerId() {
@@ -101,7 +103,21 @@ function requestedTrainerId() {
 function requestedWeekStart() {
   if (typeof window === "undefined") return nextWeekStart();
   const fromUrl = new URLSearchParams(window.location.search).get("week");
-  return fromUrl && /^\d{4}-\d{2}-\d{2}$/.test(fromUrl) ? fromUrl : nextWeekStart();
+  return normalizeWeekStartParam(fromUrl);
+}
+
+function formatLocalISODate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+function normalizeWeekStartParam(value: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return nextWeekStart();
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return nextWeekStart();
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return formatLocalISODate(date);
 }
 
 function cachedTrainer(): BookingTrainer | null {
@@ -143,6 +159,7 @@ function currentPointWeekStartISO(date = new Date()) {
 
 type BookingSchedule = {
   id: string;
+  requestSentAt: string | null;
   slotIds: Record<string, string>;
   slotKeyById: Record<string, string>;
   closedKeys: Set<string>;
@@ -151,6 +168,7 @@ type BookingSchedule = {
 async function ensureBookingSchedule(
   trainerUserId: string,
   weekStart: string,
+  { createIfMissing = false }: { createIfMissing?: boolean } = {},
 ): Promise<BookingSchedule | null> {
   // weekly_schedules.trainer_id references trainer_profiles(id), a separate
   // per-trainer mirror row keyed by the trainer's auth user id. A student can't
@@ -168,21 +186,21 @@ async function ensureBookingSchedule(
   let schedule = (
     await supabase
       .from("weekly_schedules" as never)
-      .select("id")
+      .select("id,request_sent_at")
       .eq("trainer_id", scheduleTrainer.id)
       .eq("week_start", weekStart)
       .maybeSingle()
-  ).data as { id: string } | null;
+  ).data as { id: string; request_sent_at: string | null } | null;
 
-  if (!schedule) {
+  if (!schedule && createIfMissing) {
     const { data: created } = await supabase
       .from("weekly_schedules" as never)
       .upsert({ trainer_id: scheduleTrainer.id, week_start: weekStart } as never, {
         onConflict: "trainer_id,week_start",
       })
-      .select("id")
+      .select("id,request_sent_at")
       .maybeSingle();
-    schedule = created as { id: string } | null;
+    schedule = created as { id: string; request_sent_at: string | null } | null;
   }
   if (!schedule) return null;
 
@@ -233,7 +251,7 @@ async function ensureBookingSchedule(
     slotKeyById[slot.id] = key;
     if (slot.is_closed) closedKeys.add(key);
   }
-  return { id: schedule.id, slotIds, slotKeyById, closedKeys };
+  return { id: schedule.id, requestSentAt: schedule.request_sent_at, slotIds, slotKeyById, closedKeys };
 }
 
 // Saturday (index 5) is blue, Sunday (index 6) is red, weekdays use the default ink color.
@@ -285,7 +303,23 @@ function Booking() {
   const [pageTrainerId, setPageTrainerId] = useState<string>(() => requestedTrainerId());
   const trainerRank = useTrainerRank(pageTrainerId);
   const [matchError, setMatchError] = useState<string | null>(null);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryManagerOpen, setGalleryManagerOpen] = useState(false);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
+  const MAX_GALLERY_PHOTOS = 5;
   const locationSearch = useLocation({ select: (loc) => loc.searchStr });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const rawWeek = params.get("week");
+    const normalizedWeek = normalizeWeekStartParam(rawWeek);
+    if (!rawWeek) return;
+    if (rawWeek === normalizedWeek) return;
+    params.set("week", normalizedWeek);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }, [locationSearch]);
+
   const weekDates = useMemo(() => {
     const monday = new Date(`${requestedWeekStart()}T00:00:00`);
     return Array.from({ length: 7 }, (_, i) => {
@@ -335,7 +369,7 @@ function Booking() {
 
       const { data: themedTrainer, error: themedTrainerError } = await supabase
         .from("trainers")
-        .select("id,user_id,name,gym,intro,instagram_url,theme_from,theme_to")
+        .select("id,user_id,name,gym,intro,instagram_url,theme_from,theme_to,gallery_urls")
         .eq("id", currentTrainerId)
         .maybeSingle();
 
@@ -397,8 +431,46 @@ function Booking() {
 
       const isOwner = isTrainerRole && pageTrainer?.user_id === user.id;
       if ((matchedRoster || isOwner) && pageTrainer?.user_id) {
-        const ensured = await ensureBookingSchedule(pageTrainer.user_id, requestedWeekStart());
+        const ensured = await ensureBookingSchedule(pageTrainer.user_id, requestedWeekStart(), {
+          createIfMissing: isOwner,
+        });
         if (cancelled) return;
+
+        if (matchedRoster && !ensured?.requestSentAt) {
+          setBookingSchedule(null);
+          setDemand({});
+          setSelected(new Set());
+          setUnavailable(false);
+          setSubmitted(false);
+          setMatchError(
+            "이 주차는 아직 트레이너가 시간 선택 요청을 보내지 않았어요. 받은 링크의 주차를 확인해 주세요.",
+          );
+          setRosterLoading(false);
+          return;
+        }
+
+        if (matchedRoster && ensured?.requestSentAt) {
+          const { data: recipient } = await supabase
+            .from("schedule_request_recipients" as never)
+            .select("id")
+            .eq("schedule_id", ensured.id)
+            .eq("student_user_id", user.id)
+            .maybeSingle();
+          if (cancelled) return;
+          if (!recipient) {
+            setBookingSchedule(null);
+            setDemand({});
+            setSelected(new Set());
+            setUnavailable(false);
+            setSubmitted(false);
+            setMatchError(
+              "이 주차 시간 선택 요청 대상이 아니에요. 트레이너가 새 요청을 보내면 선택할 수 있어요.",
+            );
+            setRosterLoading(false);
+            return;
+          }
+        }
+
         setBookingSchedule(ensured);
 
         if (ensured) {
@@ -468,7 +540,8 @@ function Booking() {
       : isRegisteredStudent
         ? "registered"
         : "notRegistered";
-  const effectiveUnlocked = !rosterLoading && (gateState === "registered" || gateState === "owner");
+  const effectiveUnlocked =
+    !rosterLoading && (gateState === "owner" || (gateState === "registered" && !!bookingSchedule));
   const showGateOverlay = !authLoading && !rosterLoading && !effectiveUnlocked;
   const displayTrainerName = trainerRecord?.name || "";
   const displayTrainerInitial = displayTrainerName.charAt(0);
@@ -479,6 +552,7 @@ function Booking() {
     from: trainerRecord?.theme_from || "#FF4E97",
     to: trainerRecord?.theme_to || "#FF6FB1",
   };
+  const galleryPhotos = (trainerRecord?.gallery_urls ?? []).filter(Boolean);
   const displayTrainerSpecs = TRAINER_SPECS[pageTrainerId] ?? [
     "생활스포츠지도사 2급",
     "체형 분석",
@@ -547,6 +621,61 @@ function Booking() {
 
   const onUnavailableClick = () =>
     requireAuth(() => (unavailable ? setUnavailable(false) : setConfirmUnavail(true)));
+
+  const handleGalleryFile = async (file: File) => {
+    if (!user || String(user.id).startsWith("virtual-") || !trainerRecord) return;
+    if (!file.type.startsWith("image/")) {
+      setToast({ title: "이미지 파일만 업로드할 수 있어요." });
+      setTimeout(() => setToast(null), 2400);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setToast({ title: "5MB 이하의 이미지만 업로드할 수 있어요." });
+      setTimeout(() => setToast(null), 2400);
+      return;
+    }
+    const currentUrls = trainerRecord.gallery_urls ?? [];
+    if (currentUrls.length >= MAX_GALLERY_PHOTOS) {
+      setToast({ title: `대표 사진은 최대 ${MAX_GALLERY_PHOTOS}장까지 등록할 수 있어요.` });
+      setTimeout(() => setToast(null), 2400);
+      return;
+    }
+    setGalleryUploading(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${user.id}/gallery/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { cacheControl: "3600", upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: publicUrlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const nextUrls = [...currentUrls, publicUrlData.publicUrl];
+      const { error: updateError } = await supabase
+        .from("trainers")
+        .update({ gallery_urls: nextUrls })
+        .eq("user_id", user.id);
+      if (updateError) throw updateError;
+      setTrainerRecord((prev) => (prev ? { ...prev, gallery_urls: nextUrls } : prev));
+      setToast({ title: "대표 사진을 추가했어요." });
+    } catch {
+      setToast({ title: "사진 업로드에 실패했어요. 다시 시도해주세요." });
+    } finally {
+      setGalleryUploading(false);
+      setTimeout(() => setToast(null), 2400);
+    }
+  };
+
+  const removeGalleryPhoto = async (url: string) => {
+    if (!user || !trainerRecord) return;
+    const nextUrls = (trainerRecord.gallery_urls ?? []).filter((u) => u !== url);
+    const { error } = await supabase.from("trainers").update({ gallery_urls: nextUrls }).eq("user_id", user.id);
+    if (error) {
+      setToast({ title: "삭제에 실패했어요. 다시 시도해주세요." });
+      setTimeout(() => setToast(null), 2400);
+      return;
+    }
+    setTrainerRecord((prev) => (prev ? { ...prev, gallery_urls: nextUrls } : prev));
+  };
 
   const persistSelections = async (markUnavailable: boolean, picks: string[]) => {
     if (!user || String(user.id).startsWith("virtual-") || !registeredRoster || !bookingSchedule)
@@ -719,13 +848,40 @@ function Booking() {
   return (
     <AppShell>
       {/* Trainer profile — restructured, no overlap */}
-      <section className="rounded-2xl border border-border overflow-hidden bg-white">
-        <div
-          className="h-16"
-          style={{
-            background: `linear-gradient(135deg, ${trainerTheme.from}, ${trainerTheme.to})`,
-          }}
-        />
+      <section className="relative rounded-2xl border border-border overflow-hidden bg-white">
+        {galleryPhotos.length > 0 ? (
+          <>
+            {/* Mobile: first photo only */}
+            <div className="h-56 sm:hidden">
+              <img src={galleryPhotos[0]} alt="" className="h-full w-full object-cover" />
+            </div>
+            {/* Desktop/wide: multiple photos side by side */}
+            <div className="hidden h-72 sm:flex sm:gap-0.5">
+              {galleryPhotos.slice(0, 4).map((url, i) => (
+                <div key={i} className="flex-1 min-w-0 overflow-hidden">
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div
+            className="h-16"
+            style={{
+              background: `linear-gradient(135deg, ${trainerTheme.from}, ${trainerTheme.to})`,
+            }}
+          />
+        )}
+        {isOwnerTrainer && (
+          <div className="absolute right-3 top-3 z-10">
+            <button
+              onClick={() => setGalleryManagerOpen(true)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-black/55 px-3 text-[11.5px] font-extrabold text-white hover:bg-black/75"
+            >
+              <Camera className="h-3.5 w-3.5" /> 대표 사진 관리
+            </button>
+          </div>
+        )}
         <div className="px-5 sm:px-6 -mt-10 pb-5">
           <div className="flex items-start sm:items-end gap-4 flex-wrap">
             <div className="relative shrink-0">
@@ -916,8 +1072,8 @@ function Booking() {
           </div>
 
           {/* Unified responsive timetable — 7 days × hours, larger touch cells on mobile */}
-          <div className={`pb-32 ${unavailable ? "opacity-40 pointer-events-none" : ""}`}>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+          <div className={`pb-32 -mx-5 sm:mx-0 ${unavailable ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className="mt-4 overflow-hidden rounded-none border-y border-x-0 border-border sm:rounded-2xl sm:border-x">
               <div className="grid grid-cols-[32px_repeat(7,minmax(0,1fr))] bg-surface-muted border-b border-border sm:grid-cols-[44px_repeat(7,1fr)]">
                 <div className="p-1.5 sm:p-2 text-[10px] text-muted-foreground font-bold text-center">
                   시간
@@ -980,7 +1136,39 @@ function Booking() {
               <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 grid place-items-center mb-4">
                 <Lock className="h-6 w-6 text-primary" />
               </div>
-              {gateState === "notRegistered" ? (
+              {gateState === "registered" && !bookingSchedule ? (
+                <>
+                  <h3 className="text-[18px] sm:text-[20px] font-black text-ink leading-tight">
+                    아직 열린 조율 주차가 아니에요
+                  </h3>
+                  <p className="mt-3 text-[12.5px] text-ink-soft leading-relaxed">
+                    {weekRangeLabel} 주차는 {displayTrainerName} 트레이너가 아직 시간 선택 요청을 보내지 않았어요.
+                    받은 링크의 주차를 다시 확인해 주세요.
+                  </p>
+                  {matchError && (
+                    <p className="mt-3 rounded-2xl bg-surface-muted px-4 py-3 text-[12px] font-semibold leading-relaxed text-ink-soft">
+                      {matchError}
+                    </p>
+                  )}
+                  <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate({ to: "/profile" })}
+                      className="h-11 rounded-2xl border border-border bg-white text-[13px] font-extrabold text-ink hover:bg-muted"
+                    >
+                      내 정보로 가기
+                    </button>
+                    <a
+                      href={displayInstagramUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-primary text-[13px] font-extrabold text-white shadow-pop hover:brightness-110"
+                    >
+                      <Instagram className="h-4 w-4" /> 트레이너에게 문의
+                    </a>
+                  </div>
+                </>
+              ) : gateState === "notRegistered" ? (
                 <>
                   <h3 className="text-[18px] sm:text-[20px] font-black text-ink leading-tight">
                     회원님은 {displayTrainerName} 트레이너님의
@@ -1308,6 +1496,60 @@ function Booking() {
               className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-bold shadow-pop"
             >
               네, 수정할게요
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={galleryManagerOpen} onOpenChange={setGalleryManagerOpen}>
+        <DialogContent className="max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>대표 사진 관리</DialogTitle>
+            <DialogDescription className="leading-relaxed">
+              예약 페이지 상단에 보여지는 사진이에요. PC에서는 여러 장, 모바일에서는 첫 사진만
+              보여요. (최대 {MAX_GALLERY_PHOTOS}장)
+            </DialogDescription>
+          </DialogHeader>
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleGalleryFile(file);
+              e.target.value = "";
+            }}
+          />
+          {galleryPhotos.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {galleryPhotos.map((url) => (
+                <div key={url} className="group relative aspect-square overflow-hidden rounded-xl border border-border">
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <button
+                    onClick={() => removeGalleryPhoto(url)}
+                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                    aria-label="사진 삭제"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <button
+              onClick={() => setGalleryManagerOpen(false)}
+              className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold"
+            >
+              닫기
+            </button>
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              disabled={galleryUploading || galleryPhotos.length >= MAX_GALLERY_PHOTOS}
+              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-extrabold shadow-pop disabled:opacity-40 inline-flex items-center gap-1.5"
+            >
+              <Camera className="h-3.5 w-3.5" /> {galleryUploading ? "업로드 중..." : "사진 추가"}
             </button>
           </DialogFooter>
         </DialogContent>

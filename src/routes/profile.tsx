@@ -9,6 +9,7 @@ import {
   Gift,
   Copy,
   Sparkles,
+  CalendarCheck,
   CalendarClock,
   CalendarDays,
   Clock3,
@@ -19,6 +20,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -55,6 +57,14 @@ type WeeklySession = {
 type PointsSummary = {
   total: number;
   week: number;
+};
+
+type PendingRequest = {
+  scheduleId: string;
+  weekStart: string;
+  responded: boolean;
+  confirmed: boolean;
+  confirmedAt?: string | null;
 };
 
 type TrainerSessionRow = {
@@ -116,6 +126,10 @@ function ProfilePage() {
   const isVerified = meta.verified !== false; // default true (first 100 trainers)
 
   const [editMode, setEditMode] = useState(false);
+  const [profileDetailsOpen, setProfileDetailsOpen] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -130,11 +144,10 @@ function ProfilePage() {
     name: string;
     gym: string | null;
   } | null>(null);
-  const [pendingRequests, setPendingRequests] = useState<
-    { scheduleId: string; weekStart: string; responded: boolean }[]
-  >([]);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [weeklySessions, setWeeklySessions] = useState<WeeklySession[]>([]);
   const [recentSession, setRecentSession] = useState<WeeklySession | null>(null);
+  const [recentHistory, setRecentHistory] = useState<WeeklySession[]>([]);
   const [pointsSummary, setPointsSummary] = useState<PointsSummary>({ total: 0, week: 0 });
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [trainerWeekOffset, setTrainerWeekOffset] = useState(0);
@@ -266,6 +279,7 @@ function ProfilePage() {
         setGym(trainerRow.gym ?? "");
         setIntro(trainerRow.intro ?? "");
         setRecentSession(null);
+        setRecentHistory([]);
         const { data: scheduleTrainer } = await supabase
           .from("trainer_profiles")
           .select("id")
@@ -426,20 +440,62 @@ function ProfilePage() {
                 .gte("week_start", thisWeekMonday)
                 .order("week_start", { ascending: true });
               const scheduleIds = (requestedSchedules ?? []).map((s) => s.id);
-              const { data: ownSelections } = scheduleIds.length
-                ? await supabase
-                    .from("student_selections")
-                    .select("schedule_id")
-                    .eq("student_user_id", user.id)
-                    .in("schedule_id", scheduleIds)
-                : { data: [] as { schedule_id: string }[] };
+              const [{ data: recipientRows }, { data: ownSelections }] = scheduleIds.length
+                ? await Promise.all([
+                    supabase
+                      .from("schedule_request_recipients" as never)
+                      .select("schedule_id")
+                      .eq("student_user_id", user.id)
+                      .in("schedule_id", scheduleIds),
+                    supabase
+                      .from("student_selections")
+                      .select("schedule_id,status,slot_id")
+                      .eq("student_user_id", user.id)
+                      .in("schedule_id", scheduleIds),
+                  ])
+                : [
+                    { data: [] as { schedule_id: string }[] },
+                    { data: [] as { schedule_id: string; status: string; slot_id: string | null }[] },
+                  ];
+              const recipientIds = new Set(
+                ((recipientRows ?? []) as unknown as { schedule_id: string }[]).map((s) => s.schedule_id),
+              );
+              const visibleSchedules = (requestedSchedules ?? []).filter((s) => recipientIds.has(s.id));
               const respondedIds = new Set((ownSelections ?? []).map((s) => s.schedule_id));
+              const confirmedRows = (ownSelections ?? []).filter(
+                (s) => s.status === "confirmed" && s.slot_id,
+              );
+              const confirmedSlotIds = [
+                ...new Set(confirmedRows.flatMap((s) => (s.slot_id ? [s.slot_id] : []))),
+              ];
+              const { data: confirmedSlots } = confirmedSlotIds.length
+                ? await supabase
+                    .from("time_slots")
+                    .select("id,day_of_week,hour")
+                    .in("id", confirmedSlotIds)
+                : { data: [] as { id: string; day_of_week: number; hour: number }[] };
+              const slotById = new Map((confirmedSlots ?? []).map((slot) => [slot.id, slot]));
+              const confirmedBySchedule = new Map<string, string>();
+              for (const row of confirmedRows) {
+                if (!row.slot_id) continue;
+                const slot = slotById.get(row.slot_id);
+                const schedule = (requestedSchedules ?? []).find((s) => s.id === row.schedule_id);
+                if (!slot || !schedule) continue;
+                const confirmedDate = makeWeekSlotDate(
+                  new Date(`${schedule.week_start}T00:00:00`),
+                  slot.day_of_week,
+                  slot.hour,
+                );
+                confirmedBySchedule.set(row.schedule_id, confirmedDate.toISOString());
+              }
               if (!cancelled) {
                 setPendingRequests(
-                  (requestedSchedules ?? []).map((s) => ({
+                  visibleSchedules.map((s) => ({
                     scheduleId: s.id,
                     weekStart: s.week_start,
                     responded: respondedIds.has(s.id),
+                    confirmed: confirmedBySchedule.has(s.id),
+                    confirmedAt: confirmedBySchedule.get(s.id) ?? null,
                   })),
                 );
               }
@@ -462,11 +518,9 @@ function ProfilePage() {
             .from("pt_sessions")
             .select("id,scheduled_at,status,note,trainers(name,gym)")
             .eq("student_user_id", user.id)
-            .neq("status", "cancelled")
             .lte("scheduled_at", new Date().toISOString())
             .order("scheduled_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
+            .limit(8),
         ]);
         if (!cancelled) {
           setWeeklySessions(
@@ -482,20 +536,20 @@ function ProfilePage() {
               };
             }),
           );
-          const recentRow = recent as StudentSessionRow | null;
-          const recentTrainer = relationOne(recentRow?.trainers ?? null);
-          setRecentSession(
-            recentRow
-              ? {
-                  id: recentRow.id,
-                  scheduledAt: recentRow.scheduled_at,
-                  status: effectiveSessionStatus(recentRow.status, recentRow.scheduled_at),
-                  counterpart: pickDisplayName(recentTrainer?.name) ?? "트레이너",
-                  gym: recentTrainer?.gym ?? null,
-                  note: recentRow.note,
-                }
-              : null,
-          );
+          const recentRows = (recent ?? []) as StudentSessionRow[];
+          const recentMapped = recentRows.map((recentRow) => {
+            const recentTrainer = relationOne(recentRow.trainers);
+            return {
+              id: recentRow.id,
+              scheduledAt: recentRow.scheduled_at,
+              status: effectiveSessionStatus(recentRow.status, recentRow.scheduled_at),
+              counterpart: pickDisplayName(recentTrainer?.name) ?? "트레이너",
+              gym: recentTrainer?.gym ?? null,
+              note: recentRow.note,
+            };
+          });
+          setRecentSession(recentMapped.find((s) => s.status !== "cancelled") ?? null);
+          setRecentHistory(recentMapped);
         }
       }
       if (!cancelled) setSessionsLoading(false);
@@ -547,6 +601,49 @@ function ProfilePage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const handleAvatarFile = async (file: File) => {
+    if (!user || String(user.id).startsWith("virtual-")) {
+      setHistoryToast("로그인 후 이용해주세요.");
+      setTimeout(() => setHistoryToast(null), 2400);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setHistoryToast("이미지 파일만 업로드할 수 있어요.");
+      setTimeout(() => setHistoryToast(null), 2400);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setHistoryToast("5MB 이하의 이미지만 업로드할 수 있어요.");
+      setTimeout(() => setHistoryToast(null), 2400);
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { cacheControl: "3600", upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: publicUrlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const publicUrl = publicUrlData.publicUrl;
+
+      await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
+      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+      if (role === "trainer") {
+        await supabase.from("trainers").update({ avatar_url: publicUrl }).eq("user_id", user.id);
+      }
+      setAvatarPreview(publicUrl);
+      setHistoryToast("프로필 사진을 변경했어요.");
+    } catch {
+      setHistoryToast("사진 업로드에 실패했어요. 다시 시도해주세요.");
+    } finally {
+      setAvatarUploading(false);
+      setTimeout(() => setHistoryToast(null), 2400);
+    }
+  };
+
+
   const copyInvite = () => {
     try {
       navigator.clipboard.writeText(inviteCode);
@@ -558,8 +655,8 @@ function ProfilePage() {
 
   return (
     <AppShell>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">계정</p>
           <h1 className="mt-0.5 text-[22px] sm:text-[28px] font-black text-ink leading-tight">
             내 정보
@@ -571,72 +668,93 @@ function ProfilePage() {
         {!editMode && (
           <button
             onClick={() => setEditMode(true)}
-            className="h-9 px-3.5 rounded-full bg-ink text-white text-[11.5px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-110"
+            className="h-9 shrink-0 px-3.5 rounded-full bg-ink text-white text-[11.5px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-110"
           >
-            <Pencil className="h-3.5 w-3.5" /> 정보 수정
+            <Pencil className="h-3.5 w-3.5" /> <span className="hidden sm:inline">정보 수정</span><span className="sm:hidden">수정</span>
           </button>
         )}
       </div>
 
-      <div className="mt-2 grid gap-2 lg:grid-cols-[220px_1fr] lg:gap-3">
+      <div className="mt-2 grid gap-2 lg:grid-cols-[180px_1fr] lg:gap-3">
         {/* Avatar card */}
-        <div className="rounded-2xl border border-border bg-white p-2.5 text-center sm:p-3.5">
-          <div className="relative inline-block">
-            {meta.avatar_url ? (
-              <img
-                src={meta.avatar_url}
-                alt=""
-                className="h-12 w-12 rounded-xl object-cover mx-auto ring-2 ring-border sm:h-16 sm:w-16 lg:h-20 lg:w-20 lg:rounded-2xl"
-              />
-            ) : (
-              <div className="h-12 w-12 rounded-xl bg-primary/15 grid place-items-center text-[20px] sm:h-16 sm:w-16 lg:h-20 lg:w-20 lg:rounded-2xl sm:text-[24px] lg:text-[28px] font-black text-primary mx-auto">
-                {(name || "?")[0]}
-              </div>
-            )}
-            {role === "trainer" && isVerified && (
-              <VerifiedBadge />
-            )}
-            {role === "trainer" && trainerRank && (
-              <TrainerRankBadge rank={trainerRank} />
-            )}
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <span className="inline-flex h-7 items-center rounded-full bg-primary/10 px-2.5 text-[11.5px] font-extrabold text-primary">
-                이번 주 {pointsSummary.week}P
-              </span>
-              <span className="inline-flex h-7 items-center rounded-full bg-surface-muted px-2.5 text-[11.5px] font-extrabold text-ink">
-                누적 {pointsSummary.total}P
-              </span>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-white p-2.5 text-left sm:p-3 lg:block lg:text-center">
+          <div className="relative shrink-0 lg:inline-block">
+            <div className="relative mx-auto h-14 w-14 sm:h-16 sm:w-16 lg:h-20 lg:w-20">
+              {avatarPreview || meta.avatar_url ? (
+                <img
+                  src={avatarPreview || meta.avatar_url}
+                  alt=""
+                  className={`h-full w-full rounded-xl object-cover ring-2 ring-border lg:rounded-2xl ${avatarUploading ? "opacity-50" : ""}`}
+                />
+              ) : (
+                <div
+                  className={`grid h-full w-full place-items-center rounded-xl bg-primary/15 text-[20px] font-black text-primary sm:text-[24px] lg:rounded-2xl lg:text-[28px] ${avatarUploading ? "opacity-50" : ""}`}
+                >
+                  {(name || "?")[0]}
+                </div>
+              )}
+              {role === "trainer" && trainerRank && (
+                <TrainerRankBadge rank={trainerRank} />
+              )}
+              {role === "trainer" && isVerified && (
+                <VerifiedBadge />
+              )}
             </div>
           </div>
-          <p className="mt-2 text-[14px] font-extrabold text-ink">{name || "이름 없음"}</p>
-          <span className="mt-1 inline-flex items-center px-2.5 h-5 rounded-full bg-primary/10 text-primary text-[10.5px] font-extrabold">
-            {role === "trainer" ? "트레이너" : "회원"}
-          </span>
-          {editMode && (
-            <button className="mt-3 w-full h-9 rounded-xl bg-white border border-border-strong text-[11.5px] font-bold text-ink hover:bg-muted">
-              사진 변경
-            </button>
-          )}
+          <div className="min-w-0 flex-1 lg:mt-2">
+            <p className="truncate text-[14px] font-extrabold text-ink">{name || "이름 없음"}</p>
+            <span className="mt-1 inline-flex h-5 items-center rounded-full bg-primary/10 px-2.5 text-[10.5px] font-extrabold text-primary">
+              {role === "trainer" ? "트레이너" : "회원"}
+            </span>
+            {editMode && (
+              <>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleAvatarFile(file);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="mt-2 h-8 w-full rounded-xl border border-border-strong bg-white text-[11.5px] font-bold text-ink hover:bg-muted disabled:opacity-50 lg:mt-3 lg:h-9"
+                >
+                  {avatarUploading ? "업로드 중..." : "사진 변경"}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Info / Form */}
-        <div className="rounded-2xl border border-border bg-white p-3 sm:p-5">
+        <div className="rounded-2xl border border-border bg-white p-2.5 sm:p-5">
           <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
-            <Field label="이름" value={name} onChange={setName} editable={editMode} />
-            <Field
-              label="이메일"
-              value={email}
-              onChange={setEmail}
-              type="email"
-              editable={editMode}
-            />
-            <Field
-              label="휴대폰"
-              value={phone}
-              onChange={(v) => setPhone(formatPhoneNumber(v))}
-              placeholder="010-0000-0000"
-              editable={editMode}
-            />
+            <div className={!editMode ? "hidden sm:block" : ""}>
+              <Field label="이름" value={name} onChange={setName} editable={editMode} />
+            </div>
+            <div className={!editMode && !profileDetailsOpen ? "hidden sm:block" : ""}>
+              <Field
+                label="이메일"
+                value={email}
+                onChange={setEmail}
+                type="email"
+                editable={editMode}
+              />
+            </div>
+            <div className={!editMode && !profileDetailsOpen ? "hidden sm:block" : ""}>
+              <Field
+                label="휴대폰"
+                value={phone}
+                onChange={(v) => setPhone(formatPhoneNumber(v))}
+                placeholder="010-0000-0000"
+                editable={editMode}
+              />
+            </div>
             {role === "trainer" && (
               <Field label="소속 헬스장" value={gym} onChange={setGym} editable={editMode} />
             )}
@@ -670,6 +788,36 @@ function ProfilePage() {
                 )}
               </div>
             )}
+            {role === "student" && (
+              <div className="grid grid-cols-2 gap-2 sm:col-span-2">
+                <div className="rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2">
+                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-primary">
+                    이번 주 점수
+                  </p>
+                  <p className="mt-0.5 text-[16px] font-black text-ink tabular-nums">
+                    {pointsSummary.week}P
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-surface-muted px-3 py-2">
+                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-ink-soft">
+                    누적 점수
+                  </p>
+                  <p className="mt-0.5 text-[16px] font-black text-ink tabular-nums">
+                    {pointsSummary.total}P
+                  </p>
+                </div>
+              </div>
+            )}
+            {!editMode && (
+              <button
+                type="button"
+                onClick={() => setProfileDetailsOpen((open) => !open)}
+                className="sm:hidden flex h-8 items-center justify-center gap-1.5 rounded-xl border border-border bg-white text-[11.5px] font-extrabold text-ink-soft"
+              >
+                {profileDetailsOpen ? "연락처 접기" : "이메일 / 휴대폰 보기"}
+                <ChevronDown className={`h-3.5 w-3.5 transition ${profileDetailsOpen ? "rotate-180" : ""}`} />
+              </button>
+            )}
           </div>
           {editMode && (
             <div className="mt-4 flex items-center gap-2">
@@ -691,10 +839,12 @@ function ProfilePage() {
         </div>
       </div>
 
+
       <WeeklyScheduleSummary
         role={role}
         sessions={weeklySessions}
         recentSession={recentSession}
+        recentHistory={recentHistory}
         pointsSummary={pointsSummary}
         loading={sessionsLoading}
         pendingRequests={pendingRequests}
@@ -1011,6 +1161,7 @@ function WeeklyScheduleSummary({
   role,
   sessions,
   recentSession,
+  recentHistory,
   pointsSummary,
   loading,
   pendingRequests,
@@ -1021,9 +1172,10 @@ function WeeklyScheduleSummary({
   role: "trainer" | "student";
   sessions: WeeklySession[];
   recentSession: WeeklySession | null;
+  recentHistory: WeeklySession[];
   pointsSummary: PointsSummary;
   loading: boolean;
-  pendingRequests: { scheduleId: string; weekStart: string; responded: boolean }[];
+  pendingRequests: PendingRequest[];
   trainerId?: string;
   weekOffset: number;
   onWeekOffsetChange: (next: number) => void;
@@ -1050,6 +1202,7 @@ function WeeklyScheduleSummary({
     <StudentWeeklyInsight
       sessions={sessions}
       recentSession={recentSession}
+      recentHistory={recentHistory}
       pointsSummary={pointsSummary}
       pendingRequests={pendingRequests}
       trainerId={trainerId}
@@ -1090,6 +1243,12 @@ function TrainerWeeklySchedule({
 
   const now = Date.now();
   const todayKey = dayKeys[(new Date().getDay() + 6) % 7];
+  const todayIndex = dayKeys.indexOf(todayKey);
+  const monday = new Date();
+  const mondayDistance = (monday.getDay() + 6) % 7;
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - mondayDistance + weekOffset * 7);
+  const weekDayDates = dayKeys.map((_, i) => makeWeekSlotDate(monday, i, 0));
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-black bg-ink text-white">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4 sm:px-6">
@@ -1150,41 +1309,49 @@ function TrainerWeeklySchedule({
           </h3>
         </div>
         {sortedTimes.length ? (
-          <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03]">
-            <div className="min-w-[680px]">
-              <div className="grid grid-cols-[54px_repeat(7,minmax(76px,1fr))] border-b border-white/10 bg-white/5">
-                <div className="px-2 py-2.5 text-center text-[10px] font-bold text-white/50">시간</div>
-                {dayKeys.map((day) => (
+          <div className="-mx-3 overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] sm:mx-0 sm:overflow-x-auto sm:rounded-xl">
+            <div className="relative min-w-0 [--time-col:36px] sm:min-w-[680px] sm:[--time-col:54px]">
+              {weekOffset === 0 && todayIndex >= 0 && (
+                <div
+                  className="pointer-events-none absolute inset-y-0 z-10 rounded-lg border-2 border-primary"
+                  style={{
+                    left: `calc(var(--time-col) + ((100% - var(--time-col)) / 7) * ${todayIndex})`,
+                    width: "calc((100% - var(--time-col)) / 7)",
+                  }}
+                />
+              )}
+              <div className="grid grid-cols-[36px_repeat(7,minmax(0,1fr))] border-b border-white/10 bg-white/5 sm:grid-cols-[54px_repeat(7,minmax(76px,1fr))]">
+                <div className="px-1 py-2 text-center text-[9px] font-bold text-white/50 sm:px-2 sm:py-2.5 sm:text-[10px]">시간</div>
+                {dayKeys.map((day, i) => (
                   <div
                     key={day}
-                    className={`border-l px-2 py-2.5 text-center text-[11px] font-black ${
+                    className={`border-l px-0.5 py-2 text-center text-[9px] font-black leading-tight sm:px-2 sm:py-2.5 sm:text-[11px] ${
                       weekOffset === 0 && day === todayKey
-                        ? "border-primary text-primary ring-1 ring-inset ring-primary"
+                        ? "border-white/10 text-primary"
                         : "border-white/10 text-white/90"
                     }`}
                   >
-                    {day}
+                    <p>{day}</p>
+                    <p className="text-[8px] font-bold tabular-nums opacity-60 sm:text-[9px]">
+                      {weekDayDates[i].getMonth() + 1}/{weekDayDates[i].getDate()}
+                    </p>
                   </div>
                 ))}
               </div>
               {sortedTimes.map((time) => (
-                <div key={time} className="grid min-h-12 grid-cols-[54px_repeat(7,minmax(76px,1fr))] border-b border-white/10 last:border-b-0">
-                  <div className="grid place-items-center bg-white/5 text-[11px] font-bold text-white/50">{time}</div>
+                <div key={time} className="grid min-h-10 grid-cols-[36px_repeat(7,minmax(0,1fr))] border-b border-white/10 last:border-b-0 sm:min-h-12 sm:grid-cols-[54px_repeat(7,minmax(76px,1fr))]">
+                  <div className="grid place-items-center bg-white/5 text-[9px] font-bold text-white/50 sm:text-[11px]">{time}</div>
                   {dayKeys.map((day) => {
                     const cellSessions = sessionByCell.get(`${day}-${time}`) ?? [];
                     return (
                       <div
                         key={day}
-                        className={`flex flex-col justify-center gap-1 border-l p-1.5 ${
-                          weekOffset === 0 && day === todayKey
-                            ? "border-primary ring-1 ring-inset ring-primary/80"
-                            : "border-white/10"
-                        }`}
+                        className="flex flex-col justify-center gap-0.5 border-l border-white/10 p-0.5 sm:gap-1 sm:p-1.5"
                       >
                         {cellSessions.map((session) => (
                           <span
                             key={session.id}
-                            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-md px-1.5 py-1 text-[10.5px] font-extrabold ${
+                            className={`inline-flex min-w-0 items-center justify-center gap-0.5 rounded-md px-0.5 py-0.5 text-[7.5px] font-extrabold sm:gap-1.5 sm:px-1.5 sm:py-1 sm:text-[10.5px] ${
                               new Date(session.scheduledAt).getTime() < now
                                 ? "bg-white/5 text-white/50"
                                 : "bg-primary/15 text-primary"
@@ -1195,10 +1362,10 @@ function TrainerWeeklySchedule({
                               <img
                                 src={session.avatarUrl}
                                 alt=""
-                                className="h-4 w-4 shrink-0 rounded-full object-cover"
+                                className="h-3 w-3 shrink-0 rounded-full object-cover sm:h-4 sm:w-4"
                               />
                             ) : (
-                              <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-white/15 text-[8px] text-white">
+                              <span className="grid h-3 w-3 shrink-0 place-items-center rounded-full bg-white/15 text-[7px] text-white sm:h-4 sm:w-4 sm:text-[8px]">
                                 {session.counterpart[0]}
                               </span>
                             )}
@@ -1237,20 +1404,25 @@ function relativeWeekLabel(weekStart: string) {
 function StudentWeeklyInsight({
   sessions,
   recentSession,
+  recentHistory,
   pointsSummary,
   pendingRequests,
   trainerId,
 }: {
   sessions: WeeklySession[];
   recentSession: WeeklySession | null;
+  recentHistory: WeeklySession[];
   pointsSummary: PointsSummary;
-  pendingRequests: { scheduleId: string; weekStart: string; responded: boolean }[];
+  pendingRequests: PendingRequest[];
   trainerId?: string;
 }) {
   const now = Date.now();
   const upcoming = sessions
     .filter((session) => session.status === "scheduled" && new Date(session.scheduledAt).getTime() >= now)
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+  const visiblePendingRequests = pendingRequests.filter(
+    (req) => !(req.confirmed && req.confirmedAt && new Date(req.confirmedAt).getTime() < now),
+  );
   const nextSession = upcoming[0] ?? null;
   const nextDate = nextSession ? new Date(nextSession.scheduledAt) : null;
   const recentDate = recentSession ? new Date(recentSession.scheduledAt) : null;
@@ -1259,7 +1431,7 @@ function StudentWeeklyInsight({
     ? Math.max(0, Math.round((nextDate.getTime() - recentDate.getTime()) / 86_400_000))
     : null;
   const daysUntilLabel =
-    daysUntil === null ? null : daysUntil === 0 ? "??" : `${daysUntil}? ??`;
+    daysUntil === null ? null : daysUntil === 0 ? "오늘" : `${daysUntil}일 뒤`;
   const formatLong = (date: Date) =>
     new Intl.DateTimeFormat("ko-KR", {
       month: "long",
@@ -1299,37 +1471,74 @@ function StudentWeeklyInsight({
         </div>
       </div>
 
-      <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
-        <div className="rounded-xl bg-surface-muted p-4">
-          <div className="flex items-center gap-2 text-[11px] font-bold text-ink-soft">
-            <Clock3 className="h-4 w-4" /> 최근 PT
-          </div>
-          {recentDate ? (
-            <>
-              <p className="mt-2 text-[15px] font-black text-ink">{formatLong(recentDate)}</p>
-              {intervalDays !== null && nextDate && (
-                <p className="mt-1 text-[12px] font-extrabold text-primary">{intervalDays}일 만에 다시 PT를 해요!</p>
-              )}
-            </>
-          ) : (
-            <p className="mt-2 text-[13px] font-bold text-ink-soft">아직 완료된 PT 기록이 없습니다.</p>
-          )}
+      <div className="px-5 py-5 sm:px-6 sm:py-6">
+        <div className="flex items-center gap-2">
+          <Clock3 className="h-4 w-4 text-primary" />
+          <p className="text-[14px] font-black text-ink">최근 PT · 운동 기록</p>
         </div>
-
-        <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-4">
-          <div className="flex items-center gap-2 text-[11px] font-bold text-primary">
-            <Sparkles className="h-4 w-4" /> 최근 운동 기록
-          </div>
-          {recentSession?.note?.trim() ? (
-            <p className="mt-2 line-clamp-3 text-[13px] font-semibold leading-relaxed text-ink">
-              {recentSession.note}
-            </p>
-          ) : (
-            <p className="mt-2 text-[13px] font-semibold leading-relaxed text-ink-soft">
-              트레이너가 운동 기록을 남기면 여기에 표시됩니다.
-            </p>
-          )}
-        </div>
+        {recentDate && intervalDays !== null && nextDate && (
+          <p className="mt-1 ml-6 text-[12px] font-extrabold text-primary">
+            최근 PT로부터 {intervalDays}일 만에 다시 PT를 해요!
+          </p>
+        )}
+        {recentHistory.length === 0 ? (
+          <p className="mt-3 ml-6 text-[13px] font-bold text-ink-soft">아직 완료된 PT 기록이 없습니다.</p>
+        ) : (
+          <ol className="relative mt-5 ml-2 space-y-0 border-l-2 border-border">
+            {recentHistory.map((session, index) => {
+              const sessionDate = new Date(session.scheduledAt);
+              const isLast = index === recentHistory.length - 1;
+              const isCancelled = session.status === "cancelled";
+              const sessionDay = new Date(sessionDate);
+              sessionDay.setHours(0, 0, 0, 0);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const cancelLabel = isCancelled
+                ? sessionDay.getTime() === today.getTime()
+                  ? "당일 취소"
+                  : "취소"
+                : null;
+              return (
+                <li key={session.id} className={`relative pl-7 ${isLast ? "pb-1" : "pb-6"}`}>
+                  <span
+                    className={`absolute -left-[7px] top-1.5 h-3 w-3 rounded-full border-[3px] border-white ring-2 ${
+                      isCancelled ? "bg-destructive ring-destructive/20" : "bg-primary ring-primary/20"
+                    }`}
+                  />
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-black leading-tight text-ink sm:text-[16px]">
+                        {formatLong(sessionDate)}
+                        {cancelLabel && <span className="text-destructive"> ({cancelLabel})</span>}
+                      </p>
+                      <p className="mt-1.5 text-[12.5px] font-semibold text-ink-soft">
+                        {session.counterpart} 트레이너
+                        {session.gym ? ` · ${session.gym}` : ""}
+                      </p>
+                    </div>
+                    {index === 0 && (
+                      <span className="inline-flex h-7 shrink-0 items-center rounded-full bg-primary/[0.08] px-2.5 text-[11.5px] font-extrabold text-primary">
+                        가장 최근
+                      </span>
+                    )}
+                  </div>
+                  {!isCancelled && (
+                    <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5">
+                      <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                      {session.note?.trim() ? (
+                        <p className="text-[12.5px] font-semibold leading-relaxed text-ink">{session.note}</p>
+                      ) : (
+                        <p className="text-[12.5px] font-semibold leading-relaxed text-ink-soft">
+                          트레이너가 운동 기록을 남기면 여기에 표시됩니다.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        )}
       </div>
 
       {upcoming.length > 1 && (
@@ -1373,17 +1582,28 @@ function StudentWeeklyInsight({
         </div>
       )}
 
-      {pendingRequests.length > 0 && (
+      {visiblePendingRequests.length > 0 && (
         <div className="border-t border-border px-5 py-5 sm:px-6">
           <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
             트레이너가 보낸 시간 선택 요청
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {pendingRequests.map((req) => {
+            {visiblePendingRequests.map((req) => {
               const d = new Date(`${req.weekStart}T00:00:00`);
               const end = new Date(d);
               end.setDate(end.getDate() + 6);
               const fmt = (x: Date) => `${x.getMonth() + 1}.${x.getDate()}`;
+              const confirmedDate = req.confirmedAt ? new Date(req.confirmedAt) : null;
+              const confirmedLabel = confirmedDate
+                ? confirmedDate.toLocaleString("ko-KR", {
+                    month: "numeric",
+                    day: "numeric",
+                    weekday: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })
+                : null;
               return (
                 <Link
                   key={req.scheduleId}
@@ -1393,10 +1613,15 @@ function StudentWeeklyInsight({
                 >
                   <span
                     className={`absolute left-1/2 top-0 inline-flex h-7 min-w-28 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-1.5 rounded-full px-4 text-[10.5px] font-black text-white shadow-sm ${
-                      req.responded ? "bg-emerald-500" : "bg-amber-500"
+                      req.confirmed ? "bg-primary" : req.responded ? "bg-emerald-500" : "bg-amber-500"
                     }`}
                   >
-                    {req.responded ? (
+                    {req.confirmed ? (
+                      <>
+                        <CalendarCheck className="h-3 w-3" />
+                        PT 일정 확정
+                      </>
+                    ) : req.responded ? (
                       <>
                         <Check className="h-3 w-3" />
                         시간 선택 완료
@@ -1422,11 +1647,25 @@ function StudentWeeklyInsight({
                     </div>
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
-                    <p className="text-[12px] font-semibold leading-relaxed text-ink-soft">
-                      {req.responded
-                        ? "선택한 시간을 다시 확인하거나 수정할 수 있어요."
-                        : "가능한 시간을 선택해 트레이너에게 알려주세요."}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      {confirmedLabel && (
+                        <div className="mb-2 rounded-xl border border-primary/20 bg-primary/[0.06] px-3 py-2">
+                          <p className="text-[10.5px] font-black uppercase tracking-wider text-primary">
+                            확정 시간
+                          </p>
+                          <p className="mt-0.5 text-[14px] font-black text-ink tabular-nums">
+                            {confirmedLabel}
+                          </p>
+                        </div>
+                      )}
+                      <p className="text-[12px] font-semibold leading-relaxed text-ink-soft">
+                        {req.confirmed
+                          ? "확정된 PT 일정을 확인해 주세요."
+                          : req.responded
+                            ? "선택한 시간을 다시 확인하거나 수정할 수 있어요."
+                            : "가능한 시간을 선택해 트레이너에게 알려주세요."}
+                      </p>
+                    </div>
                     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-muted text-ink transition group-hover:bg-primary group-hover:text-white">
                       <ChevronRight className="h-4 w-4" />
                     </span>
@@ -1459,11 +1698,11 @@ function ScheduleMetric({
   accent?: boolean;
 }) {
   return (
-    <div className={`rounded-xl px-3 py-3 ${accent ? "bg-primary text-white" : "bg-white/5 text-white"}`}>
-      <div className={`flex items-center gap-1 text-[10.5px] font-bold ${accent ? "text-white/80" : "text-white/55"}`}>
+    <div className={`rounded-xl px-2 py-2 sm:px-3 sm:py-3 ${accent ? "bg-primary text-white" : "bg-white/5 text-white"}`}>
+      <div className={`flex items-center gap-1 text-[9.5px] font-bold sm:text-[10.5px] ${accent ? "text-white/80" : "text-white/55"}`}>
         {icon} {label}
       </div>
-      <p className="mt-1 text-[18px] font-black tabular-nums">{value}</p>
+      <p className="mt-1 text-[15px] font-black tabular-nums sm:text-[18px]">{value}</p>
     </div>
   );
 }

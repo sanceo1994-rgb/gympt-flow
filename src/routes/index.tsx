@@ -73,21 +73,23 @@ function Hero() {
             </div>
           </Reveal>
           <Reveal variant="fade-up" delay={820}>
-            <div className="mt-4 w-full rounded-2xl bg-ink px-4 py-2">
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <span className="text-[11px] font-bold text-white mr-1">로그인 없이 미리 체험:</span>
-                <Link
-                  to="/demo/student"
-                  className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
-                >
-                  🧑‍🎓 학생 화면 체험
-                </Link>
-                <Link
-                  to="/demo/trainer"
-                  className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
-                >
-                  💪 트레이너 화면 체험
-                </Link>
+            <div className="mt-4 w-full rounded-2xl bg-ink px-4 py-3">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+                <span className="text-[11px] font-bold text-white text-center">로그인 없이 미리 체험</span>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/demo/student"
+                    className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
+                  >
+                    🧑‍🎓 학생 화면 체험
+                  </Link>
+                  <Link
+                    to="/demo/trainer"
+                    className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
+                  >
+                    💪 트레이너 화면 체험
+                  </Link>
+                </div>
               </div>
             </div>
           </Reveal>
