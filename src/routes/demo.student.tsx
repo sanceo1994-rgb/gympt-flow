@@ -223,12 +223,6 @@ function DemoStudentBooking() {
                         <Lock className="absolute inset-0 m-auto h-3 w-3 text-muted-foreground/60" />
                       ) : isMine ? (
                         <Check className="absolute inset-0 m-auto h-4 w-4 text-white" />
-                      ) : dem > 0 ? (
-                        <span
-                          className={`absolute inset-0 grid place-items-center text-[10px] font-extrabold tabular-nums ${lvl >= 3 ? "text-white/80" : "text-ink/50"} sm:hidden`}
-                        >
-                          {dem}
-                        </span>
                       ) : null}
                     </button>
                   );

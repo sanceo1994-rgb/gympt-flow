@@ -22,6 +22,7 @@ import {
   Inbox,
   OctagonAlert,
   UserX,
+  UserPlus,
 } from "lucide-react";
 import {
   Dialog,
@@ -63,7 +64,7 @@ export const Route = createFileRoute("/schedule")({
 });
 
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
-const HOURS = Array.from({ length: 17 }, (_, i) => 6 + i);
+const HOURS = Array.from({ length: 20 }, (_, i) => 4 + i);
 
 const PICKS: Record<string, string[]> = {
   "월-19": ["김지원", "한승호", "최유나", "이도현"],
@@ -205,7 +206,7 @@ function StudentNameBadge({
 
 const WEEK_LABELS = ["이번 주", "다음 주", "다다음 주", "3주 뒤", "4주 뒤"];
 
-type Status = "응답완료" | "응답대기" | "불가" | "미가입";
+type Status = "응답완료" | "응답대기" | "불가" | "미가입" | "미발송";
 type Student = {
   name: string;
   avatarUrl?: string | null;
@@ -258,28 +259,141 @@ type ActivityItem =
       sessionNo: number;
       remaining: number;
       sessionId: string;
+      note: string | null;
       when: string;
     }
   // 당일(시작 시각이 지난) PT를 회원 사정으로 취소 처리한 경우 — pt_sessions에서 파생.
   | { kind: "cancelled"; who: string; sessionNo: number; when: string };
 
 const BODY_GROUPS: { name: string; items: string[] }[] = [
-  { name: "가슴", items: ["벤치프레스", "인클라인 벤치", "체스트프레스", "딥스", "케이블 플라이"] },
-  { name: "등", items: ["데드리프트", "랫풀다운", "바벨로우", "시티드로우", "풀업"] },
-  { name: "하체", items: ["스쿼트", "레그프레스", "런지", "레그익스텐션", "레그컬"] },
+  {
+    name: "가슴",
+    items: [
+      "벤치프레스",
+      "인클라인 벤치",
+      "디클라인 벤치",
+      "체스트프레스",
+      "딥스",
+      "케이블 플라이",
+      "펙덱 플라이",
+      "덤벨 프레스",
+      "인클라인 덤벨 프레스",
+      "푸시업",
+      "스미스 머신 벤치프레스",
+      "로우 케이블 플라이",
+    ],
+  },
+  {
+    name: "등",
+    items: [
+      "데드리프트",
+      "랫풀다운",
+      "바벨로우",
+      "시티드로우",
+      "풀업",
+      "친업",
+      "원암 덤벨로우",
+      "티바로우",
+      "케이블로우",
+      "백 익스텐션",
+      "스트레이트암 풀다운",
+      "슈러그 로우",
+    ],
+  },
+  {
+    name: "하체",
+    items: [
+      "스쿼트",
+      "레그프레스",
+      "런지",
+      "레그익스텐션",
+      "레그컬",
+      "루마니안 데드리프트",
+      "불가리안 스플릿 스쿼트",
+      "힙 쓰러스트",
+      "카프레이즈",
+      "고블릿 스쿼트",
+      "스미스 머신 스쿼트",
+      "어덕션 머신",
+    ],
+  },
   {
     name: "어깨",
-    items: ["오버헤드프레스", "사이드 레터럴", "프론트 레이즈", "리어 델트", "쉬러그"],
+    items: [
+      "오버헤드프레스",
+      "사이드 레터럴",
+      "프론트 레이즈",
+      "리어 델트",
+      "쉬러그",
+      "아놀드 프레스",
+      "케이블 레터럴 레이즈",
+      "페이스풀",
+      "업라이트로우",
+      "머신 숄더프레스",
+      "플레이트 프론트 레이즈",
+    ],
   },
-  { name: "이두", items: ["바벨컬", "덤벨컬", "해머컬", "프리처컬"] },
-  { name: "삼두", items: ["케이블 푸쉬다운", "라잉 익스텐션", "딥스", "오버헤드 익스텐션"] },
-  { name: "코어", items: ["플랭크", "행잉 레그레이즈", "케이블 크런치", "러시안 트위스트"] },
+  {
+    name: "이두",
+    items: [
+      "바벨컬",
+      "덤벨컬",
+      "해머컬",
+      "프리처컬",
+      "케이블컬",
+      "컨센트레이션컬",
+      "스파이더컬",
+      "인클라인 덤벨컬",
+      "이지바 컬",
+      "21컬",
+    ],
+  },
+  {
+    name: "삼두",
+    items: [
+      "케이블 푸쉬다운",
+      "라잉 익스텐션",
+      "딥스",
+      "오버헤드 익스텐션",
+      "클로즈그립 벤치프레스",
+      "킥백",
+      "다이아몬드 푸시업",
+      "로프 푸쉬다운",
+      "원암 케이블 익스텐션",
+      "벤치 딥스",
+    ],
+  },
+  {
+    name: "코어",
+    items: [
+      "플랭크",
+      "행잉 레그레이즈",
+      "케이블 크런치",
+      "러시안 트위스트",
+      "윗몸일으키기",
+      "레그레이즈",
+      "사이드 플랭크",
+      "마운틴 클라이머",
+      "데드버그",
+      "AB 휠 롤아웃",
+    ],
+  },
 ];
 
 function parsePick(s: string): { day: string; hour: number } | null {
   const m = s.match(/(\S+)\s+(\d{1,2})시/);
   if (!m) return null;
   return { day: m[1], hour: parseInt(m[2], 10) };
+}
+
+function sortPickLabels(picks: string[]) {
+  return [...picks].sort((a, b) => {
+    const pa = parsePick(a);
+    const pb = parsePick(b);
+    if (!pa || !pb) return a.localeCompare(b);
+    const dayDiff = DAYS.indexOf(pa.day) - DAYS.indexOf(pb.day);
+    return dayDiff || pa.hour - pb.hour;
+  });
 }
 
 type Assignment = { name: string; day: string; hour: number; method: "auto" | "manual" };
@@ -290,6 +404,7 @@ function Schedule() {
   const [accessState, setAccessState] = useState<"checking" | "allowed" | "student" | "signed-out" | "error">("checking");
   const [trainerName, setTrainerName] = useState("");
   const [dbStudents, setDbStudents] = useState<Student[]>([]);
+  const [sentRosterIds, setSentRosterIds] = useState<Set<string>>(new Set());
   const [dbPicks, setDbPicks] = useState<Record<string, string[]>>({});
   const [dbAiResult, setDbAiResult] = useState<Array<{ day: string; hour: string; name: string }>>(
     [],
@@ -331,7 +446,8 @@ function Schedule() {
   const [sendToast, setSendToast] = useState<string | null>(null);
   const [notifyConfirm, setNotifyConfirm] = useState<{
     name: string;
-    scope: "individual" | "remind";
+    scope: "individual" | "remind" | "new_student";
+    rosterId?: string;
   } | null>(null);
   const [inviteIntent, setInviteIntent] = useState(false);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
@@ -367,6 +483,9 @@ function Schedule() {
   const [memoGroup, setMemoGroup] = useState<string | null>(null);
   const [memoExercises, setMemoExercises] = useState<Set<string>>(new Set());
   const [memoText, setMemoText] = useState("");
+  const [viewMemoFor, setViewMemoFor] = useState<{ name: string; sessionNo: number; note: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -505,6 +624,7 @@ function Schedule() {
               sessionNo,
               remaining: roster.remaining_sessions,
               sessionId: session.id,
+              note: session.note,
               when: new Date(session.scheduled_at).toLocaleString("ko-KR"),
             },
           });
@@ -567,6 +687,7 @@ function Schedule() {
       setConfirmedSummary(null);
 
       if (!schedule) {
+        setSentRosterIds(new Set());
         setDbStudents(
           activeRosters.map((roster) => ({
             name: roster.student_name,
@@ -620,24 +741,34 @@ function Schedule() {
       }
       if (cancelled) return;
 
-      const [{ data: slots }, { data: selections }, { data: activityRows }] = await Promise.all([
-        supabase
-          .from("time_slots")
-          .select("id,day_of_week,hour,capacity,is_closed")
-          .eq("schedule_id", schedule.id),
-        supabase
-          .from("student_selections")
-          .select("id,slot_id,student_user_id,student_name,status,assigned_method,created_at")
-          .eq("schedule_id", schedule.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("schedule_activity_log")
-          .select("id,kind,who,day,hour,from_day,from_hour,count,created_at")
-          .eq("schedule_id", schedule.id)
-          .order("created_at", { ascending: false })
-          .limit(200),
-      ]);
+      const [{ data: slots }, { data: selections }, { data: activityRows }, { data: recipientRows }] =
+        await Promise.all([
+          supabase
+            .from("time_slots")
+            .select("id,day_of_week,hour,capacity,is_closed")
+            .eq("schedule_id", schedule.id),
+          supabase
+            .from("student_selections")
+            .select("id,slot_id,student_user_id,student_name,status,assigned_method,created_at")
+            .eq("schedule_id", schedule.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("schedule_activity_log")
+            .select("id,kind,who,day,hour,from_day,from_hour,count,created_at")
+            .eq("schedule_id", schedule.id)
+            .order("created_at", { ascending: false })
+            .limit(200),
+          supabase
+            .from("schedule_request_recipients" as never)
+            .select("roster_id")
+            .eq("schedule_id", schedule.id),
+        ]);
       if (cancelled) return;
+      const sentRosterIds = new Set(
+        ((recipientRows ?? []) as unknown as { roster_id: string | null }[]).flatMap((row) =>
+          row.roster_id ? [row.roster_id] : [],
+        ),
+      );
 
       const slotById = new Map((slots ?? []).map((slot) => [slot.id, slot]));
       const ids: Record<string, string> = {};
@@ -668,6 +799,7 @@ function Schedule() {
           const slot = selection.slot_id ? slotById.get(selection.slot_id) : null;
           return slot ? [`${DAYS[slot.day_of_week]} ${String(slot.hour).padStart(2, "0")}시`] : [];
         });
+        const notYetSent = !sentRosterIds.has(roster.id);
         return {
           name: roster.student_name,
           avatarUrl: roster.student_user_id
@@ -675,11 +807,13 @@ function Schedule() {
             : null,
           status: !roster.student_user_id
             ? ("미가입" as const)
-            : unavailable
-              ? ("불가" as const)
-              : picks.length
-                ? ("응답완료" as const)
-                : ("응답대기" as const),
+            : notYetSent
+              ? ("미발송" as const)
+              : unavailable
+                ? ("불가" as const)
+                : picks.length
+                  ? ("응답완료" as const)
+                  : ("응답대기" as const),
           picks,
           lastPT: latestCompleted.get(roster.id) || "기록 없음",
           remaining: roster.remaining_sessions,
@@ -718,6 +852,7 @@ function Schedule() {
 
       setSlotIds(ids);
       setClosed(closedKeys);
+      setSentRosterIds(sentRosterIds);
       setDbStudents(students);
       setDbPicks(pickMap);
       setDbAiResult(result);
@@ -900,11 +1035,20 @@ function Schedule() {
       fireToast(`${name}님 ${sessionNo}회차 — 회원 사정으로 당일 취소 기록 ✓`);
     } else {
       const parts = [memoGroup, ...memoExercises].filter(Boolean).join(" · ");
+      const savedNote = [parts, memoText.trim()].filter(Boolean).join(" / ") || null;
       const { error } = await supabase
         .from("pt_sessions")
-        .update({ status: "completed", note: [parts, memoText.trim()].filter(Boolean).join(" / ") || null })
+        .update({ status: "completed", note: savedNote })
         .eq("id", sessionId);
       if (error) console.error("memo save failed", error);
+      else
+        setDbActivity((prev) =>
+          prev.map((item) =>
+            item.kind === "completed" && item.sessionId === sessionId
+              ? { ...item, note: savedNote }
+              : item,
+          ),
+        );
       fireToast(`${name}님 ${sessionNo}회차 메모 저장 ✓ (${parts || "메모만"})`);
     }
     resetMemo();
@@ -914,6 +1058,12 @@ function Schedule() {
   const ACT_PAGE = 4;
   const [actPage, setActPage] = useState(0);
   const actMaxPage = Math.max(0, Math.ceil(ACTIVITY_LOG.length / ACT_PAGE) - 1);
+
+  // Pending-responder & newly-added-student pagination
+  const PENDING_PAGE = 3;
+  const [pendingPage, setPendingPage] = useState(0);
+  const NEW_STUDENT_PAGE = 2;
+  const [newStudentPage, setNewStudentPage] = useState(0);
 
   const fireToast = (t: string) => {
     setSendToast(t);
@@ -1012,6 +1162,23 @@ function Schedule() {
     return { total, responded, unavailable, assignable };
   }, [STUDENTS, AI_RESULT_INIT]);
 
+  const autoConfirmNames = useMemo(
+    () => new Set(assignments.filter((a) => a.method === "auto").map((a) => a.name)),
+    [assignments],
+  );
+  const manualConfirmCount = useMemo(
+    () => assignments.filter((a) => a.method === "manual").length,
+    [assignments],
+  );
+  const panelStudents = useMemo(
+    () => (panel === "confirm" ? STUDENTS.filter((s) => autoConfirmNames.has(s.name)) : STUDENTS),
+    [STUDENTS, autoConfirmNames, panel],
+  );
+  const panelExcludedStudents = useMemo(
+    () => (panel === "confirm" ? STUDENTS.filter((s) => !autoConfirmNames.has(s.name)) : []),
+    [STUDENTS, autoConfirmNames, panel],
+  );
+
   const togglePanelStudent = (name: string) => {
     setPanelSelected((p) => {
       const n = new Set(p);
@@ -1022,7 +1189,8 @@ function Schedule() {
   };
 
   const sendRequest = async () => {
-    const count = panelSelected.size;
+    const selectedStudents = STUDENTS.filter((student) => panelSelected.has(student.name));
+    const count = selectedStudents.length;
     const all = count === STUDENTS.length;
     setPanel(null);
     if (!scheduleId) {
@@ -1031,7 +1199,8 @@ function Schedule() {
     }
     const { error } = await supabase.rpc("mark_schedule_requested", {
       p_schedule_id: scheduleId,
-    });
+      p_roster_ids: selectedStudents.flatMap((student) => (student.rosterId ? [student.rosterId] : [])),
+    } as never);
     if (error) {
       fireToast("요청 발송에 실패했어요. 다시 시도해주세요.");
       return;
@@ -1066,7 +1235,7 @@ function Schedule() {
     }
     const studentByName = new Map(STUDENTS.map((s) => [s.name, s]));
     const payload = assignments
-      .filter((a) => panelSelected.has(a.name))
+      .filter((a) => a.method === "auto" && panelSelected.has(a.name))
       .map((a) => {
         const slotId = slotIds[`${a.day}-${a.hour}`];
         const studentUserId = studentByName.get(a.name)?.studentUserId;
@@ -1168,6 +1337,18 @@ function Schedule() {
   const pendingResponders = STUDENTS.filter((s) => s.status === "응답대기");
   const halfPending = pendingResponders;
   const respondedCount = STUDENTS.filter((student) => student.status === "응답완료").length;
+  const newlyAddedStudents = STUDENTS.filter((s) => s.status === "미발송");
+  const sentStudentsCount = STUDENTS.filter((s) => s.status !== "미발송").length;
+  const pendingMaxPage = Math.max(0, Math.ceil(halfPending.length / PENDING_PAGE) - 1);
+  const pendingSlice = halfPending.slice(
+    Math.min(pendingPage, pendingMaxPage) * PENDING_PAGE,
+    (Math.min(pendingPage, pendingMaxPage) + 1) * PENDING_PAGE,
+  );
+  const newStudentMaxPage = Math.max(0, Math.ceil(newlyAddedStudents.length / NEW_STUDENT_PAGE) - 1);
+  const newStudentSlice = newlyAddedStudents.slice(
+    Math.min(newStudentPage, newStudentMaxPage) * NEW_STUDENT_PAGE,
+    (Math.min(newStudentPage, newStudentMaxPage) + 1) * NEW_STUDENT_PAGE,
+  );
   const studentByName = useMemo(
     () => new Map(STUDENTS.map((student) => [student.name, student])),
     [STUDENTS],
@@ -1332,19 +1513,42 @@ function Schedule() {
                     {halfPending.length}명
                   </span>
                 </div>
-                <button
-                  onClick={() => {
-                    setPanel("invite");
-                    setPanelWeek(weekOffset);
-                    setPanelSelected(new Set(halfPending.map((s) => s.name)));
-                  }}
-                  className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95"
-                >
-                  <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" /> 전체 재알림
-                </button>
+                <div className="flex items-center gap-2">
+                  {halfPending.length > PENDING_PAGE && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-bold text-ink-soft tabular-nums">
+                        {Math.min(pendingPage, pendingMaxPage) + 1}/{pendingMaxPage + 1}
+                      </span>
+                      <button
+                        onClick={() => setPendingPage((p) => Math.max(0, p - 1))}
+                        disabled={pendingPage <= 0}
+                        className="h-7 w-7 rounded-lg grid place-items-center bg-white border border-border text-ink-soft hover:bg-muted disabled:opacity-30"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setPendingPage((p) => Math.min(pendingMaxPage, p + 1))}
+                        disabled={pendingPage >= pendingMaxPage}
+                        className="h-7 w-7 rounded-lg grid place-items-center bg-white border border-border text-ink-soft hover:bg-muted disabled:opacity-30"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      setPanel("invite");
+                      setPanelWeek(weekOffset);
+                      setPanelSelected(new Set(halfPending.map((s) => s.name)));
+                    }}
+                    className="h-9 px-3.5 rounded-full bg-[#FEE500] text-[#191600] text-[12px] font-extrabold inline-flex items-center gap-1.5 hover:brightness-95"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5 fill-[#191600]" /> 전체 재알림
+                  </button>
+                </div>
               </div>
               <ul className="divide-y divide-border">
-                {halfPending.map((s) => (
+                {pendingSlice.map((s) => (
                   <li key={s.name} className="flex items-center justify-between gap-3 px-5 py-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
@@ -1375,6 +1579,66 @@ function Schedule() {
                   </li>
                 )}
               </ul>
+
+              {newlyAddedStudents.length > 0 && (
+                <>
+                  <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-t border-b border-border bg-amber-50">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="h-4 w-4 shrink-0 text-amber-700" />
+                      <span className="text-[13px] font-black text-amber-700">신규 추가 회원</span>
+                      <span className="text-[12px] font-bold text-amber-700 tabular-nums">
+                        {newlyAddedStudents.length}명
+                      </span>
+                    </div>
+                    {newlyAddedStudents.length > NEW_STUDENT_PAGE && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] font-bold text-amber-700 tabular-nums">
+                          {Math.min(newStudentPage, newStudentMaxPage) + 1}/{newStudentMaxPage + 1}
+                        </span>
+                        <button
+                          onClick={() => setNewStudentPage((p) => Math.max(0, p - 1))}
+                          disabled={newStudentPage <= 0}
+                          className="h-7 w-7 rounded-lg grid place-items-center bg-white border border-amber-200 text-amber-700 hover:bg-amber-100 disabled:opacity-30"
+                        >
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setNewStudentPage((p) => Math.min(newStudentMaxPage, p + 1))}
+                          disabled={newStudentPage >= newStudentMaxPage}
+                          className="h-7 w-7 rounded-lg grid place-items-center bg-white border border-amber-200 text-amber-700 hover:bg-amber-100 disabled:opacity-30"
+                        >
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <ul className="divide-y divide-border">
+                    {newStudentSlice.map((s) => (
+                      <li key={s.name} className="flex items-center justify-between gap-3 px-5 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
+                            {s.name[0]}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-bold text-ink">{s.name}</p>
+                            <p className="text-[11px] text-ink-soft">
+                              등록 {s.joinedAt} · 아직 요청을 보내지 않았어요
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            setNotifyConfirm({ name: s.name, scope: "new_student", rosterId: s.rosterId })
+                          }
+                          className="h-8 px-3 rounded-full bg-[#FEE500] text-[#191600] text-[11px] font-extrabold inline-flex items-center gap-1 hover:brightness-95 shrink-0"
+                        >
+                          <MessageCircle className="h-3 w-3 fill-[#191600]" /> 알림 보내기
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </>
           )}
         </div>
@@ -1486,16 +1750,24 @@ function Schedule() {
                   )}
                   <p className="mt-0.5 text-[11px] text-ink-soft">{a.when}</p>
                 </div>
-                {a.kind === "completed" && (
-                  <button
-                    onClick={() =>
-                      setMemoFor({ name: a.who, sessionNo: a.sessionNo, sessionId: a.sessionId })
-                    }
-                    className="shrink-0 h-8 px-3 rounded-full bg-ink text-white text-[11px] font-extrabold hover:brightness-110"
-                  >
-                    메모 남기기
-                  </button>
-                )}
+                {a.kind === "completed" &&
+                  (a.note?.trim() ? (
+                    <button
+                      onClick={() => setViewMemoFor({ name: a.who, sessionNo: a.sessionNo, note: a.note! })}
+                      className="shrink-0 h-8 px-3 rounded-full bg-primary/10 text-primary text-[11px] font-extrabold hover:bg-primary/15"
+                    >
+                      메모 등록 완료
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        setMemoFor({ name: a.who, sessionNo: a.sessionNo, sessionId: a.sessionId })
+                      }
+                      className="shrink-0 h-8 px-3 rounded-full bg-ink text-white text-[11px] font-extrabold hover:brightness-110"
+                    >
+                      메모 남기기
+                    </button>
+                  ))}
               </li>
             ))}
             {activitySlice.length === 0 && (
@@ -1847,7 +2119,7 @@ function Schedule() {
                       <div className="text-center text-muted-foreground">—</div>
                     ) : (
                       <div className="grid grid-cols-5 gap-1 justify-center">
-                        {s.picks.map((p) => (
+                        {sortPickLabels(s.picks).map((p) => (
                           <span
                             key={p}
                             style={{ backgroundColor: "#F1F1F4", color: "#171A1F" }}
@@ -1948,7 +2220,7 @@ function Schedule() {
                   </p>
                   {s.picks.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      {s.picks.map((p) => (
+                      {sortPickLabels(s.picks).map((p) => (
                         <span
                           key={p}
                           style={{ backgroundColor: "#F1F1F4", color: "#171A1F" }}
@@ -2486,6 +2758,29 @@ function Schedule() {
         </SheetContent>
       </Sheet>
 
+      {/* Read-only view of an already-saved memo */}
+      <Dialog open={!!viewMemoFor} onOpenChange={(v) => !v && setViewMemoFor(null)}>
+        <DialogContent className="max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-ink">
+              <Check className="h-4.5 w-4.5 text-primary" />
+              {viewMemoFor?.name}님 · {viewMemoFor?.sessionNo}회차 메모
+            </DialogTitle>
+            <DialogDescription className="text-[13px] leading-relaxed text-ink-soft whitespace-pre-wrap">
+              {viewMemoFor?.note}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setViewMemoFor(null)}
+              className="h-10 rounded-xl border border-border-strong bg-white px-4 text-[12.5px] font-bold text-ink"
+            >
+              닫기
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Right-side panel — invite or confirm */}
       <Sheet open={!!panel} onOpenChange={(v) => !v && setPanel(null)}>
         <SheetContent side="right" className="w-[88vw] sm:!max-w-[50vw] overflow-y-auto">
@@ -2506,7 +2801,11 @@ function Schedule() {
                 ? `학생들에게 ${WEEK_LABELS[panelWeek]} 가능 시간 선택을 요청할까요?`
                 : `학생들에게 ${WEEK_LABELS[panelWeek]} 확정 일정을 알릴까요?`}
             </SheetTitle>
-            <SheetDescription>선택한 회원에게만 카카오톡으로 발송됩니다.</SheetDescription>
+            <SheetDescription>
+              {panel === "confirm"
+                ? `자동 확정된 회원에게만 발송해요. 미응답/불가 회원은 제외하고, 수동 확정 ${manualConfirmCount}명은 이미 개별 안내한 대상으로 봅니다.`
+                : "선택한 회원에게만 카카오톡으로 발송됩니다."}
+            </SheetDescription>
           </SheetHeader>
 
           <div className="mt-5">
@@ -2529,11 +2828,11 @@ function Schedule() {
           <div className="mt-5">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider">
-                대상 회원 ({panelSelected.size}/{STUDENTS.length})
+                대상 회원 ({panelSelected.size}/{panelStudents.length})
               </p>
               <div className="flex gap-1">
                 <button
-                  onClick={() => setPanelSelected(new Set(STUDENTS.map((s) => s.name)))}
+                  onClick={() => setPanelSelected(new Set(panelStudents.map((s) => s.name)))}
                   className="text-[11px] font-bold text-primary hover:underline"
                 >
                   전체 선택
@@ -2548,7 +2847,7 @@ function Schedule() {
               </div>
             </div>
             <ul className="rounded-xl border border-border divide-y divide-border max-h-[40vh] overflow-y-auto">
-              {STUDENTS.map((s) => {
+              {panelStudents.map((s) => {
                 const checked = panelSelected.has(s.name);
                 return (
                   <li key={s.name}>
@@ -2578,8 +2877,45 @@ function Schedule() {
                   </li>
                 );
               })}
+              {panel === "confirm" && panelStudents.length === 0 && (
+                <li className="px-3 py-8 text-center text-[12px] font-bold text-ink-soft">
+                  자동 확정된 회원이 아직 없어요.
+                </li>
+              )}
             </ul>
           </div>
+
+          {panel === "confirm" && panelExcludedStudents.length > 0 && (
+            <div className="mt-5">
+              <p className="text-[11px] font-extrabold uppercase text-ink-soft tracking-wider mb-2">
+                미응답/불가 · 수동 확정 회원 ({panelExcludedStudents.length}명 · 발송 대상 아님)
+              </p>
+              <ul className="rounded-xl border border-border divide-y divide-border max-h-[40vh] overflow-y-auto opacity-70">
+                {panelExcludedStudents.map((s) => {
+                  const isManual = assignments.some(
+                    (a) => a.name === s.name && a.method === "manual",
+                  );
+                  return (
+                    <li
+                      key={s.name}
+                      className="flex items-center gap-2.5 px-3 py-2.5 cursor-not-allowed"
+                    >
+                      <span className="h-5 w-5 rounded-md border-2 border-border bg-surface-muted shrink-0" />
+                      <div className="h-8 w-8 rounded-full bg-surface-muted grid place-items-center font-black text-[12px] text-ink shrink-0">
+                        {s.name[0]}
+                      </div>
+                      <div className="flex-1 min-w-0 leading-tight">
+                        <p className="text-[13px] font-bold text-ink">{s.name}</p>
+                        <p className="text-[11px] text-ink-soft">
+                          {isManual ? "수동 확정 · 이미 개별 안내됨" : `${s.status} · 발송 제외`}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           <div className="mt-6 sticky bottom-0 -mx-6 px-6 py-4 bg-white border-t border-border">
             <button
@@ -2590,7 +2926,7 @@ function Schedule() {
               <Send className="h-4 w-4" />
               {panelSelected.size === 0
                 ? "회원을 선택해주세요"
-                : panelSelected.size === STUDENTS.length
+                : panelSelected.size === panelStudents.length
                   ? `전원에게 ${panel === "invite" ? "요청" : "확정 알림"} 보내기`
                   : `${panelSelected.size}명에게 ${panel === "invite" ? "요청" : "확정 알림"} 보내기`}
             </button>
@@ -2620,15 +2956,15 @@ function Schedule() {
                 <span className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] pl-1 pr-2.5 text-[11.5px] font-semibold tracking-tight sm:h-[34px] sm:gap-2 sm:rounded-[11px] sm:pl-1.5 sm:pr-3.5 sm:text-[13px]" style={{ background: "rgba(255,255,255,.13)", color: "rgba(255,255,255,.92)" }}>
                   <ToastPeopleIcon compact />
                   {confirmedSummary?.responded ?? stats.responded}/{confirmedSummary?.total ?? stats.total}명
-                  <span className="hidden sm:inline">&nbsp;응답</span>
+                  <span className="hidden sm:inline"> 응답</span>
                 </span>
                 <span className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] pl-1 pr-2.5 text-[11.5px] font-semibold tracking-tight sm:h-[34px] sm:gap-2 sm:rounded-[11px] sm:pl-1.5 sm:pr-3.5 sm:text-[13px]" style={{ background: "rgba(255,255,255,.13)", color: "rgba(255,255,255,.92)" }}>
                   <ToastCalendarIcon compact />
                   {confirmedCount}명 확정
                 </span>
-                <span className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] pl-1 pr-2.5 text-[11.5px] font-bold tracking-tight text-white sm:h-[34px] sm:gap-2 sm:rounded-[11px] sm:pl-1.5 sm:pr-3.5 sm:text-[13px]">
+                <span className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] pl-1 pr-2.5 text-[11.5px] font-semibold tracking-tight sm:h-[34px] sm:gap-2 sm:rounded-[11px] sm:pl-1.5 sm:pr-3.5 sm:text-[13px]" style={{ background: "rgba(255,255,255,.13)", color: "rgba(255,255,255,.92)" }}>
                   <ToastClockIcon compact />
-                  <span className="hidden sm:inline">약&nbsp;</span>
+                  <span className="hidden sm:inline">약 </span>
                   {savedMinutes}분 절약
                 </span>
               </div>
@@ -2653,9 +2989,9 @@ function Schedule() {
                   </span>
                 </span>
                 <p className="mt-[7px] text-[14.5px] font-bold leading-tight tracking-tight text-white sm:text-[16px]">
-                  <span className="sm:hidden">다음 주 응답 현황 · {STUDENTS.length}명 발송됨</span>
+                  <span className="sm:hidden">다음 주 응답 현황 · {sentStudentsCount}명 발송됨</span>
                   <span className="hidden sm:inline">
-                    {WEEK_LABELS[weekOffset]} 응답 현황 · {STUDENTS.length}명에게 알림 발송됨
+                    {WEEK_LABELS[weekOffset]} 응답 현황 · {sentStudentsCount}명에게 알림 발송됨
                   </span>
                 </p>
                 <p className="mt-1 text-[11.5px] font-medium leading-[1.45] tracking-tight tabular-nums sm:text-[12.5px] sm:leading-[1.5]" style={{ color: "rgba(255,255,255,.72)" }}>
@@ -2699,7 +3035,7 @@ function Schedule() {
                   onClick={() => {
                     setPanel("confirm");
                     setPanelWeek(weekOffset);
-                    setPanelSelected(new Set(STUDENTS.map((s) => s.name)));
+                    setPanelSelected(new Set(assignments.filter((a) => a.method === "auto").map((a) => a.name)));
                   }}
                   className="inline-flex h-[42px] flex-1 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-white px-[18px] text-[14px] font-bold"
                   style={{ color: "#b46213" }}
@@ -2863,7 +3199,9 @@ function Schedule() {
             <DialogDescription>
               {notifyConfirm?.scope === "remind"
                 ? "이번 주 가능 시간 응답을 다시 한 번 요청합니다."
-                : "확정된 일정 / 안내 메시지를 개별로 한 번 더 발송합니다."}
+                : notifyConfirm?.scope === "new_student"
+                  ? "새로 등록된 회원이에요. 이번 주 가능 시간 선택을 처음으로 요청합니다."
+                  : "확정된 일정 / 안내 메시지를 개별로 한 번 더 발송합니다."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2893,6 +3231,23 @@ function Schedule() {
                     [n.name]: log?.created_at ?? new Date().toISOString(),
                   }));
                   setConfirmedStudentNames((previous) => new Set(previous).add(n.name));
+                }
+                if (n.scope === "new_student" && n.rosterId && scheduleId) {
+                  const { error } = await supabase.rpc("mark_schedule_requested", {
+                    p_schedule_id: scheduleId,
+                    p_roster_ids: [n.rosterId],
+                  } as never);
+                  if (error) {
+                    fireToast("요청 발송에 실패했어요. 다시 시도해주세요.");
+                    setNotifyConfirm(null);
+                    return;
+                  }
+                  setSentRosterIds((previous) => new Set(previous).add(n.rosterId!));
+                  setDbStudents((previous) =>
+                    previous.map((student) =>
+                      student.rosterId === n.rosterId ? { ...student, status: "응답대기" } : student,
+                    ),
+                  );
                 }
                 fireToast(`${n.name}님에게 카카오톡을 보냈어요 ✓`);
                 setNotifyConfirm(null);
@@ -3120,6 +3475,7 @@ function StatusBadge({ s }: { s: Status }) {
     응답대기: { bg: "#F2F3F5", fg: "#5F6673" },
     불가: { bg: "#FFE8EA", fg: "#E53945" },
     미가입: { bg: "#EFEAFB", fg: "#7C5BD6" },
+    미발송: { bg: "#FFF4E0", fg: "#B46213" },
   };
   const icon =
     s === "불가" ? <Ban className="h-3 w-3" /> : s === "미가입" ? <UserX className="h-3 w-3" /> : null;

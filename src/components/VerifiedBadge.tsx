@@ -2,8 +2,8 @@ import { cn } from "@/lib/utils";
 import verifiedMuscle from "@/assets/verified-muscle.png";
 
 /**
- * 픽짐피티 첫 100 트레이너 인증 배지.
- * 12갈래 꽃/별 모양의 외곽선 안에 근육 아이콘이 들어가요.
+ * 인기 트레이너 인증 배지.
+ * 12갈래 별 모양의 배경 안에 근육 아이콘이 들어간다.
  */
 export function VerifiedBadge({ className }: { className?: string }) {
   // 12-point flower-ish star polygon (alternating outer/inner radii) on a viewBox of 100x100
@@ -23,7 +23,7 @@ export function VerifiedBadge({ className }: { className?: string }) {
 
   return (
     <span
-      title="픽짐피티 첫 100 트레이너 인증"
+      title="인기 트레이너 인증"
       className={cn(
         "absolute -bottom-[10%] -right-[10%] grid h-[51%] w-[51%] place-items-center drop-shadow text-primary",
         className,

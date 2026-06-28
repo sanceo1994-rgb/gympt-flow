@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X, CalendarDays, ClipboardList } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 const NAV = [
   { to: "/", label: "홈" },
@@ -12,6 +13,7 @@ const NAV = [
 export function TopBar() {
   const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const { user, loading } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-card/90 backdrop-blur-xl">
@@ -56,12 +58,22 @@ export function TopBar() {
           >
             로그인
           </Link>
-          <Link
-            to="/schedule"
-            className="inline-flex h-9 items-center px-4 rounded-full text-[13px] font-bold bg-primary text-white shadow-pop hover:brightness-110"
-          >
-            무료로 시작하기
-          </Link>
+          {loading ? (
+            <button
+              type="button"
+              disabled
+              className="inline-flex h-9 items-center px-4 rounded-full text-[13px] font-bold bg-primary text-white shadow-pop opacity-60"
+            >
+              무료로 시작하기
+            </button>
+          ) : (
+            <Link
+              to={user ? "/profile" : "/login"}
+              className="inline-flex h-9 items-center px-4 rounded-full text-[13px] font-bold bg-primary text-white shadow-pop hover:brightness-110"
+            >
+              무료로 시작하기
+            </Link>
+          )}
           <button
             className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
             onClick={() => setOpen((v) => !v)}

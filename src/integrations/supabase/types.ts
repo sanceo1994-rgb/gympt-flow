@@ -39,6 +39,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_ads: {
+        Row: {
+          action: string
+          audience: string
+          created_at: string
+          cta_href: string
+          cta_label: string
+          description: string
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          label: string
+          placement: string
+          priority: number
+          starts_at: string | null
+          title: string
+          tone: string
+          updated_at: string
+        }
+        Insert: {
+          action?: string
+          audience?: string
+          created_at?: string
+          cta_href?: string
+          cta_label?: string
+          description?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          placement?: string
+          priority?: number
+          starts_at?: string | null
+          title: string
+          tone?: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          audience?: string
+          created_at?: string
+          cta_href?: string
+          cta_label?: string
+          description?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          placement?: string
+          priority?: number
+          starts_at?: string | null
+          title?: string
+          tone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       booking_responses: {
         Row: {
           created_at: string
@@ -103,6 +160,63 @@ export type Database = {
             referencedColumns: ["student_id"]
           },
         ]
+      }
+      phone_otps: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+        }
+        Relationships: []
+      }
+      points: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          reason: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          reason: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          reason?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -228,6 +342,70 @@ export type Database = {
           },
         ]
       }
+      schedule_activity_log: {
+        Row: {
+          count: number | null
+          created_at: string
+          day: string | null
+          from_day: string | null
+          from_hour: number | null
+          hour: number | null
+          id: string
+          kind: string
+          schedule_id: string
+          trainer_id: string
+          who: string | null
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string
+          day?: string | null
+          from_day?: string | null
+          from_hour?: number | null
+          hour?: number | null
+          id?: string
+          kind: string
+          schedule_id: string
+          trainer_id: string
+          who?: string | null
+        }
+        Update: {
+          count?: number | null
+          created_at?: string
+          day?: string | null
+          from_day?: string | null
+          from_hour?: number | null
+          hour?: number | null
+          id?: string
+          kind?: string
+          schedule_id?: string
+          trainer_id?: string
+          who?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_activity_log_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "schedule_activity_log_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_activity_log_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_assignments: {
         Row: {
           created_at: string
@@ -311,6 +489,55 @@ export type Database = {
           },
         ]
       }
+      schedule_request_recipients: {
+        Row: {
+          created_at: string
+          id: string
+          roster_id: string | null
+          schedule_id: string
+          student_name: string
+          student_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          roster_id?: string | null
+          schedule_id: string
+          student_name: string
+          student_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          roster_id?: string | null
+          schedule_id?: string
+          student_name?: string
+          student_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_request_recipients_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "student_rosters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_request_recipients_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_dashboard_responses"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "schedule_request_recipients_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_rosters: {
         Row: {
           created_at: string
@@ -357,63 +584,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "student_rosters_trainer_id_fkey"
-            columns: ["trainer_id"]
-            isOneToOne: false
-            referencedRelation: "trainers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      schedule_activity_log: {
-        Row: {
-          count: number | null
-          created_at: string
-          day: string | null
-          from_day: string | null
-          from_hour: number | null
-          hour: number | null
-          id: string
-          kind: string
-          schedule_id: string
-          trainer_id: string
-          who: string | null
-        }
-        Insert: {
-          count?: number | null
-          created_at?: string
-          day?: string | null
-          from_day?: string | null
-          from_hour?: number | null
-          hour?: number | null
-          id?: string
-          kind: string
-          schedule_id: string
-          trainer_id: string
-          who?: string | null
-        }
-        Update: {
-          count?: number | null
-          created_at?: string
-          day?: string | null
-          from_day?: string | null
-          from_hour?: number | null
-          hour?: number | null
-          id?: string
-          kind?: string
-          schedule_id?: string
-          trainer_id?: string
-          who?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "schedule_activity_log_schedule_id_fkey"
-            columns: ["schedule_id"]
-            isOneToOne: false
-            referencedRelation: "weekly_schedules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "schedule_activity_log_trainer_id_fkey"
             columns: ["trainer_id"]
             isOneToOne: false
             referencedRelation: "trainers"
@@ -626,6 +796,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          gallery_urls: string[]
           gym: string | null
           id: string
           instagram_url: string | null
@@ -639,6 +810,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          gallery_urls?: string[]
           gym?: string | null
           id?: string
           instagram_url?: string | null
@@ -652,6 +824,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          gallery_urls?: string[]
           gym?: string | null
           id?: string
           instagram_url?: string | null
@@ -790,6 +963,7 @@ export type Database = {
         Args: { _trainer_id: string }
         Returns: boolean
       }
+      email_exists: { Args: { check_email: string }; Returns: boolean }
       get_public_booking_schedule: {
         Args: { _booking_token: string }
         Returns: Json
@@ -801,10 +975,22 @@ export type Database = {
           slot_id: string
         }[]
       }
+      get_week_points: {
+        Args: { _user_id: string; _week_start: string }
+        Returns: number
+      }
       mark_schedule_requested: {
-        Args: { p_schedule_id: string }
+        Args: { p_roster_ids?: string[]; p_schedule_id: string }
         Returns: undefined
       }
+      phone_account_info: {
+        Args: { check_phone: string }
+        Returns: {
+          email: string
+          provider: string
+        }[]
+      }
+      phone_exists: { Args: { check_phone: string }; Returns: boolean }
       schedule_is_public: { Args: { _schedule_id: string }; Returns: boolean }
       submit_booking_response: {
         Args: {

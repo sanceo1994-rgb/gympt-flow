@@ -11,6 +11,7 @@ import roleTrainer from "@/assets/role-trainer.png";
 import roleStudent from "@/assets/role-student.png";
 import { Badge } from "@/components/Badge";
 import { Reveal } from "@/components/Reveal";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -59,12 +60,9 @@ function Hero() {
           </Reveal>
           <Reveal variant="fade-up" delay={560}>
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link
-                to="/login"
-                className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white text-[14px] font-bold shadow-pink hover:brightness-110 transition-transform hover:-translate-y-0.5"
-              >
+              <StartLink className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white text-[14px] font-bold shadow-pink hover:brightness-110 transition-transform hover:-translate-y-0.5">
                 무료로 시작하기 <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
+              </StartLink>
             </div>
           </Reveal>
           <Reveal variant="fade" delay={720}>
@@ -75,21 +73,23 @@ function Hero() {
             </div>
           </Reveal>
           <Reveal variant="fade-up" delay={820}>
-            <div className="mt-4 w-full rounded-2xl bg-ink px-4 py-2">
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <span className="text-[11px] font-bold text-white mr-1">로그인 없이 미리 체험:</span>
-                <Link
-                  to="/demo/student"
-                  className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
-                >
-                  🧑‍🎓 학생 화면 체험
-                </Link>
-                <Link
-                  to="/demo/trainer"
-                  className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
-                >
-                  💪 트레이너 화면 체험
-                </Link>
+            <div className="mt-4 w-full rounded-2xl bg-ink px-4 py-3">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+                <span className="text-[11px] font-bold text-white text-center">로그인 없이 미리 체험</span>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/demo/student"
+                    className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
+                  >
+                    🧑‍🎓 학생 화면 체험
+                  </Link>
+                  <Link
+                    to="/demo/trainer"
+                    className="inline-flex h-8 items-center px-3.5 rounded-full bg-white text-ink text-[12px] font-bold hover:bg-white/90 hover:-translate-y-0.5 transition-transform"
+                  >
+                    💪 트레이너 화면 체험
+                  </Link>
+                </div>
               </div>
             </div>
           </Reveal>
@@ -461,15 +461,33 @@ function FinalCTA() {
       </h3>
       <Reveal variant="fade-up" delay={280}>
         <div className="mt-5 flex justify-center gap-3 flex-wrap">
-          <Link to="/schedule" className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white font-bold shadow-pink transition-transform hover:-translate-y-0.5">
+          <StartLink className="inline-flex h-12 items-center px-6 rounded-full bg-primary text-white font-bold shadow-pink transition-transform hover:-translate-y-0.5">
             무료로 시작하기
-          </Link>
+          </StartLink>
           <Link to="/pricing" className="inline-flex h-12 items-center px-6 rounded-full bg-card border border-border-strong text-ink font-bold transition-transform hover:-translate-y-0.5">
             요금제 비교하기
           </Link>
         </div>
       </Reveal>
     </section>
+  );
+}
+
+function StartLink({ className, children }: { className: string; children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <button type="button" disabled className={`${className} opacity-60`}>
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={user ? "/profile" : "/login"} className={className}>
+      {children}
+    </Link>
   );
 }
 

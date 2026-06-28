@@ -20,18 +20,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { pickDisplayName } from "@/lib/display-name";
 import { TrainerRankBadge } from "@/components/TrainerRankBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { rankTrainerRows } from "@/lib/trainer-ranking";
 import { useTrainerRank } from "@/hooks/use-trainer-rank";
 import { trackEvent } from "@/lib/analytics";
-
-type PopularTrainer = {
-  id: string;
-  name: string;
-  gym: string | null;
-  avatar_url: string | null;
-  theme_from: string | null;
-  created_at: string;
-};
+import { TrainerRankingSection } from "@/components/sidebars/TrainerRankingSection";
 
 type AppAd = {
   id: string;
@@ -78,7 +69,6 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
   const avatar = (user?.user_metadata as { avatar_url?: string } | undefined)?.avatar_url;
 
   const [toast, setToast] = useState<string | null>(null);
-  const [popularTrainers, setPopularTrainers] = useState<PopularTrainer[]>([]);
   const [ads, setAds] = useState<AppAd[]>([]);
   const [studentPoints, setStudentPoints] = useState({ week: 0, total: 0 });
 
@@ -115,27 +105,6 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
       cancelled = true;
     };
   }, [user, metaRole]);
-
-  useEffect(() => {
-    if (!mobileMenu) return;
-    let cancelled = false;
-    supabase
-      .from("trainers")
-      .select("id,name,gym,avatar_url,theme_from,created_at")
-      .order("created_at", { ascending: false })
-      .limit(8)
-      .then(({ data }) => {
-        if (cancelled) return;
-        const rows = ((data ?? []) as PopularTrainer[]).flatMap((trainer) => {
-          const name = pickDisplayName(trainer.name);
-          return name ? [{ ...trainer, name }] : [];
-        });
-        setPopularTrainers(rankTrainerRows(rows).slice(0, 5));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [mobileMenu]);
 
   useEffect(() => {
     if (!user || role !== "student" || String(user.id).startsWith("virtual-")) {
@@ -382,102 +351,7 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
       )}
 
       {mobileMenu ? (
-        <div className="overflow-hidden rounded-2xl border border-border bg-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 px-3.5 pt-3.5">
-              <Trophy className="h-4 w-4 text-primary" />
-              <p className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
-                인기 트레이너 TOP 5
-              </p>
-            </div>
-            <span className="px-3.5 pt-3.5 text-[10px] text-muted-foreground">실시간</span>
-          </div>
-          {popularTrainers.length ? (
-            <div className="px-3 pb-3 pt-3">
-              <Link
-                to="/booking"
-                search={{ trainer: popularTrainers[0].id }}
-                className="flex items-center gap-2 rounded-[14px] border border-primary/10 bg-[#FFF1F8] p-2 transition hover:border-primary/25"
-              >
-                <span className="relative shrink-0">
-                  {popularTrainers[0].avatar_url ? (
-                    <img
-                      src={popularTrainers[0].avatar_url}
-                      alt=""
-                      className="h-11 w-11 rounded-full object-cover ring-2 ring-white"
-                    />
-                  ) : (
-                    <span
-                      className="grid h-11 w-11 place-items-center rounded-full text-[14px] font-black text-white ring-2 ring-white"
-                      style={{ backgroundColor: popularTrainers[0].theme_from || "#FF008C" }}
-                    >
-                      {popularTrainers[0].name[0]}
-                    </span>
-                  )}
-                  <TrainerRankBadge rank={1} className="ring-[#FFF1F8]" />
-                  <VerifiedBadge />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-black text-ink">
-                    {popularTrainers[0].name} 트레이너
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                    {popularTrainers[0].gym || "소속 센터 준비 중"}
-                  </span>
-                </span>
-                <span className="text-right">
-                  <span className="block text-[11px] font-black text-ink">1위</span>
-                  <span className="block text-[10.5px] font-bold text-primary">예약 화면</span>
-                </span>
-              </Link>
-              <ol className="mt-1">
-                {popularTrainers.slice(1).map((trainer, index) => (
-                  <li key={trainer.id}>
-                    <Link
-                      to="/booking"
-                      search={{ trainer: trainer.id }}
-                      className="grid grid-cols-[24px_34px_1fr_auto] items-center gap-2 rounded-xl px-1 py-2 transition hover:bg-muted/70"
-                    >
-                      <span className="grid h-6 w-6 place-items-center rounded-md bg-muted text-[11px] font-black text-ink-soft">
-                        {index + 2}
-                      </span>
-                      <span className="relative">
-                        {trainer.avatar_url ? (
-                          <img
-                            src={trainer.avatar_url}
-                            alt=""
-                            className="h-8 w-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <span
-                            className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-black text-white"
-                            style={{ backgroundColor: trainer.theme_from || "#FF008C" }}
-                          >
-                            {trainer.name[0]}
-                          </span>
-                        )}
-                        {index < 2 && (
-                          <TrainerRankBadge rank={(index + 2) as 2 | 3} />
-                        )}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
-                          {trainer.name}
-                        </span>
-                        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                          {trainer.gym || "소속 센터 준비 중"}
-                        </span>
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ) : (
-            <div className="m-3 h-28 animate-pulse rounded-xl bg-surface-muted" />
-          )}
-        </div>
+        <TrainerRankingSection />
       ) : (
         <div className="rounded-2xl border border-border bg-card p-3.5">
           <div className="flex items-center justify-between">

@@ -62,7 +62,7 @@
 }
 
 :root {
-  color-scheme: light only;
+  color-scheme: only light;
   --radius: 16px;
 
   /* Surfaces */
@@ -125,7 +125,7 @@
 }
 
 .dark {
-  color-scheme: light only;
+  color-scheme: only light;
   --background: oklch(0.97 0.003 320);
   --surface: oklch(0.97 0.003 320);
   --surface-muted: oklch(0.945 0.004 320);
@@ -162,20 +162,31 @@
   }
 
   html {
-    color-scheme: light only;
+    color-scheme: only light;
+    background: oklch(0.97 0.003 320);
+    color: oklch(0.18 0.01 285);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
 
   body {
-    color-scheme: light only;
+    color-scheme: only light;
+    background: oklch(0.97 0.003 320);
     background-color: var(--color-surface);
+    color: oklch(0.18 0.01 285);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "ss02", "cv11";
     letter-spacing: -0.01em;
     overflow-x: hidden;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    color-scheme: only light;
   }
 
   h1,
@@ -316,11 +327,11 @@
   }
 
   body:has([data-bottom-floating]) .support-fab-button {
-    bottom: calc(6.25rem + env(safe-area-inset-bottom));
+    bottom: calc(7.5rem + env(safe-area-inset-bottom));
   }
 
   body:has([data-bottom-floating]) .support-fab-panel {
-    bottom: calc(9.75rem + env(safe-area-inset-bottom));
+    bottom: calc(11rem + env(safe-area-inset-bottom));
   }
 
   @media (min-width: 640px) {

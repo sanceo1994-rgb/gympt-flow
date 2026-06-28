@@ -15,12 +15,21 @@ another agent's changes just because they are uncommitted.
 ## Current database state
 
 - Linked Supabase project: `symnrjcgtltcgizwbaax`
-- Last checked with `npm run db:status` on 2026-06-26.
+- Last checked with `npm run db:push` on 2026-06-28.
 - Remote migration history now matches every local migration from
   `20260512065037` through `20260622015032`; the workflow reports no unexplained
   historical migration gap.
-- `20260623093000_add_app_ads.sql` exists locally but is not recorded remotely.
-  It is the only push-pending migration version from the latest status check.
+- Remote migration history currently matches local through
+  `20260628134632_prefer_raw_metadata_phone_for_roster_linking.sql`.
+- `20260628132304` adds `schedule_request_recipients` and updates
+  `mark_schedule_requested` so each time-selection request snapshots the roster
+  recipients that were selected at send time. Booking and profile screens now
+  read that snapshot so students added later do not inherit old requests.
+- `20260628134632` fixes student roster signup linking after `auth.users.phone`
+  started being stored as E.164 (`+8210...`). Roster linking and phone-account
+  lookup now compare the normalized `auth.users.raw_user_meta_data->>'phone'`
+  value, and the migration backfills existing roster rows that were incorrectly
+  left unlinked/misclassified as unregistered.
 - Continue using `npm run db:status`, `npm run db:push:dry`, and
   `npm run db:push` for database work. Do not bypass the guarded npm workflow.
 
