@@ -36,6 +36,7 @@ function getKoreanTimeProperties() {
 
 export function initializeAnalyticsClient() {
   if (typeof window === "undefined") return Promise.resolve();
+  if (!isAnalyticsEnabledForCurrentHost()) return Promise.resolve();
 
   if (!initialization) {
     initialization = Promise.all([
@@ -54,6 +55,8 @@ export function initializeAnalyticsClient() {
 }
 
 export async function trackClientEvent(eventName: string, eventProperties?: AnalyticsProperties) {
+  if (typeof window === "undefined" || !isAnalyticsEnabledForCurrentHost()) return;
+
   await initializeAnalyticsClient();
   const properties = {
     ...eventProperties,
@@ -65,12 +68,15 @@ export async function trackClientEvent(eventName: string, eventProperties?: Anal
 }
 
 export async function setClientUserId(userId?: string) {
+  if (typeof window === "undefined" || !isAnalyticsEnabledForCurrentHost()) return;
+
   await initializeAnalyticsClient();
   amplitude.setUserId(userId);
   setGoogleAnalyticsUser(userId);
 }
 
 function initializeGoogleAnalytics() {
+  if (!isAnalyticsEnabledForCurrentHost()) return Promise.resolve();
   if (!GA_MEASUREMENT_ID) return Promise.resolve();
   if (googleAnalyticsInitialization) return googleAnalyticsInitialization;
 
@@ -126,6 +132,19 @@ function setGoogleAnalyticsUser(userId?: string) {
   if (!GA_MEASUREMENT_ID || !window.gtag) return;
 
   window.gtag("set", { user_id: userId || undefined });
+}
+
+function isAnalyticsEnabledForCurrentHost() {
+  const hostname = window.location.hostname.toLowerCase();
+
+  if (["localhost", "0.0.0.0", "::1"].includes(hostname)) return false;
+  if (hostname.endsWith(".local")) return false;
+  if (/^127\./.test(hostname)) return false;
+  if (/^10\./.test(hostname)) return false;
+  if (/^192\.168\./.test(hostname)) return false;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)) return false;
+
+  return true;
 }
 
 function toGoogleAnalyticsParams(properties: AnalyticsProperties) {
