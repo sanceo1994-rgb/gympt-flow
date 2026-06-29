@@ -89,6 +89,7 @@ type BookingTrainer = {
   name: string;
   gym: string | null;
   intro: string | null;
+  avatar_url?: string | null;
   instagram_url?: string | null;
   theme_from?: string | null;
   theme_to?: string | null;
@@ -134,6 +135,7 @@ function cachedTrainer(): BookingTrainer | null {
       name: cachedName,
       gym: value.gym || null,
       intro: value.intro || null,
+      avatar_url: value.avatar_url || null,
       instagram_url: value.instagram_url || null,
       theme_from: value.theme_from || "#FF4E97",
       theme_to: value.theme_to || "#FF6FB1",
@@ -369,7 +371,7 @@ function Booking() {
 
       const { data: themedTrainer, error: themedTrainerError } = await supabase
         .from("trainers")
-        .select("id,user_id,name,gym,intro,instagram_url,theme_from,theme_to,gallery_urls")
+        .select("id,user_id,name,gym,intro,avatar_url,instagram_url,theme_from,theme_to,gallery_urls")
         .eq("id", currentTrainerId)
         .maybeSingle();
 
@@ -377,7 +379,7 @@ function Booking() {
       if (themedTrainerError) {
         const { data: legacyTrainer } = await supabase
           .from("trainers")
-          .select("id,user_id,name,gym,intro,instagram_url")
+          .select("id,user_id,name,gym,intro,avatar_url,instagram_url")
           .eq("id", currentTrainerId)
           .maybeSingle();
         const legacyTheme = LEGACY_TRAINER_THEMES[currentTrainerId];
@@ -885,9 +887,17 @@ function Booking() {
         <div className="px-5 sm:px-6 -mt-10 pb-5">
           <div className="flex items-start sm:items-end gap-4 flex-wrap">
             <div className="relative shrink-0">
-              <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">
-                {displayTrainerInitial}
-              </div>
+              {trainerRecord?.avatar_url ? (
+                <img
+                  src={trainerRecord.avatar_url}
+                  alt=""
+                  className="h-20 w-20 rounded-2xl object-cover ring-4 ring-white shadow-sm"
+                />
+              ) : (
+                <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">
+                  {displayTrainerInitial}
+                </div>
+              )}
               {trainerRank && (
                 <TrainerRankBadge rank={trainerRank} />
               )}

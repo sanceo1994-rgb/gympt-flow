@@ -1,13 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { ArrowUp, ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Camera, Lock, Phone, UserRound } from "lucide-react";
+import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { ArrowUp, ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Lock, Phone, UserRound, Building2, MapPin } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
 import logo from "@/assets/pickgympt-logo.png";
-import { OTTER_PRESETS, otterDataUrl } from "@/components/OtterPicker";
-import { AvatarBuilder, AVATAR_COLORS, AVATAR_ICONS, avatarDataUrl } from "@/components/AvatarBuilder";
-import { useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhoneNumber } from "@/lib/phone";
 import { needsDisplayNameRepair, pickDisplayName } from "@/lib/display-name";
@@ -16,6 +13,8 @@ import { kakaoSdkLogin } from "@/lib/kakao-sdk";
 import { kakaoBridgeLogin } from "@/lib/kakao-bridge.functions";
 import { requestPhoneOtp, verifyPhoneOtp, confirmUserPhone } from "@/lib/phone-otp.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { matchesKoreanSearch } from "@/lib/koreanSearch";
+import { LegalLinks } from "@/components/LegalLinks";
 
 
 
@@ -26,6 +25,14 @@ export const Route = createFileRoute("/login")({
 
 type Step = "method" | "email" | "consent" | "role" | "confirm" | "preview" | "done";
 type Role = "trainer" | "student";
+type GymOption = {
+  id: string;
+  name: string;
+  address: string;
+  sido: string | null;
+  district: string | null;
+  dong: string | null;
+};
 
 const PALETTES: { id: string; label: string; from: string; to: string }[] = [
   { id: "pink", label: "픽짐 핑크", from: "#FF4E97", to: "#FF6FB1" },
@@ -48,18 +55,16 @@ function clearLocalLoginState() {
 function Login() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("method");
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [method, setMethod] = useState<"kakao" | "email">("kakao");
   const [agree, setAgree] = useState({ tos: false, priv: false, age: false });
   const [role, setRole] = useState<Role | null>(null);
   const [profile, setProfile] = useState({ name: "", email: "", phone: "", avatar: "" });
-  const [desktopAvatarColorId, setDesktopAvatarColorId] = useState(AVATAR_COLORS[0].id);
-  const [desktopAvatarIconId, setDesktopAvatarIconId] = useState(AVATAR_ICONS[0].id);
   const [emailPw, setEmailPw] = useState({ email: "", password: "", confirm: "" });
   const [inviteCode, setInviteCode] = useState("");
   // Trainer mini-hompy customization
   const [palette, setPalette] = useState<string>("pink");
   const [trainerGym, setTrainerGym] = useState("");
+  const [gymOptions, setGymOptions] = useState<GymOption[]>([]);
   const [trainerSpecs, setTrainerSpecs] = useState<string[]>([]);
   const [specDraft, setSpecDraft] = useState("");
   const [trainerIntro, setTrainerIntro] = useState("");
@@ -67,6 +72,11 @@ function Login() {
   const [emailMode, setEmailMode] = useState<"login" | "signup" | null>(null);
   const [emailErr, setEmailErr] = useState<string | null>(null);
   const [emailBusy, setEmailBusy] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetErr, setResetErr] = useState<string | null>(null);
   // Kakao often doesn't share a real email, so the bridge falls back to a
   // synthetic one — without this check, a returning member who previously
   // signed up by email would silently get a second, disconnected account.
@@ -83,17 +93,6 @@ function Login() {
   const toggleAll = (v: boolean) => setAgree({ tos: v, priv: v, age: v });
 
   useEffect(() => {
-    if (step !== "confirm") return;
-    if (method === "kakao" && profile.avatar && !profile.avatar.startsWith("data:image/svg+xml")) {
-      return;
-    }
-    const color = AVATAR_COLORS.find((c) => c.id === desktopAvatarColorId) ?? AVATAR_COLORS[0];
-    const icon = AVATAR_ICONS.find((i) => i.id === desktopAvatarIconId) ?? AVATAR_ICONS[0];
-    const nextAvatar = avatarDataUrl(color.hex, icon);
-    setProfile((current) => (current.avatar === nextAvatar ? current : { ...current, avatar: nextAvatar }));
-  }, [desktopAvatarColorId, desktopAvatarIconId, method, profile.avatar, step]);
-
-  useEffect(() => {
     const pending = sessionStorage.getItem("gympt-kakao-onboarding");
     if (!pending) return;
     try {
@@ -106,6 +105,22 @@ function Login() {
     } finally {
       sessionStorage.removeItem("gympt-kakao-onboarding");
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void supabase
+      .from("gyms" as never)
+      .select("id,name,address,sido,district,dong")
+      .order("sido", { ascending: true })
+      .order("district", { ascending: true })
+      .order("name", { ascending: true })
+      .then(({ data }) => {
+        if (!cancelled) setGymOptions(((data ?? []) as unknown as GymOption[]));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Only relevant for the Kakao signup path — email signup already has its
@@ -306,6 +321,28 @@ function Login() {
     setStep("consent");
   };
 
+  const submitPasswordReset = async () => {
+    setResetErr(null);
+    if (!resetEmail) {
+      setResetErr("이메일을 입력해주세요");
+      return;
+    }
+    setResetBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        setResetErr("재설정 메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        return;
+      }
+      setResetSent(true);
+      trackEvent("Password Reset Requested", {});
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
   const afterConsent = () => {
     setStep("role");
   };
@@ -499,20 +536,20 @@ function Login() {
                 <p className="mt-2 text-[13px] text-ink-soft">처음이세요? 가입과 동시에 시작돼요. 이미 계정이 있으면 같은 입력으로 바로 로그인.</p>
 
                 <button
-                  onClick={() => startMethod("kakao", "quick")}
+                  onClick={() => startMethod("kakao", "account")}
                   disabled={emailBusy}
                   className="mt-6 h-14 w-full rounded-2xl bg-[#FEE500] text-[#191600] text-[15px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
                   <MessageCircle className="h-4 w-4 fill-[#191600]" />
-                  {emailBusy ? "카카오로 이동 중..." : "카카오로 시작하기"}
+                  {emailBusy ? "???? ?? ?..." : "??? ?? ?? ? ????"}
                 </button>
 
                 <button
-                  onClick={() => startMethod("kakao", "account")}
+                  onClick={() => startMethod("kakao", "quick")}
                   disabled={emailBusy}
                   className="mt-2 h-10 w-full rounded-xl border border-border bg-white text-[12px] font-extrabold text-ink-soft hover:bg-muted disabled:cursor-wait disabled:opacity-60"
                 >
-                  다른 카카오 계정으로 로그인
+                  ? ??? ?????? ??? ???
                 </button>
 
                 {emailErr && <p className="mt-3 text-[12px] font-bold text-destructive">{emailErr}</p>}
@@ -586,7 +623,19 @@ function Login() {
                 </form>
 
                 <p className="mt-4 text-center text-[11.5px] text-ink-soft">
-                  비밀번호를 잊으셨나요? <a className="text-primary font-bold hover:underline" href="#">재설정</a>
+                  비밀번호를 잊으셨나요?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(emailPw.email);
+                      setResetErr(null);
+                      setResetSent(false);
+                      setResetOpen(true);
+                    }}
+                    className="text-primary font-bold hover:underline"
+                  >
+                    재설정
+                  </button>
                 </p>
               </div>
             )}
@@ -657,91 +706,21 @@ function Login() {
                   {method === "kakao" ? "카카오에서 받아온 정보예요. 필요하면 수정할 수 있어요." : "기본 정보를 입력해주세요."}
                 </p>
 
-                <div className="mt-5 rounded-[26px] border border-border bg-white p-4 shadow-pop">
-                  {method === "kakao" && profile.avatar && !profile.avatar.startsWith("data:image/svg+xml") ? (
-                    <div className="mb-5 flex items-center gap-3 rounded-2xl bg-surface-muted p-3">
-                      <img
-                        src={profile.avatar}
-                        alt=""
-                        className="h-16 w-16 rounded-2xl bg-muted object-cover ring-2 ring-border"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-[12px] font-black text-ink">카카오 프로필 사진</p>
-                        <p className="mt-1 text-[11.5px] font-semibold leading-snug text-ink-soft">
-                          기본값으로 이 사진을 사용해요. 아래에서 직접 만든 아이콘으로 바꿀 수도 있어요.
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
-                  <AvatarBuilder
-                    colorId={desktopAvatarColorId}
-                    iconId={desktopAvatarIconId}
-                    onChange={({ colorId, iconId }) => {
-                      setDesktopAvatarColorId(colorId);
-                      setDesktopAvatarIconId(iconId);
-                      const color = AVATAR_COLORS.find((c) => c.id === colorId) ?? AVATAR_COLORS[0];
-                      const icon = AVATAR_ICONS.find((i) => i.id === iconId) ?? AVATAR_ICONS[0];
-                      setProfile((p) => ({ ...p, avatar: avatarDataUrl(color.hex, icon) }));
-                    }}
-                  />
-                  <span className="mt-4 inline-flex chip bg-primary/10 text-primary">
-                    {role === "trainer" ? "?몃젅?대꼫" : "?뚯썝"}
-                  </span>
-                </div>
-
-                <div className="hidden">
-                  <div className="relative shrink-0">
-                    {profile.avatar ? (
-                      <img src={profile.avatar} alt="" className="h-24 w-24 rounded-2xl bg-muted object-cover ring-2 ring-border" />
-                    ) : (
-                      <div className="h-24 w-24 rounded-2xl bg-surface-muted grid place-items-center text-[28px] font-black text-ink ring-2 ring-border">
-                        {profile.name?.[0] || "?"}
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      aria-label="프로필 사진 업로드"
-                      className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-ink text-white grid place-items-center ring-2 ring-white shadow-md hover:brightness-110"
-                    >
-                      <Camera className="h-3.5 w-3.5" />
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => setProfile((p) => ({ ...p, avatar: String(reader.result || "") }));
-                        reader.readAsDataURL(file);
-                      }}
+                {method === "kakao" && profile.avatar ? (
+                  <div className="mt-5 flex items-center gap-3 rounded-[22px] border border-border bg-surface-muted p-3">
+                    <img
+                      src={profile.avatar}
+                      alt=""
+                      className="h-14 w-14 rounded-2xl bg-muted object-cover ring-2 ring-border"
                     />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10.5px] font-extrabold uppercase tracking-wider text-ink-soft">기본 프로필 아이콘</p>
-                    <div className="mt-1.5 grid grid-cols-3 grid-rows-2 gap-1.5">
-                      {OTTER_PRESETS.map((preset) => {
-                        const url = otterDataUrl(preset);
-                        const active = profile.avatar === url;
-                        return (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            onClick={() => setProfile((p) => ({ ...p, avatar: url }))}
-                            title={preset.label}
-                            className={`h-10 w-10 rounded-xl overflow-hidden border-2 transition ${active ? "border-primary shadow-pop" : "border-transparent hover:border-border-strong"}`}
-                          >
-                            <img src={url} alt={preset.label} className="h-full w-full block" />
-                          </button>
-                        );
-                      })}
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-black text-ink">??? ??? ??</p>
+                      <p className="mt-1 text-[11.5px] font-semibold leading-snug text-ink-soft">
+                        ?? ??? ??? ?? ??? ???. ??? ??? ??? ?? ???? ?????.
+                      </p>
                     </div>
-                    <span className="mt-2 inline-flex chip bg-primary/10 text-primary">{role === "trainer" ? "트레이너" : "회원"}</span>
                   </div>
-                </div>
+                ) : null}
 
                 <div className="mt-5 grid gap-3">
                   <Field label="이름" value={profile.name} onChange={(v) => setProfile((p) => ({ ...p, name: v }))} placeholder="홍길동" hint="실명을 입력하면 트레이너/회원이 더 원활하게 알아볼 수 있어요" />
@@ -805,7 +784,7 @@ function Login() {
 
                   {role === "trainer" && (
                     <>
-                      <Field label="소속 헬스장 (지점)" value={trainerGym} onChange={setTrainerGym} placeholder="하이엔드 피트니스 강남점" />
+                      <GymSearchField value={trainerGym} onChange={setTrainerGym} gyms={gymOptions} />
                       <div className="block">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">전문 분야 · 자격 · 수상</span>
                         <p className="mt-1 text-[11px] text-ink-soft">하나씩 추가해주세요. 예) NSCA-CPT · 2024 머슬마니아 그랑프리 · 다이어트 8년</p>
@@ -927,6 +906,9 @@ function Login() {
               />
             )}
           </div>
+          <div className="mt-10 pb-8">
+            <LegalLinks />
+          </div>
       </main>
 
       {emailBusy && step === "method" && (
@@ -947,7 +929,61 @@ function Login() {
         />
       )}
 
-
+      <Dialog open={resetOpen} onOpenChange={(v) => { setResetOpen(v); if (!v) setResetErr(null); }}>
+        <DialogContent className="max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>비밀번호 재설정</DialogTitle>
+          </DialogHeader>
+          {resetSent ? (
+            <div className="py-2 text-center">
+              <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
+                <Check className="h-5 w-5" />
+              </span>
+              <p className="mt-3 text-[13.5px] font-bold text-ink">
+                {resetEmail}로 재설정 링크를 보냈어요.
+              </p>
+              <p className="mt-1 text-[12px] text-ink-soft leading-relaxed">
+                메일의 링크를 눌러 새 비밀번호를 설정해주세요. 메일이 안 보이면 스팸함도
+                확인해주세요.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-[12.5px] text-ink-soft leading-relaxed">
+                가입하신 이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드려요.
+              </p>
+              <Field
+                label="이메일"
+                type="email"
+                value={resetEmail}
+                onChange={(v) => { setResetEmail(v); setResetErr(null); }}
+                placeholder="you@example.com"
+              />
+              {resetErr && <p className="text-[12px] font-bold text-destructive">{resetErr}</p>}
+            </>
+          )}
+          <DialogFooter>
+            {resetSent ? (
+              <button
+                type="button"
+                onClick={() => setResetOpen(false)}
+                className="w-full h-12 rounded-full bg-ink text-white text-[14px] font-extrabold"
+              >
+                확인
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={resetBusy || !resetEmail}
+                onClick={submitPasswordReset}
+                className="w-full h-12 rounded-full bg-primary text-white text-[14px] font-extrabold disabled:opacity-40"
+              >
+                {resetBusy ? "전송 중..." : "재설정 링크 보내기"}
+              </button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1030,23 +1066,8 @@ function MobileSignupConfirm({
   phoneVerified: boolean;
   onPhoneVerified: () => void;
 }) {
-  type StepKey = "name" | "phone" | "email" | "password" | "confirm" | "avatar";
+  type StepKey = "name" | "phone" | "email" | "password" | "confirm";
   const [active, setActive] = useState<StepKey>("name");
-  const [avatarColorId, setAvatarColorId] = useState(AVATAR_COLORS[0].id);
-  const [avatarIconId, setAvatarIconId] = useState(AVATAR_ICONS[0].id);
-
-  // Profile pictures are the lowest-priority field and a camera-roll picker
-  // is extra friction on mobile, so it's a quick color+icon builder, asked
-  // last, after every required field is already filled.
-  useEffect(() => {
-    if (method === "kakao" && profile.avatar && !profile.avatar.startsWith("data:image/svg+xml")) {
-      return;
-    }
-    const color = AVATAR_COLORS.find((c) => c.id === avatarColorId) ?? AVATAR_COLORS[0];
-    const icon = AVATAR_ICONS.find((i) => i.id === avatarIconId) ?? AVATAR_ICONS[0];
-    const nextAvatar = avatarDataUrl(color.hex, icon);
-    setProfile((p) => (p.avatar === nextAvatar ? p : { ...p, avatar: nextAvatar }));
-  }, [avatarColorId, avatarIconId, method, profile.avatar, setProfile]);
 
   // Kakao already has a password (and a real profile photo), so those steps
   // only apply to email signup.
@@ -1060,7 +1081,6 @@ function MobileSignupConfirm({
           { key: "confirm" as const, label: "비밀번호 확인", icon: Check, value: emailPw.confirm, valid: emailPw.confirm.length > 0 && emailPw.password === emailPw.confirm },
         ]
       : []),
-    { key: "avatar" as const, label: "프로필 아이콘", icon: Camera, value: "", valid: true },
   ];
   const currentIndex = Math.max(0, steps.findIndex((step) => step.key === active));
   const current = steps[currentIndex] ?? steps[0];
@@ -1078,7 +1098,6 @@ function MobileSignupConfirm({
     setCompletionOrder((prev) => {
       let next = prev;
       for (const step of steps) {
-        if (step.key === "avatar") continue;
         const has = next.includes(step.key);
         if (step.valid && !has) next = [step.key, ...next];
         if (!step.valid && has) next = next.filter((k) => k !== step.key);
@@ -1148,33 +1167,7 @@ function MobileSignupConfirm({
         </div>
       )}
 
-      {current.key === "avatar" ? (
-        <div key={current.key} className="mt-5 rounded-[26px] border border-border bg-white p-4 shadow-pop animate-in fade-in slide-in-from-right-3 duration-300">
-          <p className="text-[12px] font-extrabold text-ink-soft">{current.label}</p>
-          <p className="mt-0.5 text-[19px] font-black leading-tight text-ink">색상과 아이콘으로 나만의 아이콘을 만들어요</p>
-          <div className="mt-4">
-            <AvatarBuilder
-              colorId={avatarColorId}
-              iconId={avatarIconId}
-              onChange={({ colorId, iconId }) => {
-                setAvatarColorId(colorId);
-                setAvatarIconId(iconId);
-                const color = AVATAR_COLORS.find((c) => c.id === colorId) ?? AVATAR_COLORS[0];
-                const icon = AVATAR_ICONS.find((i) => i.id === iconId) ?? AVATAR_ICONS[0];
-                setProfile((p) => ({ ...p, avatar: avatarDataUrl(color.hex, icon) }));
-              }}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={moveNext}
-            disabled={emailBusy}
-            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-extrabold text-white shadow-pop disabled:opacity-40"
-          >
-            {emailBusy ? "처리 중..." : role === "trainer" ? "프로필 미리보기" : "회원가입 완료"}
-          </button>
-        </div>
-      ) : (
+      {(
         <div key={current.key} className="mt-5 rounded-[26px] bg-ink p-4 text-white shadow-pop animate-in fade-in slide-in-from-right-3 duration-300">
           <div className="flex items-center gap-3">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-primary">
@@ -1224,7 +1217,7 @@ function MobileSignupConfirm({
   );
 }
 
-function mobileQuestion(key: "name" | "phone" | "email" | "password" | "confirm" | "avatar") {
+function mobileQuestion(key: "name" | "phone" | "email" | "password" | "confirm") {
   if (key === "name") return "어떻게 불러드릴까요?";
   if (key === "phone") return "연락받을 번호는요?";
   if (key === "email") return "로그인 이메일은요?";
@@ -1233,7 +1226,7 @@ function mobileQuestion(key: "name" | "phone" | "email" | "password" | "confirm"
   return "";
 }
 
-function mobilePlaceholder(key: "name" | "phone" | "email" | "password" | "confirm" | "avatar") {
+function mobilePlaceholder(key: "name" | "phone" | "email" | "password" | "confirm") {
   if (key === "name") return "홍길동";
   if (key === "phone") return "010-0000-0000";
   if (key === "email") return "you@example.com";
@@ -1347,6 +1340,93 @@ function RoleCard({ title, sub, img, active, onClick }: { title: string; sub: st
   );
 }
 
+function GymSearchField({
+  value,
+  onChange,
+  gyms,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  gyms: GymOption[];
+}) {
+  const [focused, setFocused] = useState(false);
+  const query = value.trim();
+  const results = useMemo(() => {
+    if (!query) return gyms.slice(0, 8);
+    return gyms
+      .filter((gym) =>
+        matchesKoreanSearch(
+          `${gym.name} ${gym.address} ${gym.sido ?? ""} ${gym.district ?? ""} ${gym.dong ?? ""}`,
+          query,
+        ),
+      )
+      .slice(0, 8);
+  }, [gyms, query]);
+
+  const pick = (gym: GymOption) => {
+    onChange(gym.name);
+    setFocused(false);
+  };
+
+  return (
+    <label className="relative block">
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft inline-flex items-center gap-2 flex-wrap">
+          소속 헬스장
+          <span className="text-[10.5px] font-medium normal-case tracking-normal text-muted-foreground">
+            · 초성/이름/주소 검색
+          </span>
+        </span>
+      </span>
+      <div className="mt-1.5 flex h-11 items-center gap-2 rounded-xl border border-border bg-surface-muted px-3.5 focus-within:border-ink focus-within:bg-white">
+        <Building2 className="h-4 w-4 shrink-0 text-ink-soft" />
+        <input
+          value={value}
+          onFocus={() => setFocused(true)}
+          onChange={(event) => {
+            onChange(event.target.value);
+            setFocused(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && results[0]) {
+              event.preventDefault();
+              pick(results[0]);
+            }
+          }}
+          placeholder="ㄱ, 가, 강남, 센터명으로 검색"
+          className="h-full min-w-0 flex-1 bg-transparent text-[14px] font-semibold text-ink outline-none placeholder:text-ink-soft/60"
+        />
+      </div>
+      {focused && (query || results.length > 0) && (
+        <div className="absolute left-0 right-0 top-[74px] z-30 overflow-hidden rounded-2xl border border-border bg-white shadow-pop">
+          {results.length > 0 ? (
+            results.map((gym) => (
+              <button
+                key={gym.id}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => pick(gym)}
+                className="flex w-full items-start gap-2 border-b border-border/70 px-3.5 py-3 text-left last:border-0 hover:bg-surface-muted"
+              >
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0">
+                  <span className="block truncate text-[13px] font-black text-ink">{gym.name}</span>
+                  <span className="mt-0.5 block truncate text-[11.5px] font-semibold text-ink-soft">
+                    {gym.address}
+                  </span>
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="px-3.5 py-4 text-[12px] font-semibold text-ink-soft">
+              검색 결과가 없어요. 직접 입력해도 됩니다.
+            </div>
+          )}
+        </div>
+      )}
+    </label>
+  );
+}
 
 function Field({ label, value, onChange, placeholder, type = "text", hint, action }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; hint?: string; action?: ReactNode }) {
   return (

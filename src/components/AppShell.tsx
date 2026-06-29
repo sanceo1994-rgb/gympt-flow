@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { LeftRail } from "./sidebars/LeftRail";
 import { RightRail } from "./sidebars/RightRail";
 import { MobileAccountHeader } from "./MobileAccountHeader";
+import { LegalLinks } from "./LegalLinks";
 
 type Props = {
   children: ReactNode;
@@ -22,7 +23,12 @@ export function AppShell({ children, left, right }: Props) {
           </aside>
           <main className="mx-auto min-h-screen w-full max-w-[1080px] min-w-0 bg-white min-[1720px]:max-w-none">
             <MobileAccountHeader />
-            <div className="px-5 sm:px-7 lg:px-8 py-6">{children}</div>
+            <div className="px-5 sm:px-7 lg:px-8 py-6 pb-28">
+              {children}
+              <div className="mt-14 min-[1720px]:hidden">
+                <LegalLinks />
+              </div>
+            </div>
           </main>
           <aside className="hidden min-w-0 min-[1720px]:block">
             <div className="sticky top-0 mr-auto flex h-screen w-full max-w-[320px] min-w-0 flex-col overflow-hidden py-3 pl-5">

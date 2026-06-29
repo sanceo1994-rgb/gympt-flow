@@ -35,6 +35,7 @@ import { pickDisplayName } from "@/lib/display-name";
 import { formatPhoneNumber } from "@/lib/phone";
 import { trackEvent } from "@/lib/analytics";
 import { matchesKoreanSearch } from "@/lib/koreanSearch";
+import { nextPlan, planById, type PlanId } from "@/lib/subscription-plans";
 
 export const Route = createFileRoute("/students")({
   head: () => ({ meta: [{ title: "학생 관리 - PickGymPT" }] }),
@@ -104,6 +105,7 @@ function StudentsPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [trainerId, setTrainerId] = useState<string | null>(null);
+  const [subscriptionPlanId, setSubscriptionPlanId] = useState<PlanId>("free");
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -116,6 +118,7 @@ function StudentsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editDraft, setEditDraft] = useState<DraftRow>(emptyRow);
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
+  const [limitDialogOpen, setLimitDialogOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Student | null>(null);
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDeleteRef = useRef<Student | null>(null);
@@ -131,7 +134,7 @@ function StudentsPage() {
 
     const { data: trainer, error: trainerError } = await supabase
       .from("trainers")
-      .select("id")
+      .select("id,subscription_plan")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -144,6 +147,9 @@ function StudentsPage() {
     }
 
     setTrainerId(trainer.id);
+    setSubscriptionPlanId(
+      planById(String((trainer as { subscription_plan?: string | null }).subscription_plan ?? "free")).id,
+    );
 
     const { data, error: rosterError } = await supabase
       .from("student_rosters" as never)
@@ -186,6 +192,9 @@ function StudentsPage() {
     (r) => r.name.trim() && r.phone.replace(/\D/g, "").length === 11,
   );
   const validCount = validRows.length;
+  const currentPlan = planById(subscriptionPlanId);
+  const upgradePlan = nextPlan(currentPlan);
+  const activeStudentCount = students.filter((student) => student.remaining > 0).length;
 
   const onSort = (k: SortKey) => {
     if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -206,6 +215,11 @@ function StudentsPage() {
 
   const submitBulk = async () => {
     if (!trainerId || validCount === 0) return;
+    const incomingActiveCount = validRows.filter((row) => (Number(row.remaining) || 0) > 0).length;
+    if (activeStudentCount + incomingActiveCount > currentPlan.activeStudentLimit) {
+      setLimitDialogOpen(true);
+      return;
+    }
 
     const payload = validRows.map((r) => ({
       trainer_id: trainerId,
@@ -221,6 +235,10 @@ function StudentsPage() {
       .from("student_rosters" as never)
       .insert(payload as never);
     if (insertError) {
+      if (insertError.message.includes("active student limit exceeded")) {
+        setLimitDialogOpen(true);
+        return;
+      }
       setError("학생 명단 저장에 실패했습니다.");
       return;
     }
@@ -682,6 +700,28 @@ function StudentsPage() {
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={limitDialogOpen} onOpenChange={setLimitDialogOpen}>
+        <AlertDialogContent className="max-w-[460px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black">??? ?? ??? ?????</AlertDialogTitle>
+            <AlertDialogDescription>
+              ?? {currentPlan.name} ???? PT ? ??? ?? {currentPlan.activeStudentLimit}??? ??? ? ???.
+              ??? ??? ??? ???? ????.
+              {upgradePlan ? ` ${upgradePlan.name} ???? ???? ?? ${upgradePlan.activeStudentLimit}??? ??? ? ???.` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>?? ??</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => navigate({ to: "/pricing" })}
+              className="bg-primary text-white hover:bg-primary/90"
+            >
+              ??? ????
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

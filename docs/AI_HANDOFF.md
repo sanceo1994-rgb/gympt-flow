@@ -20,7 +20,11 @@ another agent's changes just because they are uncommitted.
   `20260512065037` through `20260622015032`; the workflow reports no unexplained
   historical migration gap.
 - Remote migration history currently matches local through
-  `20260628134632_prefer_raw_metadata_phone_for_roster_linking.sql`.
+  `20260629121227_add_subscription_plans_and_gyms.sql`.
+- `20260629121227` adds trainer subscription plans (`Free`, `Mini`, `Basic`,
+  `Pro`), stores each trainer's `subscription_plan`, enforces active student
+  limits on `student_rosters`, and seeds 8,839 deduplicated gyms from
+  `C:\dev\crawling\crawling_gym.xlsx` into `public.gyms`.
 - `20260628132304` adds `schedule_request_recipients` and updates
   `mark_schedule_requested` so each time-selection request snapshots the roster
   recipients that were selected at send time. Booking and profile screens now
