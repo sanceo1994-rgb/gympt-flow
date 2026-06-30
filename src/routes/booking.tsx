@@ -13,6 +13,10 @@ import {
   Coffee,
   Sparkles,
   Camera,
+  CalendarClock,
+  Clock3,
+  CalendarOff,
+  Crown,
 } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import {
@@ -23,12 +27,15 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { pickDisplayName } from "@/lib/display-name";
 import { TrainerRankBadge } from "@/components/TrainerRankBadge";
 import { useTrainerRank } from "@/hooks/use-trainer-rank";
 import { trackEvent } from "@/lib/analytics";
+import { OnboardingTour, type TourStep } from "@/components/OnboardingTour";
+import { planById } from "@/lib/subscription-plans";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -45,7 +52,7 @@ export const Route = createFileRoute("/booking")({
 });
 
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
-const HOURS = Array.from({ length: 17 }, (_, i) => 6 + i);
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 const DEFAULT_TRAINER_ID = "0b8781ee-55af-489c-9737-a4b081f596f9";
 const LEGACY_TRAINER_THEMES: Record<string, { from: string; to: string }> = {
@@ -74,6 +81,33 @@ const TRAINER_SPECS: Record<string, string[]> = {
   ],
 };
 
+const BOOKING_TOUR_STEPS: TourStep[] = [
+  {
+    targetId: "tour-gallery-button",
+    badge: "STEP 1 · 대표 사진",
+    title: "첫인상은 대표 사진에서 시작돼요",
+    description:
+      "여기서 대표 사진을 등록하면 학생들이 보는 예약 페이지 상단에 바로 노출돼요. 트레이너님만의 분위기를 보여주세요.",
+    icon: <Camera className="h-5 w-5" />,
+  },
+  {
+    targetId: "tour-announcement-button",
+    badge: "STEP 2 · 공지",
+    title: "휴무·이벤트는 공지로 알려주세요",
+    description:
+      "여기서 공지를 등록하면 이 페이지를 보는 모든 학생에게 바로 전달돼요. 휴무 안내나 이벤트 소식을 올려보세요.",
+    icon: <Megaphone className="h-5 w-5" />,
+  },
+  {
+    targetId: "tour-booking-preview",
+    badge: "STEP 3 · 학생 예약",
+    title: "학생들은 이 화면에서 시간을 골라요",
+    description:
+      "아래 시간표가 학생들이 실제로 보는 화면이에요. 학생이 가능한 시간을 고르면 색이 진해지고, 트레이너님은 빠른 일정조율에서 한 번에 확인할 수 있어요.",
+    icon: <CalendarClock className="h-5 w-5" />,
+  },
+];
+
 type StudentRosterMatch = {
   id: string;
   trainer_id: string;
@@ -89,10 +123,13 @@ type BookingTrainer = {
   name: string;
   gym: string | null;
   intro: string | null;
+  avatar_url?: string | null;
   instagram_url?: string | null;
   theme_from?: string | null;
   theme_to?: string | null;
   gallery_urls?: string[] | null;
+  onboarding_seen?: string[] | null;
+  subscription_plan?: string | null;
 };
 
 function requestedTrainerId() {
@@ -134,6 +171,7 @@ function cachedTrainer(): BookingTrainer | null {
       name: cachedName,
       gym: value.gym || null,
       intro: value.intro || null,
+      avatar_url: value.avatar_url || null,
       instagram_url: value.instagram_url || null,
       theme_from: value.theme_from || "#FF4E97",
       theme_to: value.theme_to || "#FF6FB1",
@@ -177,10 +215,10 @@ async function ensureBookingSchedule(
   const scheduleTrainer = (
     await supabase
       .from("trainer_profiles" as never)
-      .select("id")
+      .select("id,booking_start_hour,booking_end_hour")
       .eq("user_id", trainerUserId)
       .maybeSingle()
-  ).data as { id: string } | null;
+  ).data as { id: string; booking_start_hour: number | null; booking_end_hour: number | null } | null;
   if (!scheduleTrainer) return null;
 
   let schedule = (
@@ -210,6 +248,17 @@ async function ensureBookingSchedule(
     .eq("schedule_id", schedule.id)
     .limit(1);
   if (!existingSlots || existingSlots.length === 0) {
+    const startHour = scheduleTrainer.booking_start_hour ?? 6;
+    const endHour = scheduleTrainer.booking_end_hour ?? 22;
+    const { data: defaultClosedRows } = await supabase
+      .from("trainer_default_closed_slots" as never)
+      .select("day_of_week,hour")
+      .eq("trainer_profile_id", scheduleTrainer.id);
+    const defaultClosedSet = new Set(
+      ((defaultClosedRows ?? []) as unknown as { day_of_week: number; hour: number }[]).map(
+        (row) => `${row.day_of_week}-${row.hour}`,
+      ),
+    );
     const grid: {
       schedule_id: string;
       day_of_week: number;
@@ -224,7 +273,7 @@ async function ensureBookingSchedule(
           day_of_week: day,
           hour,
           capacity: 1,
-          is_closed: day === 6,
+          is_closed: hour < startHour || hour >= endHour || defaultClosedSet.has(`${day}-${hour}`),
         });
     }
     await supabase.from("time_slots" as never).upsert(grid as never, {
@@ -309,6 +358,18 @@ function Booking() {
   const MAX_GALLERY_PHOTOS = 5;
   const locationSearch = useLocation({ select: (loc) => loc.searchStr });
 
+  // Trainer-only: operating hours + recurring default-closed slots
+  const [trainerProfileId, setTrainerProfileId] = useState<string | null>(null);
+  const [hoursOpen, setHoursOpen] = useState(false);
+  const [bookingStartHour, setBookingStartHour] = useState(6);
+  const [bookingEndHour, setBookingEndHour] = useState(22);
+  const [hoursDraft, setHoursDraft] = useState({ start: 6, end: 22 });
+  const [hoursSaving, setHoursSaving] = useState(false);
+  const [upgradePromptOpen, setUpgradePromptOpen] = useState(false);
+  const [defaultClosedOpen, setDefaultClosedOpen] = useState(false);
+  const [defaultClosedSlots, setDefaultClosedSlots] = useState<Set<string>>(new Set());
+  const [defaultClosedSaving, setDefaultClosedSaving] = useState(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -369,7 +430,7 @@ function Booking() {
 
       const { data: themedTrainer, error: themedTrainerError } = await supabase
         .from("trainers")
-        .select("id,user_id,name,gym,intro,instagram_url,theme_from,theme_to,gallery_urls")
+        .select("id,user_id,name,gym,intro,avatar_url,instagram_url,theme_from,theme_to,gallery_urls,onboarding_seen,subscription_plan")
         .eq("id", currentTrainerId)
         .maybeSingle();
 
@@ -377,7 +438,7 @@ function Booking() {
       if (themedTrainerError) {
         const { data: legacyTrainer } = await supabase
           .from("trainers")
-          .select("id,user_id,name,gym,intro,instagram_url")
+          .select("id,user_id,name,gym,intro,avatar_url,instagram_url")
           .eq("id", currentTrainerId)
           .maybeSingle();
         const legacyTheme = LEGACY_TRAINER_THEMES[currentTrainerId];
@@ -566,6 +627,115 @@ function Booking() {
     );
   };
 
+  // Loaded for every viewer (not just the owner) so the timetable's visual
+  // open/closed boundaries always match the trainer's saved settings — the
+  // owner's edit affordances (trainerProfileId, default-closed editing) only
+  // matter when isOwnerTrainer is also true.
+  useEffect(() => {
+    const trainerUserId = trainerRecord?.user_id;
+    if (!trainerUserId) {
+      setTrainerProfileId(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("trainer_profiles" as never)
+      .select("id,booking_start_hour,booking_end_hour")
+      .eq("user_id", trainerUserId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const profile = data as { id: string; booking_start_hour: number; booking_end_hour: number } | null;
+        if (!profile) return;
+        setTrainerProfileId(profile.id);
+        setBookingStartHour(profile.booking_start_hour);
+        setBookingEndHour(profile.booking_end_hour);
+        setHoursDraft({ start: profile.booking_start_hour, end: profile.booking_end_hour });
+        return supabase
+          .from("trainer_default_closed_slots" as never)
+          .select("day_of_week,hour")
+          .eq("trainer_profile_id", profile.id)
+          .then(({ data: rows }) => {
+            if (cancelled) return;
+            const set = new Set(
+              ((rows ?? []) as unknown as { day_of_week: number; hour: number }[]).map(
+                (row) => `${row.day_of_week}-${row.hour}`,
+              ),
+            );
+            setDefaultClosedSlots(set);
+          });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [trainerRecord?.user_id]);
+
+  const trainerPlan = planById(trainerRecord?.subscription_plan);
+  const hasDefaultClosedAccess = trainerPlan.displayOrder >= 30; // Basic and above
+
+  const saveBookingHours = async () => {
+    if (!user || !trainerProfileId) return;
+    if (hoursDraft.start >= hoursDraft.end) {
+      setToast({ title: "시작 시간은 끝 시간보다 빨라야 해요." });
+      setTimeout(() => setToast(null), 2400);
+      return;
+    }
+    setHoursSaving(true);
+    try {
+      const { error } = await supabase
+        .from("trainer_profiles" as never)
+        .update({ booking_start_hour: hoursDraft.start, booking_end_hour: hoursDraft.end } as never)
+        .eq("id", trainerProfileId);
+      if (error) throw error;
+      setBookingStartHour(hoursDraft.start);
+      setBookingEndHour(hoursDraft.end);
+      setHoursOpen(false);
+      setToast({ title: "운영 시간을 저장했어요.", sub: "다음에 새로 보내는 요청부터 적용돼요." });
+      setTimeout(() => setToast(null), 2800);
+    } catch {
+      setToast({ title: "저장에 실패했어요. 다시 시도해주세요." });
+      setTimeout(() => setToast(null), 2400);
+    } finally {
+      setHoursSaving(false);
+    }
+  };
+
+  const toggleDefaultClosedSlot = async (day: number, hour: number) => {
+    if (!trainerProfileId) return;
+    const key = `${day}-${hour}`;
+    const isClosed = defaultClosedSlots.has(key);
+    setDefaultClosedSaving(true);
+    try {
+      if (isClosed) {
+        const { error } = await supabase
+          .from("trainer_default_closed_slots" as never)
+          .delete()
+          .eq("trainer_profile_id", trainerProfileId)
+          .eq("day_of_week", day)
+          .eq("hour", hour);
+        if (error) throw error;
+        setDefaultClosedSlots((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      } else {
+        const { error } = await supabase.from("trainer_default_closed_slots" as never).insert({
+          trainer_profile_id: trainerProfileId,
+          day_of_week: day,
+          hour,
+        } as never);
+        if (error) throw error;
+        setDefaultClosedSlots((prev) => new Set(prev).add(key));
+      }
+    } catch {
+      setToast({ title: "저장에 실패했어요. 다시 시도해주세요." });
+      setTimeout(() => setToast(null), 2400);
+    } finally {
+      setDefaultClosedSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (!user || String(user.id).startsWith("virtual-")) {
       setWeekPoints(0);
@@ -675,6 +845,19 @@ function Booking() {
       return;
     }
     setTrainerRecord((prev) => (prev ? { ...prev, gallery_urls: nextUrls } : prev));
+  };
+
+  const finishBookingTour = () => {
+    if (!user) return;
+    setTrainerRecord((prev) =>
+      prev ? { ...prev, onboarding_seen: [...(prev.onboarding_seen ?? []), "booking"] } : prev,
+    );
+    // .then() (not "void") is what actually fires this lazy request.
+    supabase
+      .rpc("mark_onboarding_seen" as never, { p_user_id: user.id, p_key: "booking" } as never)
+      .then(({ error }) => {
+        if (error) console.error("[onboarding] mark_onboarding_seen failed", error.message);
+      });
   };
 
   const persistSelections = async (markUnavailable: boolean, picks: string[]) => {
@@ -875,6 +1058,7 @@ function Booking() {
         {isOwnerTrainer && (
           <div className="absolute right-3 top-3 z-10">
             <button
+              id="tour-gallery-button"
               onClick={() => setGalleryManagerOpen(true)}
               className="inline-flex h-8 items-center gap-1.5 rounded-full bg-black/55 px-3 text-[11.5px] font-extrabold text-white hover:bg-black/75"
             >
@@ -885,9 +1069,17 @@ function Booking() {
         <div className="px-5 sm:px-6 -mt-10 pb-5">
           <div className="flex items-start sm:items-end gap-4 flex-wrap">
             <div className="relative shrink-0">
-              <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">
-                {displayTrainerInitial}
-              </div>
+              {trainerRecord?.avatar_url ? (
+                <img
+                  src={trainerRecord.avatar_url}
+                  alt=""
+                  className="h-20 w-20 rounded-2xl object-cover ring-4 ring-white shadow-sm"
+                />
+              ) : (
+                <div className="h-20 w-20 rounded-2xl bg-surface-muted ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow-sm">
+                  {displayTrainerInitial}
+                </div>
+              )}
               {trainerRank && (
                 <TrainerRankBadge rank={trainerRank} />
               )}
@@ -950,6 +1142,7 @@ function Booking() {
             </p>
             {isOwnerTrainer && (
               <button
+                id="tour-announcement-button"
                 onClick={() => {
                   setAnnDraft(announcement);
                   setAnnOpen(true);
@@ -973,7 +1166,7 @@ function Booking() {
           aria-hidden={showGateOverlay}
         >
           {/* Header */}
-          <div className="mt-6 flex items-start justify-between gap-3 flex-wrap">
+          <div id="tour-booking-preview" className="mt-6 flex items-start justify-between gap-3 flex-wrap">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
                 학생 예약 · 다음 주
@@ -988,7 +1181,39 @@ function Booking() {
                 맞는 시간으로 확정해 드려요.
               </p>
             </div>
-            {submitted ? (
+            {isOwnerTrainer ? (
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                <button
+                  onClick={() => {
+                    setHoursDraft({ start: bookingStartHour, end: bookingEndHour });
+                    setHoursOpen(true);
+                  }}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-[12.5px] font-extrabold text-white shadow-sm hover:brightness-110"
+                >
+                  <Clock3 className="h-4 w-4 text-primary" /> 첫/마지막 시간 설정
+                </button>
+                <button
+                  onClick={() => (hasDefaultClosedAccess ? setDefaultClosedOpen(true) : setUpgradePromptOpen(true))}
+                  className={`relative inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[12.5px] font-extrabold shadow-sm ${
+                    hasDefaultClosedAccess
+                      ? "bg-primary text-white hover:brightness-110"
+                      : "border-2 border-dashed border-border-strong bg-surface-muted text-muted-foreground opacity-80 hover:opacity-100"
+                  }`}
+                >
+                  {hasDefaultClosedAccess ? (
+                    <CalendarOff className="h-4 w-4" />
+                  ) : (
+                    <Lock className="h-4 w-4" />
+                  )}
+                  특정 시간 고정 닫기
+                  {!hasDefaultClosedAccess && (
+                    <span className="ml-0.5 inline-flex h-5 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 text-[10px] font-black text-amber-700">
+                      <Crown className="h-3 w-3" /> Basic+
+                    </span>
+                  )}
+                </button>
+              </div>
+            ) : submitted ? (
               <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-[oklch(0.95_0.05_160)] text-[oklch(0.40_0.12_160)] text-[12px] font-extrabold">
                 <Check className="h-3.5 w-3.5" /> 제출 완료 · 상시 수정 가능
               </span>
@@ -1095,9 +1320,13 @@ function Booking() {
                     <div className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums">
                       {String(h).padStart(2, "0")}
                     </div>
-                    {DAYS.map((d) => {
+                    {DAYS.map((d, dayIndex) => {
                       const key = `${d}-${h}`;
-                      const closed = bookingSchedule?.closedKeys.has(key) ?? false;
+                      const outsideHours = h < bookingStartHour || h >= bookingEndHour;
+                      const closed =
+                        outsideHours ||
+                        defaultClosedSlots.has(`${dayIndex}-${h}`) ||
+                        (bookingSchedule?.closedKeys.has(key) ?? false);
                       const isMine = selected.has(key);
                       const dem = demand[key] ?? 0;
                       const lvl = heatLevel(dem, isMine);
@@ -1555,6 +1784,162 @@ function Booking() {
         </DialogContent>
       </Dialog>
 
+      {/* 첫/마지막 시간 설정 — available to every plan */}
+      <Dialog open={hoursOpen} onOpenChange={setHoursOpen}>
+        <DialogContent className="max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>첫/마지막 시간 설정</DialogTitle>
+            <DialogDescription>
+              설정한 시간 바깥은 학생들의 시간표에서 항상 닫혀있어요. 새로 보내는 요청부터 적용돼요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">
+                시작 시간
+              </span>
+              <select
+                value={hoursDraft.start}
+                onChange={(e) => setHoursDraft((p) => ({ ...p, start: Number(e.target.value) }))}
+                className="mt-1.5 h-11 w-full rounded-xl border border-border bg-surface-muted px-3 text-[14px] font-bold text-ink outline-none focus:border-ink focus:bg-white"
+              >
+                {HOURS.map((h) => (
+                  <option key={h} value={h}>
+                    {String(h).padStart(2, "0")}:00
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">
+                마지막 시간
+              </span>
+              <select
+                value={hoursDraft.end}
+                onChange={(e) => setHoursDraft((p) => ({ ...p, end: Number(e.target.value) }))}
+                className="mt-1.5 h-11 w-full rounded-xl border border-border bg-surface-muted px-3 text-[14px] font-bold text-ink outline-none focus:border-ink focus:bg-white"
+              >
+                {[...HOURS, 24].map((h) => (
+                  <option key={h} value={h}>
+                    {h === 24 ? "24:00" : `${String(h).padStart(2, "0")}:00`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setHoursOpen(false)}
+              className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold"
+            >
+              취소
+            </button>
+            <button
+              onClick={saveBookingHours}
+              disabled={hoursSaving}
+              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-extrabold shadow-pop disabled:opacity-40"
+            >
+              {hoursSaving ? "저장 중..." : "저장"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upsell prompt for plans below Basic */}
+      <Dialog open={upgradePromptOpen} onOpenChange={setUpgradePromptOpen}>
+        <DialogContent className="max-w-[420px] text-center">
+          <DialogHeader>
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-amber-100 text-amber-600">
+              <Crown className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-center">Basic 요금제부터 사용할 수 있어요</DialogTitle>
+            <DialogDescription>
+              특정 시간 고정 닫기를 설정하면 매주 시간 요청을 보낼 때마다 똑같은 시간을 다시 막을 필요가
+              없어져요. Basic 요금제 이상에서 사용할 수 있어요.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setUpgradePromptOpen(false)}
+              className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold"
+            >
+              닫기
+            </button>
+            <Link
+              to="/pricing"
+              onClick={() => setUpgradePromptOpen(false)}
+              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-extrabold shadow-pop inline-flex items-center justify-center"
+            >
+              요금제 보기
+            </Link>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 특정 시간 고정 닫기 — Basic plan and above, styled like the trainer's
+          manual schedule-adjustment panel on /schedule. */}
+      <Sheet open={defaultClosedOpen} onOpenChange={setDefaultClosedOpen}>
+        <SheetContent side="right" className="w-[88vw] sm:!max-w-[50vw] overflow-y-auto">
+          <SheetHeader>
+            <span className="inline-flex w-fit chip bg-primary/10 text-primary">
+              <CalendarOff className="h-3 w-3" /> 고정 닫기
+            </span>
+            <SheetTitle className="text-[20px] font-black leading-tight">특정 시간 고정 닫기</SheetTitle>
+            <SheetDescription>
+              매주 자동으로 닫혀있을 시간을 골라주세요. 학생들에게 새로 시간 선택 요청을 보낼 때마다 이
+              시간들은 따로 막지 않아도 돼요.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-5 rounded-xl border border-border overflow-hidden">
+            <div className="grid grid-cols-[40px_repeat(7,1fr)] bg-surface-muted border-b border-border">
+              <div className="p-1.5 text-[10px] text-muted-foreground font-bold text-center">시간</div>
+              {DAYS.map((d) => (
+                <div key={d} className="p-1.5 text-center text-[12px] font-bold text-ink">
+                  {d}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-[40px_repeat(7,1fr)] max-h-[480px] overflow-y-auto">
+              {HOURS.map((h) => (
+                <React.Fragment key={h}>
+                  <div className="border-b border-border bg-surface-muted/60 grid place-items-center text-[10px] font-bold text-muted-foreground tabular-nums">
+                    {String(h).padStart(2, "0")}
+                  </div>
+                  {DAYS.map((_, dayIndex) => {
+                    const key = `${dayIndex}-${h}`;
+                    const isOutsideHours = h < bookingStartHour || h >= bookingEndHour;
+                    const isClosed = defaultClosedSlots.has(key);
+                    return (
+                      <button
+                        key={key}
+                        disabled={isOutsideHours || defaultClosedSaving}
+                        onClick={() => toggleDefaultClosedSlot(dayIndex, h)}
+                        className={`relative h-10 border-b border-l border-border transition ${
+                          isOutsideHours
+                            ? "bg-muted text-muted-foreground/40 cursor-not-allowed"
+                            : isClosed
+                              ? "bg-destructive/15 hover:bg-destructive/25"
+                              : "hover:ring-2 hover:ring-ink/30 hover:ring-inset"
+                        }`}
+                      >
+                        {!isOutsideHours && isClosed && (
+                          <Lock className="absolute inset-0 m-auto h-3 w-3 text-destructive" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+          <p className="mt-3 text-[12px] text-ink-soft leading-relaxed">
+            회색 칸은 첫/마지막 시간 설정 바깥이라 항상 닫혀있어요. 빨간 칸을 눌러 매주 고정으로 닫을
+            시간을 추가하거나 해제할 수 있어요.
+          </p>
+        </SheetContent>
+      </Sheet>
+
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
           <div className="rounded-2xl bg-ink text-white px-4 py-3 shadow-pop flex items-center gap-2.5 min-w-[280px]">
@@ -1571,6 +1956,10 @@ function Booking() {
             </div>
           </div>
         </div>
+      )}
+
+      {isOwnerTrainer && !(trainerRecord?.onboarding_seen ?? []).includes("booking") && (
+        <OnboardingTour steps={BOOKING_TOUR_STEPS} finishLabel="확인" onFinish={finishBookingTour} />
       )}
     </AppShell>
   );

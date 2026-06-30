@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, CalendarHeart, ChevronDown, Trophy } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarHeart, Trophy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import logo from "@/assets/pickgympt-logo.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { pickDisplayName } from "@/lib/display-name";
 import { TrainerRankBadge } from "@/components/TrainerRankBadge";
 import { rankTrainerRows } from "@/lib/trainer-ranking";
+import { LegalLinks } from "@/components/LegalLinks";
 
 const FALLBACK_COLORS = ["#E23A8A", "#2563EB", "#16A34A", "#F59E0B", "#7C3AED"];
 const LEGACY_THEME_BY_ID: Record<string, { theme_from: string; theme_to: string }> = {
@@ -64,7 +65,6 @@ function TrainerAvatar({
 
 export function LeftRail() {
   const { user } = useAuth();
-  const [bizOpen, setBizOpen] = useState(false);
   const [trainers, setTrainers] = useState<SidebarTrainer[]>([]);
   const [myTrainer, setMyTrainer] = useState<SidebarTrainer | null>(null);
 
@@ -397,47 +397,8 @@ export function LeftRail() {
           </section>
         </div>
 
-        <div className="mt-auto px-2 pt-4 pb-7 text-[10.5px] text-ink-soft">
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-            <Link to="/" className="hover:text-ink">
-              이용약관
-            </Link>
-            <span className="text-border">·</span>
-            <Link to="/" className="hover:text-ink">
-              개인정보처리방침
-            </Link>
-            <span className="text-border">·</span>
-            <Link to="/" className="hover:text-ink">
-              광고/협업 문의
-            </Link>
-          </div>
-          <button
-            onClick={() => setBizOpen((value) => !value)}
-            className="mt-2 mx-auto flex items-center gap-1 text-[10.5px] text-ink-soft hover:text-ink"
-          >
-            사업자정보 보기{" "}
-            <ChevronDown className={`h-3 w-3 transition ${bizOpen ? "rotate-180" : ""}`} />
-          </button>
-          {bizOpen && (
-            <div className="mt-2 rounded-lg bg-white border border-border p-3 leading-relaxed text-[10.5px]">
-              <p>
-                <b className="text-ink">상호</b> 와이낫스피릿 주식회사
-              </p>
-              <p>
-                <b className="text-ink">대표</b> 김산
-              </p>
-              <p>
-                <b className="text-ink">사업자등록번호</b> 596-81-03128
-              </p>
-              <p>
-                <b className="text-ink">주소</b> 서울시 마포구 서강대길 22, 2층 4호
-              </p>
-              <p>
-                <b className="text-ink">고객센터</b> pickgympt@gmail.com
-              </p>
-              <p className="mt-1.5 text-ink-soft/70">© 2026 PickGymPT</p>
-            </div>
-          )}
+        <div className="mt-auto px-2 pb-7 pt-4">
+          <LegalLinks compact />
         </div>
       </div>
     </div>

@@ -280,24 +280,28 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
             {role === "trainer" ? (
               <>
                 <Link
+                  id={mobileMenu ? "tour-nav-students-mobile" : "tour-nav-students"}
                   to="/students"
                   className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink"
                 >
                   <Users className="h-3.5 w-3.5 text-primary" /> 학생 관리
                 </Link>
                 <Link
+                  id={mobileMenu ? "tour-nav-booking-mobile" : "tour-nav-booking"}
                   to="/booking"
                   className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink"
                 >
                   <CalendarHeart className="h-3.5 w-3.5 text-primary" /> 내 예약화면
                 </Link>
                 <Link
+                  id={mobileMenu ? "tour-nav-schedule-mobile" : "tour-nav-schedule"}
                   to="/schedule"
                   className="rounded-xl bg-primary hover:brightness-110 px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-white shadow-sm"
                 >
                   <Zap className="h-3.5 w-3.5 text-white" /> 빠른 일정조율
                 </Link>
                 <Link
+                  id={mobileMenu ? "tour-nav-profile-mobile" : "tour-nav-profile"}
                   to="/profile"
                   className="rounded-xl bg-surface-muted hover:bg-muted px-2.5 py-2 flex items-center gap-1.5 text-[12px] font-bold text-ink"
                 >
@@ -365,12 +369,12 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
           </div>
           <ol className="mt-3 space-y-2.5 text-[13px]">
             {[
-              ["스포애니 강남점", "강남구", "▲ 12%"],
-              ["짐박스 성수", "성동구", "▲ 8%"],
-              ["바디스튜디오 분당", "분당", "▲ 6%"],
-              ["코어짐 잠실", "송파", "▲ 4%"],
-              ["핏필 홍대", "마포", "▲ 2%"],
-            ].map(([name, area, delta], i) => (
+              ["에이블짐 당산역점", "영등포구"],
+              ["센터원웰니스", "중구"],
+              ["어반필드 영등포KT점", "영등포구"],
+              ["장교휘트니스센터", "중구"],
+              ["베럴짐 헬스앤피티 여의도점", "영등포구"],
+            ].map(([name, area], i) => (
               <li key={i} className="flex items-center gap-2.5">
                 <span
                   className={`h-6 w-6 rounded-md grid place-items-center text-[11px] font-black ${i === 0 ? "bg-primary text-white" : "bg-muted text-ink-soft"}`}
@@ -382,7 +386,7 @@ export function RightRail({ mobileMenu = false }: { mobileMenu?: boolean }) {
                   <p className="font-semibold text-ink leading-tight truncate">{name}</p>
                   <p className="text-[11px] text-muted-foreground">{area}</p>
                 </div>
-                <span className="text-[11px] font-bold text-primary">{delta}</span>
+                <span className="text-[10px] font-black text-primary">HOT</span>
               </li>
             ))}
           </ol>

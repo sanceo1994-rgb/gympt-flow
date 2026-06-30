@@ -2,11 +2,31 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+function isMobileBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
+function getAuthStorage() {
+  if (typeof window === 'undefined') return undefined;
+  if (!isMobileBrowser()) return window.sessionStorage;
+
+  try {
+    const key = '__gympt_storage_probe__';
+    window.localStorage.setItem(key, key);
+    window.localStorage.removeItem(key);
+    return window.localStorage;
+  } catch {
+    return window.sessionStorage;
+  }
+}
+
 function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
   // Fall back to process.env for SSR (server-side rendering)
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+  const SUPABASE_PUBLISHABLE_KEY =
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
@@ -20,19 +40,19 @@ function createSupabaseClient() {
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
-      // sessionStorage (not localStorage) so each browser tab/window keeps its
-      // own independent login — needed for testing multiple accounts side by
-      // side. Trade-off: login does not persist across a tab close or restart.
-      storage: typeof window !== 'undefined' ? sessionStorage : undefined,
+      // Desktop uses sessionStorage so refreshes keep login but new tabs can
+      // test another account. Mobile uses localStorage to avoid frequent
+      // re-login in in-app browsers and OS browsers.
+      storage: getAuthStorage(),
       persistSession: true,
       autoRefreshToken: true,
       // Implicit (not PKCE): Kakao's PC-app handoff can land the OAuth
       // redirect in a different browser tab/window, and the PKCE
-      // code_verifier lives in this tab's sessionStorage — a different tab
-      // can't see it, so the code exchange fails with "PKCE code verifier
+      // code_verifier lives in this tab's sessionStorage; a different tab
+      // cannot see it, so the code exchange fails with "PKCE code verifier
       // not found in storage". Implicit flow needs no stored verifier.
       flowType: 'implicit',
-    }
+    },
   });
 }
 
@@ -46,4 +66,3 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
     return Reflect.get(_supabase, prop, receiver);
   },
 });
-

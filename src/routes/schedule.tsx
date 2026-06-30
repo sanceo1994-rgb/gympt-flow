@@ -44,6 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { maximizeScheduleAssignments, type MatchingSlot } from "@/lib/maximize-schedule";
 import { pickDisplayName } from "@/lib/display-name";
 import { trackEvent } from "@/lib/analytics";
+import { OnboardingTour, type TourStep } from "@/components/OnboardingTour";
 
 export const Route = createFileRoute("/schedule")({
   validateSearch: (search: Record<string, unknown>): { week?: number } => {
@@ -64,7 +65,41 @@ export const Route = createFileRoute("/schedule")({
 });
 
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
-const HOURS = Array.from({ length: 20 }, (_, i) => 4 + i);
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+const SCHEDULE_TOUR_STEPS: TourStep[] = [
+  {
+    targetId: "tour-floating-cta",
+    badge: "STEP 1 · 시간 선택 요청",
+    title: "여기서 학생들에게 요청을 보내요",
+    description:
+      "버튼 하나로 학생 전체(또는 일부)에게 이번 주 가능한 시간을 골라달라고 카카오톡으로 요청할 수 있어요.",
+    icon: <Send className="h-5 w-5" />,
+  },
+  {
+    targetId: "schedule-demand-grid",
+    badge: "STEP 2 · 학생 선택 현황",
+    title: "학생들이 고른 시간이 여기 모여요",
+    description:
+      "색이 진할수록 많이 선택된 시간이에요. 셀을 눌러 안 되는 시간을 미리 막아두면 그 시간엔 아무도 선택할 수 없어요.",
+    icon: <Lock className="h-5 w-5" />,
+  },
+  {
+    targetId: "tour-pending-card",
+    badge: "STEP 3 · 미응답 회원",
+    title: "응답 안 한 학생, 바로 재알림",
+    description: "아직 응답하지 않은 학생을 한눈에 보고, 개별 또는 전체로 다시 알림을 보낼 수 있어요.",
+    icon: <UserRoundSearch className="h-5 w-5" />,
+  },
+  {
+    targetId: "tour-activity-card",
+    badge: "STEP 4 · 최근 활동",
+    title: "확정하고 카톡까지, 한 번에",
+    description:
+      "여기서 누가 언제 응답했는지 확인하고, 다 모이면 일정을 확정해 카카오톡 알림까지 바로 보낼 수 있어요.",
+    icon: <Activity className="h-5 w-5" />,
+  },
+];
 
 const PICKS: Record<string, string[]> = {
   "월-19": ["김지원", "한승호", "최유나", "이도현"],
@@ -386,6 +421,15 @@ function parsePick(s: string): { day: string; hour: number } | null {
   return { day: m[1], hour: parseInt(m[2], 10) };
 }
 
+function parseSlotKey(key: string): { day: string; hour: number } | null {
+  const index = key.lastIndexOf("-");
+  if (index < 1) return null;
+  const day = key.slice(0, index);
+  const hour = Number(key.slice(index + 1));
+  if (!Number.isFinite(hour)) return null;
+  return { day, hour };
+}
+
 function sortPickLabels(picks: string[]) {
   return [...picks].sort((a, b) => {
     const pa = parsePick(a);
@@ -412,6 +456,7 @@ function Schedule() {
   const [dbUnassigned, setDbUnassigned] = useState<Array<{ name: string; reason: string }>>([]);
   const [dbActivity, setDbActivity] = useState<ActivityItem[]>([]);
   const [slotIds, setSlotIds] = useState<Record<string, string>>({});
+  const [slotCapacityByKey, setSlotCapacityByKey] = useState<Record<string, number>>({});
   const STUDENTS = dbStudents;
   const PICKS = dbPicks;
   const AI_RESULT_INIT = dbAiResult;
@@ -438,9 +483,18 @@ function Schedule() {
       "일-22",
     ]),
   );
+  const [bookingStartHour, setBookingStartHour] = useState(6);
+  const [bookingEndHour, setBookingEndHour] = useState(22);
+  const [defaultClosedSlots, setDefaultClosedSlots] = useState<Set<string>>(new Set());
+  const isEffectivelyClosed = (dayIndex: number, hour: number, key: string) =>
+    hour < bookingStartHour ||
+    hour >= bookingEndHour ||
+    defaultClosedSlots.has(`${dayIndex}-${hour}`) ||
+    closed.has(key);
   const [editing, setEditing] = useState<Student | null>(null);
   const [activeName, setActiveName] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentsExpanded, setAssignmentsExpanded] = useState(false);
   const [pendingMove, setPendingMove] = useState<{ day: string; hour: number } | null>(null);
   const [pendingCancel, setPendingCancel] = useState<string | null>(null);
   const [sendToast, setSendToast] = useState<string | null>(null);
@@ -452,6 +506,7 @@ function Schedule() {
   const [inviteIntent, setInviteIntent] = useState(false);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [trainerId, setTrainerId] = useState<string | null>(null);
+  const [showScheduleTour, setShowScheduleTour] = useState(false);
   const [requestSentAt, setRequestSentAt] = useState<string | null>(null);
   const [confirmedAt, setConfirmedAt] = useState<string | null>(null);
   const [confirmedStudentNames, setConfirmedStudentNames] = useState<Set<string>>(new Set());
@@ -473,6 +528,7 @@ function Schedule() {
   const [pendingClose, setPendingClose] = useState<Set<string>>(new Set());
   const [closeEditMode, setCloseEditMode] = useState(false);
   const [slotDetail, setSlotDetail] = useState<{ label: string; names: string[] } | null>(null);
+  const [closeImpact, setCloseImpact] = useState<{ names: string[]; closedCount: number } | null>(null);
 
   // Memo panel state
   const [memoFor, setMemoFor] = useState<{
@@ -523,7 +579,7 @@ function Schedule() {
     async function loadSchedule() {
       const { data: trainer, error: trainerError } = await supabase
         .from("trainers")
-        .select("id,name,gym,intro,avatar_url,instagram_url")
+        .select("id,name,gym,intro,avatar_url,instagram_url,onboarding_seen")
         .eq("user_id", userId)
         .maybeSingle();
       if (trainerError) {
@@ -537,6 +593,9 @@ function Schedule() {
       if (!cancelled) setAccessState("allowed");
       if (trainer && !cancelled) setTrainerName(pickDisplayName(trainer.name) ?? "");
       if (trainer && !cancelled) setTrainerId(trainer.id);
+      if (trainer && !cancelled && !(trainer.onboarding_seen ?? []).includes("schedule")) {
+        setShowScheduleTour(true);
+      }
       if (cancelled) return;
 
       const [{ data: rosters }, { data: sessions }] = await Promise.all([
@@ -637,7 +696,7 @@ function Schedule() {
       // schedule + its full time-slot grid too, since nothing else in the app does.
       let { data: scheduleTrainer } = await supabase
         .from("trainer_profiles")
-        .select("id")
+        .select("id,booking_start_hour,booking_end_hour")
         .eq("user_id", userId)
         .maybeSingle();
       if (!scheduleTrainer) {
@@ -654,12 +713,28 @@ function Schedule() {
             },
             { onConflict: "user_id" },
           )
-          .select("id")
+          .select("id,booking_start_hour,booking_end_hour")
           .maybeSingle();
         scheduleTrainer = createdProfile ?? null;
       }
       if (cancelled) return;
       if (!scheduleTrainer) return;
+
+      setBookingStartHour(scheduleTrainer.booking_start_hour ?? 6);
+      setBookingEndHour(scheduleTrainer.booking_end_hour ?? 22);
+      const { data: defaultClosedRows } = await supabase
+        .from("trainer_default_closed_slots" as never)
+        .select("day_of_week,hour")
+        .eq("trainer_profile_id", scheduleTrainer.id);
+      if (!cancelled) {
+        setDefaultClosedSlots(
+          new Set(
+            ((defaultClosedRows ?? []) as unknown as { day_of_week: number; hour: number }[]).map(
+              (row) => `${row.day_of_week}-${row.hour}`,
+            ),
+          ),
+        );
+      }
 
       let schedule = (
         await supabase
@@ -724,6 +799,17 @@ function Schedule() {
         .eq("schedule_id", schedule.id)
         .limit(1);
       if (!existingSlots || existingSlots.length === 0) {
+        const startHour = scheduleTrainer.booking_start_hour ?? 6;
+        const endHour = scheduleTrainer.booking_end_hour ?? 22;
+        const { data: defaultClosedRows } = await supabase
+          .from("trainer_default_closed_slots" as never)
+          .select("day_of_week,hour")
+          .eq("trainer_profile_id", scheduleTrainer.id);
+        const defaultClosedSet = new Set(
+          ((defaultClosedRows ?? []) as unknown as { day_of_week: number; hour: number }[]).map(
+            (row) => `${row.day_of_week}-${row.hour}`,
+          ),
+        );
         const grid = [];
         for (let day = 0; day < 7; day++) {
           for (const hour of HOURS)
@@ -732,7 +818,7 @@ function Schedule() {
               day_of_week: day,
               hour,
               capacity: 1,
-              is_closed: day === 6,
+              is_closed: hour < startHour || hour >= endHour || defaultClosedSet.has(`${day}-${hour}`),
             });
         }
         await supabase
@@ -772,10 +858,12 @@ function Schedule() {
 
       const slotById = new Map((slots ?? []).map((slot) => [slot.id, slot]));
       const ids: Record<string, string> = {};
+      const capacities: Record<string, number> = {};
       const closedKeys = new Set<string>();
       for (const slot of slots ?? []) {
         const key = `${DAYS[slot.day_of_week]}-${slot.hour}`;
         ids[key] = slot.id;
+        capacities[key] = slot.capacity;
         if (slot.is_closed) closedKeys.add(key);
       }
 
@@ -851,6 +939,7 @@ function Schedule() {
       }));
 
       setSlotIds(ids);
+      setSlotCapacityByKey(capacities);
       setClosed(closedKeys);
       setSentRosterIds(sentRosterIds);
       setDbStudents(students);
@@ -1070,9 +1159,76 @@ function Schedule() {
     setTimeout(() => setSendToast(null), 2400);
   };
 
+  const finishScheduleTour = () => {
+    setShowScheduleTour(false);
+    if (!user) return;
+    // .then() (not "void") is what actually fires this lazy request.
+    supabase
+      .rpc("mark_onboarding_seen" as never, { p_user_id: user.id, p_key: "schedule" } as never)
+      .then(({ error }) => {
+        if (error) console.error("[onboarding] mark_onboarding_seen failed", error.message);
+      });
+  };
+
   const openEdit = (s: Student) => {
     setEditing(s);
     setActiveName(s.name);
+  };
+
+  const recomputeAssignmentsForClosed = (nextClosed: Set<string>) => {
+    const respondedStudents = STUDENTS.filter((student) => student.status === "응답완료");
+    const matching = maximizeScheduleAssignments(
+      respondedStudents.map((student) => ({
+        id: student.name,
+        name: student.name,
+        preferredSlotIds: student.picks.flatMap((pick) => {
+          const parsed = parsePick(pick);
+          return parsed ? [`${parsed.day}-${parsed.hour}`] : [];
+        }),
+      })),
+      Object.keys(slotIds).map((key) => {
+        const parsed = parseSlotKey(key);
+        return {
+          id: key,
+          day: parsed?.day ?? key.split("-")[0] ?? "",
+          hour: parsed?.hour ?? 0,
+          capacity: slotCapacityByKey[key] ?? 1,
+          isClosed: nextClosed.has(key),
+        };
+      }),
+    );
+    const nextResult = matching.assignments.map((assignment) => ({
+      day: assignment.day,
+      hour: `${String(assignment.hour).padStart(2, "0")}:00`,
+      name: assignment.studentName,
+    }));
+    const confirmedByName = new Map(assignments.filter((a) => confirmedStudentNames.has(a.name)).map((a) => [a.name, a]));
+    setDbAiResult(nextResult);
+    setDbUnassigned(
+      matching.unassigned.map((student) => ({
+        name: student.studentName,
+        reason: student.reason,
+      })),
+    );
+    setAssignments([
+      ...nextResult
+        .filter((item) => !confirmedByName.has(item.name))
+        .map((item) => ({
+          name: item.name,
+          day: item.day,
+          hour: parseInt(item.hour, 10),
+          method: "auto" as const,
+        })),
+      ...confirmedByName.values(),
+    ]);
+
+    return respondedStudents.filter((student) => {
+      const pickedKeys = student.picks.flatMap((pick) => {
+        const parsed = parsePick(pick);
+        return parsed ? [`${parsed.day}-${parsed.hour}`] : [];
+      });
+      return pickedKeys.length > 0 && pickedKeys.every((key) => nextClosed.has(key));
+    });
   };
 
   // Cell click toggles pending-close membership (XOR with current closed)
@@ -1124,14 +1280,13 @@ function Schedule() {
       else toClose++;
     });
 
-    setClosed((prev) => {
-      const n = new Set(prev);
-      pendingClose.forEach((k) => {
-        if (n.has(k)) n.delete(k);
-        else n.add(k);
-      });
-      return n;
+    const nextClosed = new Set(closed);
+    pendingClose.forEach((k) => {
+      if (nextClosed.has(k)) nextClosed.delete(k);
+      else nextClosed.add(k);
     });
+    const impacted = recomputeAssignmentsForClosed(nextClosed);
+    setClosed(nextClosed);
     setPendingClose(new Set());
     if (requestSentAt != null) setCloseEditMode(false);
     await Promise.all(
@@ -1147,10 +1302,19 @@ function Schedule() {
     const parts: string[] = [];
     if (toClose) parts.push(`${toClose}개 시간을 닫았어요`);
     if (toOpen) parts.push(`${toOpen}개 시간을 다시 열었어요`);
-    fireToast(parts.join(" · ") || "변경사항 저장됨");
+    if (impacted.length > 0) {
+      setCloseImpact({ names: impacted.map((student) => student.name), closedCount: toClose });
+      fireToast(`${impacted.length}명은 닫힌 시간만 선택했어요.`);
+    } else {
+      fireToast(parts.join(" · ") || "변경사항 저장됨");
+    }
   };
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
+  const todayIndex = useMemo(() => {
+    if (weekOffset !== 0) return -1;
+    return (new Date().getDay() + 6) % 7;
+  }, [weekOffset]);
 
   const stats = useMemo(() => {
     const total = STUDENTS.length;
@@ -1486,7 +1650,7 @@ function Schedule() {
 
       {/* Pending responses (left half) + Activity feed (right half) */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-border bg-white overflow-hidden">
+        <div id="tour-pending-card" className="rounded-2xl border border-border bg-white overflow-hidden">
           {requestSentAt == null ? (
             <>
               <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border bg-surface-muted">
@@ -1644,7 +1808,7 @@ function Schedule() {
         </div>
 
         {/* Activity feed (paginated) */}
-        <div className="rounded-2xl border border-border bg-white overflow-hidden flex flex-col">
+        <div id="tour-activity-card" className="rounded-2xl border border-border bg-white overflow-hidden flex flex-col">
           <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-border bg-surface-muted">
             <div className="flex items-center gap-1.5">
               <Activity className="h-3.5 w-3.5 text-ink" />
@@ -1827,11 +1991,13 @@ function Schedule() {
           </div>
         )}
 
-        <div className="relative mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="relative mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
           {assignments.map((a, i) => (
             <div
               key={i}
-              className="rounded-xl bg-white/5 border border-white/10 px-2 py-2.5 sm:px-3 flex items-center justify-between gap-1.5 min-w-0"
+              className={`rounded-xl bg-white/5 border border-white/10 px-2 py-2.5 sm:px-3 items-center justify-between gap-1.5 min-w-0 ${
+                !assignmentsExpanded && i > 0 ? "hidden sm:flex" : "flex"
+              }`}
             >
               <div className="min-w-0">
                 <p
@@ -1854,9 +2020,29 @@ function Schedule() {
             </div>
           ))}
         </div>
+        {assignments.length > 1 && (
+          <button
+            type="button"
+            onClick={() => setAssignmentsExpanded((value) => !value)}
+            className="relative mt-2 inline-flex h-8 w-full items-center justify-center rounded-full border border-white/15 bg-white/5 text-[11px] font-extrabold text-white/80 sm:hidden"
+          >
+            {assignmentsExpanded
+              ? "\uC811\uAE30"
+              : `+${assignments.length - 1}\uAC74 \uB354 \uBCF4\uAE30`}
+          </button>
+        )}
 
-        <div className="relative -mx-5 mt-3 overflow-hidden border-y border-white/10 bg-white/[0.03] sm:mx-0 sm:rounded-xl sm:border-x">
-          <div className="grid grid-cols-[30px_repeat(7,minmax(0,1fr))] bg-white/5 border-b border-white/10 sm:grid-cols-[36px_repeat(7,minmax(0,1fr))]">
+        <div className="relative -mx-5 mt-3 overflow-hidden border-y border-white/10 bg-white/[0.03] [--time-col:30px] sm:mx-0 sm:rounded-xl sm:border-x sm:[--time-col:36px]">
+          {todayIndex >= 0 && (
+            <div
+              className="pointer-events-none absolute inset-y-0 z-10 rounded-sm border-2 border-primary/80 bg-primary/5"
+              style={{
+                left: `calc(var(--time-col) + ((100% - var(--time-col)) / 7) * ${todayIndex})`,
+                width: "calc((100% - var(--time-col)) / 7)",
+              }}
+            />
+          )}
+          <div className="relative z-20 grid grid-cols-[30px_repeat(7,minmax(0,1fr))] bg-white/5 border-b border-white/10 sm:grid-cols-[36px_repeat(7,minmax(0,1fr))]">
             <div className="p-1.5 text-[12px] text-white/50 font-bold text-center">시간</div>
             {DAYS.map((d, i) => (
               <div key={d} className="p-1.5 text-[13px] text-white/90">
@@ -1864,7 +2050,7 @@ function Schedule() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-[30px_repeat(7,minmax(0,1fr))] sm:grid-cols-[36px_repeat(7,minmax(0,1fr))]">
+          <div className="relative z-20 grid grid-cols-[30px_repeat(7,minmax(0,1fr))] sm:grid-cols-[36px_repeat(7,minmax(0,1fr))]">
             {HOURS.map((h) => {
               const hasAny = DAYS.some((d) => assignments.some((a) => a.day === d && a.hour === h));
               if (!hasAny) return null;
@@ -1953,9 +2139,18 @@ function Schedule() {
         </div>
 
         <div
-          className={`-mx-5 mt-3 overflow-hidden rounded-none border-x-0 border-border sm:mx-0 sm:rounded-2xl sm:border-x ${pendingClose.size > 0 ? "pb-28" : ""}`}
+          className={`relative -mx-5 mt-3 overflow-hidden rounded-none border-x-0 border-border [--time-col:26px] sm:mx-0 sm:rounded-2xl sm:border-x sm:[--time-col:44px] ${pendingClose.size > 0 ? "pb-28" : ""}`}
         >
-          <div className="grid grid-cols-[26px_repeat(7,minmax(0,1fr))] bg-surface-muted border-b border-border sm:grid-cols-[44px_repeat(7,minmax(0,1fr))]">
+          {todayIndex >= 0 && (
+            <div
+              className="pointer-events-none absolute inset-y-0 z-10 rounded-sm border-2 border-primary bg-primary/5"
+              style={{
+                left: `calc(var(--time-col) + ((100% - var(--time-col)) / 7) * ${todayIndex})`,
+                width: "calc((100% - var(--time-col)) / 7)",
+              }}
+            />
+          )}
+          <div className="relative z-20 grid grid-cols-[26px_repeat(7,minmax(0,1fr))] bg-surface-muted border-b border-border sm:grid-cols-[44px_repeat(7,minmax(0,1fr))]">
             <div className="p-1 text-[12px] text-muted-foreground font-bold text-center sm:p-2">
               시간
             </div>
@@ -1971,7 +2166,7 @@ function Schedule() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-[26px_repeat(7,minmax(0,1fr))] sm:grid-cols-[44px_repeat(7,minmax(0,1fr))]">
+          <div className="relative z-20 grid grid-cols-[26px_repeat(7,minmax(0,1fr))] sm:grid-cols-[44px_repeat(7,minmax(0,1fr))]">
             {HOURS.map((h) => (
               <React.Fragment key={h}>
                 <button
@@ -1982,10 +2177,12 @@ function Schedule() {
                 >
                   {String(h).padStart(2, "0")}
                 </button>
-                {DAYS.map((d) => {
+                {DAYS.map((d, dayIndex) => {
                   const key = `${d}-${h}`;
                   const picks = PICKS[key] ?? [];
-                  const isClosed = closed.has(key);
+                  const isOutOfRange =
+                    h < bookingStartHour || h >= bookingEndHour || defaultClosedSlots.has(`${dayIndex}-${h}`);
+                  const isClosed = isOutOfRange || closed.has(key);
                   const isPending = pendingClose.has(key);
                   const lvl = heatLevel(picks.length);
                   const willBeClosed = isClosed !== isPending; // XOR
@@ -1993,6 +2190,7 @@ function Schedule() {
                     <button
                       key={key}
                       onClick={() => {
+                        if (isOutOfRange) return;
                         if (requestSentAt != null && !closeEditMode) {
                           if (picks.length > 0) setSlotDetail({ label: `${d}요일 ${String(h).padStart(2, "0")}시`, names: picks });
                           return;
@@ -2938,7 +3136,7 @@ function Schedule() {
 
       {/* Floating invite bar — primary CTA, hidden when pendingClose bar overlays it */}
       {pendingClose.size === 0 && (
-        <div data-bottom-floating className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[min(720px,calc(100vw-24px))]">
+        <div id="tour-floating-cta" data-bottom-floating className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[min(720px,calc(100vw-24px))]">
           {confirmedAt != null ? (
             <div
               className="flex flex-wrap items-center gap-[14px] rounded-[18px] px-[18px] py-[15px]"
@@ -3186,6 +3384,58 @@ function Schedule() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!closeImpact} onOpenChange={(open) => !open && setCloseImpact(null)}>
+        <DialogContent className="max-w-[520px]">
+          <DialogHeader>
+            <div className="mb-3 grid h-28 w-28 place-items-center rounded-[28px] bg-primary/10 text-primary [&>svg]:h-10 [&>svg]:w-10">
+              <OctagonAlert />
+            </div>
+            <DialogTitle>{"닫힌 시간 때문에 조율 불가 학생이 있어요"}</DialogTitle>
+            <DialogDescription>
+              {"방금 닫은 시간을 제외하고 다시 계산했어요. 아래 학생은 현재 선택한 시간이 모두 닫혀 있어 재요청이나 직접 조정이 필요합니다."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-2xl border border-border bg-surface-muted p-3">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">
+              {"영향받은 학생"} · {closeImpact?.names.length ?? 0}{"명"}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {closeImpact?.names.map((name) => (
+                <span
+                  key={name}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white px-2.5 text-[12px] font-extrabold text-ink ring-1 ring-border"
+                >
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-primary/10 text-[10px] text-primary">
+                    {name[0]}
+                  </span>
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setCloseImpact(null)}
+              className="h-10 px-4 rounded-full bg-white border border-border text-[12px] font-bold"
+            >
+              {"확인"}
+            </button>
+            <button
+              onClick={() => {
+                const names = closeImpact?.names ?? [];
+                setCloseImpact(null);
+                setPanel("invite");
+                setPanelWeek(weekOffset);
+                setPanelSelected(new Set(STUDENTS.filter((student) => names.includes(student.name)).map((student) => student.name)));
+              }}
+              className="h-10 px-4 rounded-full bg-primary text-white text-[12px] font-extrabold inline-flex items-center gap-1.5"
+            >
+              <Send className="h-4 w-4" /> {"재요청 보내기"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Notify confirmation */}
       <Dialog open={!!notifyConfirm} onOpenChange={(v) => !v && setNotifyConfirm(null)}>
         <DialogContent className="max-w-[520px]">
@@ -3270,6 +3520,10 @@ function Schedule() {
             <p className="text-[13px] font-extrabold">{sendToast}</p>
           </div>
         </div>
+      )}
+
+      {showScheduleTour && (
+        <OnboardingTour steps={SCHEDULE_TOUR_STEPS} finishLabel="확인" onFinish={finishScheduleTour} />
       )}
     </AppShell>
   );

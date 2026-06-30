@@ -21,7 +21,11 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Users,
+  CalendarHeart,
+  Menu,
 } from "lucide-react";
+import { OnboardingTour, type TourStep } from "@/components/OnboardingTour";
 import {
   Dialog,
   DialogContent,
@@ -109,6 +113,65 @@ function makeWeekSlotDate(weekStart: Date, dayOfWeek: number, hour: number) {
   return date;
 }
 
+const ULTRAWIDE_QUERY = "(min-width: 1720px)";
+
+// On screens under 1720px, the nav links live inside the "메뉴" sheet that's
+// closed by default — step 1 explains the trigger button itself (no sheet
+// needed), then opens the sheet for the rest. On ultra-wide screens the nav
+// links are already visible in the right rail, so that click-the-button step
+// doesn't apply at all.
+function getTrainerTourSteps(): TourStep[] {
+  const isUltrawide = typeof window !== "undefined" && window.matchMedia(ULTRAWIDE_QUERY).matches;
+  // RightRail renders twice (the always-in-DOM-but-CSS-hidden ultra-wide
+  // aside, and the mobile sheet's copy) with the SAME ids unless suffixed —
+  // document.getElementById would otherwise always resolve to the hidden
+  // aside's (zero-size) link instead of the one actually visible in the open
+  // sheet, which is exactly why the spotlight used to land in the wrong spot.
+  const idSuffix = isUltrawide ? "" : "-mobile";
+  const navSteps: TourStep[] = [
+    {
+      targetId: `tour-nav-students${idSuffix}`,
+      badge: `STEP ${isUltrawide ? 1 : 2} · 학생 관리`,
+      title: "학생은 여기서 추가해요",
+      description:
+        "회원 등록부터 잔여 횟수·연락처 관리까지, 트레이너님의 학생들을 한곳에서 관리할 수 있어요.",
+      icon: <Users className="h-5 w-5" />,
+      inMobileMenu: !isUltrawide,
+    },
+    {
+      targetId: `tour-nav-booking${idSuffix}`,
+      badge: `STEP ${isUltrawide ? 2 : 3} · 내 예약화면`,
+      title: "학생들이 보는 화면, 직접 꾸며보세요",
+      description:
+        "소개글, 전문 분야·자격·수상, 대표 사진과 컬러까지 — 트레이너님만의 예약 페이지를 완성하면 학생들이 더 신뢰하고 선택해요.",
+      icon: <CalendarHeart className="h-5 w-5" />,
+      inMobileMenu: !isUltrawide,
+    },
+    {
+      targetId: `tour-nav-schedule${idSuffix}`,
+      badge: `STEP ${isUltrawide ? 3 : 4} · 빠른 일정조율`,
+      title: "시간 조율부터 카톡 발송까지, 한 번에",
+      description:
+        "학생들이 고른 가능 시간을 자동으로 모아 보여드려요. 마음에 들면 바로 확정하고, 카카오톡 알림까지 한 번에 보낼 수 있어요.",
+      icon: <Zap className="h-5 w-5" />,
+      inMobileMenu: !isUltrawide,
+    },
+  ];
+  if (isUltrawide) return navSteps;
+  return [
+    {
+      targetId: "tour-menu-trigger",
+      badge: "STEP 1 · 메뉴 열기",
+      title: "여기를 눌러보세요",
+      description:
+        "프로필을 누르면 학생 관리, 내 예약화면, 빠른 일정조율 등 트레이너님의 모든 기능이 한 곳에 모여있어요.",
+      icon: <Menu className="h-5 w-5" />,
+      inMobileMenu: false,
+    },
+    ...navSteps,
+  ];
+}
+
 function ProfilePage() {
   const { user } = useAuth();
   const meta = (user?.user_metadata ?? {}) as {
@@ -124,6 +187,24 @@ function ProfilePage() {
   const [trainerId, setTrainerId] = useState<string | null>(null);
   const trainerRank = useTrainerRank(trainerId);
   const isVerified = meta.verified !== false; // default true (first 100 trainers)
+  const [showOnboardingTour, setShowOnboardingTour] = useState(false);
+
+  // Persisted server-side (trainers.onboarding_seen) rather than localStorage,
+  // so the tour stays "seen" across devices/browsers and survives clearing
+  // site data — only ever shown once per trainer per tour key.
+  const finishOnboardingTour = () => {
+    setShowOnboardingTour(false);
+    if (user) {
+      // supabase-js query builders are lazy "thenables" — the request is only
+      // actually sent once something calls .then()/await on them, so this
+      // .then() isn't just error-handling, it's what makes the call happen.
+      supabase
+        .rpc("mark_onboarding_seen" as never, { p_user_id: user.id, p_key: "profile" } as never)
+        .then(({ error }) => {
+          if (error) console.error("[onboarding] mark_onboarding_seen failed", error.message);
+        });
+    }
+  };
 
   const [editMode, setEditMode] = useState(false);
   const [profileDetailsOpen, setProfileDetailsOpen] = useState(false);
@@ -266,7 +347,7 @@ function ProfilePage() {
 
       const { data: trainerRow } = await supabase
         .from("trainers")
-        .select("id,name,gym,intro")
+        .select("id,name,gym,intro,onboarding_seen")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -278,6 +359,7 @@ function ProfilePage() {
         setPhone("");
         setGym(trainerRow.gym ?? "");
         setIntro(trainerRow.intro ?? "");
+        if (!(trainerRow.onboarding_seen ?? []).includes("profile")) setShowOnboardingTour(true);
         setRecentSession(null);
         setRecentHistory([]);
         const { data: scheduleTrainer } = await supabase
@@ -839,6 +921,9 @@ function ProfilePage() {
         </div>
       </div>
 
+      {showOnboardingTour && (
+        <OnboardingTour steps={getTrainerTourSteps()} onFinish={finishOnboardingTour} />
+      )}
 
       <WeeklyScheduleSummary
         role={role}

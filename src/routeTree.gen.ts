@@ -13,10 +13,12 @@ import { Route as TeamRouteImport } from './routes/team'
 import { Route as StudentsRouteImport } from './routes/students'
 import { Route as SignupEmailRouteImport } from './routes/signup-email'
 import { Route as ScheduleRouteImport } from './routes/schedule'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PtHistoryRouteImport } from './routes/pt-history'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as BookingRouteImport } from './routes/booking'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoTrainerRouteImport } from './routes/demo.trainer'
@@ -44,6 +46,11 @@ const ScheduleRoute = ScheduleRouteImport.update({
   path: '/schedule',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PtHistoryRoute = PtHistoryRouteImport.update({
   id: '/pt-history',
   path: '/pt-history',
@@ -62,6 +69,11 @@ const PricingRoute = PricingRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BookingRoute = BookingRouteImport.update({
@@ -98,10 +110,12 @@ const AccountDeleteRoute = AccountDeleteRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/booking': typeof BookingRoute
+  '/checkout': typeof CheckoutRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/pt-history': typeof PtHistoryRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/schedule': typeof ScheduleRoute
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
@@ -114,10 +128,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/booking': typeof BookingRoute
+  '/checkout': typeof CheckoutRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/pt-history': typeof PtHistoryRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/schedule': typeof ScheduleRoute
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
@@ -131,10 +147,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/booking': typeof BookingRoute
+  '/checkout': typeof CheckoutRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/pt-history': typeof PtHistoryRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/schedule': typeof ScheduleRoute
   '/signup-email': typeof SignupEmailRoute
   '/students': typeof StudentsRoute
@@ -149,10 +167,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/booking'
+    | '/checkout'
     | '/login'
     | '/pricing'
     | '/profile'
     | '/pt-history'
+    | '/reset-password'
     | '/schedule'
     | '/signup-email'
     | '/students'
@@ -165,10 +185,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/booking'
+    | '/checkout'
     | '/login'
     | '/pricing'
     | '/profile'
     | '/pt-history'
+    | '/reset-password'
     | '/schedule'
     | '/signup-email'
     | '/students'
@@ -181,10 +203,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/booking'
+    | '/checkout'
     | '/login'
     | '/pricing'
     | '/profile'
     | '/pt-history'
+    | '/reset-password'
     | '/schedule'
     | '/signup-email'
     | '/students'
@@ -198,10 +222,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BookingRoute: typeof BookingRoute
+  CheckoutRoute: typeof CheckoutRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   ProfileRoute: typeof ProfileRoute
   PtHistoryRoute: typeof PtHistoryRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ScheduleRoute: typeof ScheduleRoute
   SignupEmailRoute: typeof SignupEmailRoute
   StudentsRoute: typeof StudentsRoute
@@ -242,6 +268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pt-history': {
       id: '/pt-history'
       path: '/pt-history'
@@ -268,6 +301,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/booking': {
@@ -318,10 +358,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BookingRoute: BookingRoute,
+  CheckoutRoute: CheckoutRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   ProfileRoute: ProfileRoute,
   PtHistoryRoute: PtHistoryRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ScheduleRoute: ScheduleRoute,
   SignupEmailRoute: SignupEmailRoute,
   StudentsRoute: StudentsRoute,

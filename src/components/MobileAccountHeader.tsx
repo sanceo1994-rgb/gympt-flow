@@ -18,6 +18,20 @@ export function MobileAccountHeader() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [trainerId, setTrainerId] = useState<string | null>(null);
   const trainerRank = useTrainerRank(trainerId);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Lets the onboarding tour force this menu open/closed (so it can spotlight
+  // the nav links inside) without making the Sheet controlled everywhere else.
+  useEffect(() => {
+    const open = () => setMenuOpen(true);
+    const close = () => setMenuOpen(false);
+    window.addEventListener("gympt-open-mobile-menu", open);
+    window.addEventListener("gympt-close-mobile-menu", close);
+    return () => {
+      window.removeEventListener("gympt-open-mobile-menu", open);
+      window.removeEventListener("gympt-close-mobile-menu", close);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user || String(user.id).startsWith("virtual-")) {
@@ -69,9 +83,10 @@ export function MobileAccountHeader() {
       {loading ? (
         <div className="h-9 w-24 rounded-full bg-surface-muted animate-pulse" />
       ) : user ? (
-        <Sheet>
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetTrigger asChild>
             <button
+              id="tour-menu-trigger"
               className="h-10 pl-1 pr-2 rounded-full border border-border bg-white inline-flex items-center gap-2 shadow-sm"
               aria-label="내 메뉴 열기"
             >
