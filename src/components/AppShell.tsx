@@ -23,9 +23,9 @@ export function AppShell({ children, left, right }: Props) {
           </aside>
           <main className="mx-auto min-h-screen w-full max-w-[1080px] min-w-0 bg-white min-[1720px]:max-w-none">
             <MobileAccountHeader />
-            <div className="px-5 sm:px-7 lg:px-8 py-6 pb-28">
+            <div className="px-5 sm:px-7 lg:px-8 py-6 pb-40 sm:pb-32">
               {children}
-              <div className="mt-14 min-[1720px]:hidden">
+              <div className="mt-14 mb-10 min-[1720px]:hidden">
                 <LegalLinks />
               </div>
             </div>

@@ -33,9 +33,13 @@ export function getKoreanInitials(value: string): string {
 export function matchesKoreanSearch(value: string, query: string): boolean {
   const normalizedValue = value.trim().toLowerCase();
   const normalizedQuery = query.trim().toLowerCase();
+  const compactValue = normalizedValue.replace(/[\s\-_.()&/]+/g, "");
+  const compactQuery = normalizedQuery.replace(/[\s\-_.()&/]+/g, "");
   if (!normalizedQuery) return true;
   return (
     normalizedValue.includes(normalizedQuery) ||
-    getKoreanInitials(normalizedValue).includes(normalizedQuery)
+    compactValue.includes(compactQuery) ||
+    getKoreanInitials(normalizedValue).includes(normalizedQuery) ||
+    getKoreanInitials(compactValue).includes(compactQuery)
   );
 }

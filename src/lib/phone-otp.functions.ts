@@ -8,6 +8,20 @@ const CODE_TTL_MS = 5 * 60_000;
 const MAX_ATTEMPTS = 5;
 const RECENT_VERIFY_WINDOW_MS = 10 * 60_000;
 
+// Test/demo accounts (트레이너가 학생을 미리 만들어보는 용도 등) shouldn't need a real
+// phone to receive a real SMS. These five numbers always succeed with the
+// fixed code below — no Aligo call, no cooldown — and are never reachable
+// outside this exact allowlist, so they can't be used to bypass OTP for a
+// real number.
+const TEST_PHONES = new Set([
+  "01000000001",
+  "01000000002",
+  "01000000003",
+  "01000000004",
+  "01000000005",
+]);
+const TEST_OTP_CODE = "123456";
+
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
 }
@@ -38,15 +52,25 @@ type PhoneOtpRow = {
 export const requestPhoneOtp = createServerFn({ method: "POST" })
   .validator(z.object({ phone: z.string().min(1) }).parse)
   .handler(async ({ data }) => {
+    const phone = normalizePhone(data.phone);
+    if (phone.length !== 11) throw new Error("올바른 휴대폰 번호를 입력해주세요.");
+
+    if (TEST_PHONES.has(phone)) {
+      const { error: insertError } = await supabaseAdmin.from("phone_otps" as never).insert({
+        phone,
+        code_hash: hashCode(TEST_OTP_CODE),
+        expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
+      } as never);
+      if (insertError) throw new Error("인증번호 생성에 실패했습니다.");
+      return { ok: true };
+    }
+
     const apiKey = process.env.ALIGO_API_KEY;
     const userId = process.env.ALIGO_USER_ID;
     const sender = process.env.ALIGO_SENDER;
     if (!apiKey || !userId || !sender) {
       throw new Error("SMS 발송 설정이 누락되었습니다.");
     }
-
-    const phone = normalizePhone(data.phone);
-    if (phone.length !== 11) throw new Error("올바른 휴대폰 번호를 입력해주세요.");
 
     const { data: recent } = await supabaseAdmin
       .from("phone_otps" as never)

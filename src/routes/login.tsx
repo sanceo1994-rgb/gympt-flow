@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { ArrowUp, ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, Plus, X, Lock, Phone, UserRound, Building2, MapPin } from "lucide-react";
+import { ArrowUp, ChevronLeft, MessageCircle, Check, Mail, ArrowRight, Sparkles, X, Lock, Phone, UserRound, Building2, MapPin } from "lucide-react";
 import heroDumbbell from "@/assets/hero-dumbbell.png";
 import trainerImg from "@/assets/role-trainer.png";
 import studentImg from "@/assets/role-student.png";
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/login")({
   component: Login,
 });
 
-type Step = "method" | "email" | "consent" | "role" | "confirm" | "preview" | "done";
+type Step = "method" | "email" | "consent" | "role" | "confirm" | "done";
 type Role = "trainer" | "student";
 type GymOption = {
   id: string;
@@ -32,6 +32,7 @@ type GymOption = {
   sido: string | null;
   district: string | null;
   dong: string | null;
+  popularity_rank: number | null;
 };
 
 const PALETTES: { id: string; label: string; from: string; to: string }[] = [
@@ -65,9 +66,10 @@ function Login() {
   const [palette, setPalette] = useState<string>("pink");
   const [trainerGym, setTrainerGym] = useState("");
   const [gymOptions, setGymOptions] = useState<GymOption[]>([]);
-  const [trainerSpecs, setTrainerSpecs] = useState<string[]>([]);
-  const [specDraft, setSpecDraft] = useState("");
-  const [trainerIntro, setTrainerIntro] = useState("");
+  // 가입 절차에서는 더 이상 입력받지 않고(빠른 가입을 위해 생략), 온보딩 투어에서
+  // "내 예약 화면" 단계로 안내해 나중에 채우도록 유도한다.
+  const trainerSpecs: string[] = [];
+  const trainerIntro = "";
   const [welcome, setWelcome] = useState<string | null>(null);
   const [emailMode, setEmailMode] = useState<"login" | "signup" | null>(null);
   const [emailErr, setEmailErr] = useState<string | null>(null);
@@ -109,15 +111,26 @@ function Login() {
 
   useEffect(() => {
     let cancelled = false;
-    void supabase
-      .from("gyms" as never)
-      .select("id,name,address,sido,district,dong")
-      .order("sido", { ascending: true })
-      .order("district", { ascending: true })
-      .order("name", { ascending: true })
-      .then(({ data }) => {
-        if (!cancelled) setGymOptions(((data ?? []) as unknown as GymOption[]));
-      });
+    async function loadGyms() {
+      const pageSize = 1000;
+      const all: GymOption[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from("gyms" as never)
+          .select("id,name,address,sido,district,dong,popularity_rank")
+          .order("popularity_rank", { ascending: true, nullsFirst: false })
+          .order("sido", { ascending: true })
+          .order("district", { ascending: true })
+          .order("name", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) break;
+        const rows = ((data ?? []) as unknown as GymOption[]);
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+      }
+      if (!cancelled) setGymOptions(all);
+    }
+    void loadGyms();
     return () => {
       cancelled = true;
     };
@@ -235,7 +248,7 @@ function Login() {
       provider: "kakao",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: kakaoMode === "account" ? { prompt: "login" } : undefined,
+        queryParams: { prompt: "login" },
       },
     });
     if (error) {
@@ -516,9 +529,7 @@ function Login() {
             onClick={() => setStep(
               step === "email" ? "method" :
               step === "consent" ? (method === "email" ? "email" : "method") :
-              step === "role" ? "consent" :
-              step === "confirm" ? "role" :
-              step === "preview" ? "confirm" : "role"
+              step === "role" ? "consent" : "role"
             )}
             className="self-start h-9 px-2.5 rounded-full inline-flex items-center gap-1 text-[12px] font-bold text-ink-soft hover:bg-muted"
           >
@@ -536,20 +547,12 @@ function Login() {
                 <p className="mt-2 text-[13px] text-ink-soft">처음이세요? 가입과 동시에 시작돼요. 이미 계정이 있으면 같은 입력으로 바로 로그인.</p>
 
                 <button
-                  onClick={() => startMethod("kakao", "account")}
+                  onClick={() => startMethod("kakao", "quick")}
                   disabled={emailBusy}
                   className="mt-6 h-14 w-full rounded-2xl bg-[#FEE500] text-[#191600] text-[15px] font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
                   <MessageCircle className="h-4 w-4 fill-[#191600]" />
-                  {emailBusy ? "???? ?? ?..." : "??? ?? ?? ? ????"}
-                </button>
-
-                <button
-                  onClick={() => startMethod("kakao", "quick")}
-                  disabled={emailBusy}
-                  className="mt-2 h-10 w-full rounded-xl border border-border bg-white text-[12px] font-extrabold text-ink-soft hover:bg-muted disabled:cursor-wait disabled:opacity-60"
-                >
-                  ? ??? ?????? ??? ???
+                  {emailBusy ? "\uCE74\uCE74\uC624\uB85C \uC774\uB3D9 \uC911..." : "\uCE74\uCE74\uC624\uD1A1 \uB85C\uADF8\uC778\uD558\uAE30"}
                 </button>
 
                 {emailErr && <p className="mt-3 text-[12px] font-bold text-destructive">{emailErr}</p>}
@@ -693,9 +696,7 @@ function Login() {
                   setProfile={setProfile}
                   emailPw={emailPw}
                   setEmailPw={setEmailPw}
-                  role={role}
                   emailBusy={emailBusy}
-                  onTrainerNext={() => setStep("preview")}
                   onComplete={completeSignup}
                   phoneVerified={phoneVerified}
                   onPhoneVerified={() => setVerifiedPhone(profile.phone)}
@@ -785,84 +786,6 @@ function Login() {
                   {role === "trainer" && (
                     <>
                       <GymSearchField value={trainerGym} onChange={setTrainerGym} gyms={gymOptions} />
-                      <div className="block">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">전문 분야 · 자격 · 수상</span>
-                        <p className="mt-1 text-[11px] text-ink-soft">하나씩 추가해주세요. 예) NSCA-CPT · 2024 머슬마니아 그랑프리 · 다이어트 8년</p>
-                        <div className="mt-2 flex gap-2">
-                          <input
-                            value={specDraft}
-                            onChange={(e) => setSpecDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                const v = specDraft.trim();
-                                if (v && !trainerSpecs.includes(v)) setTrainerSpecs([...trainerSpecs, v]);
-                                setSpecDraft("");
-                              }
-                            }}
-                            placeholder="예: 2024 머슬마니아 그랑프리"
-                            className="flex-1 h-11 px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13px] text-ink"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const v = specDraft.trim();
-                              if (v && !trainerSpecs.includes(v)) setTrainerSpecs([...trainerSpecs, v]);
-                              setSpecDraft("");
-                            }}
-                            disabled={!specDraft.trim()}
-                            className="h-11 px-3.5 rounded-xl bg-ink text-white text-[12px] font-extrabold inline-flex items-center gap-1 disabled:opacity-40"
-                          >
-                            <Plus className="h-3.5 w-3.5" /> 추가
-                          </button>
-                        </div>
-                        {trainerSpecs.length > 0 && (
-                          <div className="mt-2.5 flex flex-wrap gap-1.5">
-                            {trainerSpecs.map((s, i) => (
-                              <span key={i} className="inline-flex items-center gap-1 px-2.5 h-7 rounded-full bg-primary/10 text-primary text-[12px] font-bold">
-                                {s}
-                                <button
-                                  type="button"
-                                  onClick={() => setTrainerSpecs(trainerSpecs.filter((_, idx) => idx !== i))}
-                                  className="hover:text-ink"
-                                  aria-label="삭제"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <label className="block">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">트레이너 한 줄 소개</span>
-                        <textarea
-                          value={trainerIntro}
-                          onChange={(e) => setTrainerIntro(e.target.value)}
-                          rows={9}
-                          placeholder={"평생 가져갈 운동 습관을 만들어드려요.\n부상 없는 점진적 과부하 전문.\n\n- 운동 철학 / 지도 스타일\n- 함께하면 좋은 회원상\n- 주요 성과·후기 한 줄"}
-                          className="mt-1.5 w-full min-h-[200px] px-3.5 py-3 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[13.5px] text-ink resize-y leading-relaxed"
-                        />
-                      </label>
-
-                      <div className="rounded-xl bg-white border border-border p-3.5">
-                        <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink">미니홈피 컬러 팔레트</p>
-                        <p className="mt-1 text-[11.5px] text-ink-soft leading-relaxed">내 예약 페이지의 헤더·강조 컬러로 사용돼요.</p>
-                        <div className="mt-3 grid grid-cols-5 gap-2">
-                          {PALETTES.map((p) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => setPalette(p.id)}
-                              className={`group rounded-xl p-1.5 border-2 transition ${palette === p.id ? "border-ink shadow-pop" : "border-transparent hover:border-border"}`}
-                              title={p.label}
-                            >
-                              <div className="h-10 rounded-lg" style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})` }} />
-                              <p className="mt-1 text-[10px] font-bold text-ink-soft text-center truncate">{p.label}</p>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
 
                       <div className="rounded-xl bg-primary/[0.04] border border-primary/20 p-3.5">
                         <p className="text-[11px] font-extrabold text-primary uppercase tracking-wider">초대 코드 (선택)</p>
@@ -882,28 +805,15 @@ function Login() {
                 </div>
 
                 <button
-                  onClick={() => role === "trainer" ? setStep("preview") : completeSignup()}
+                  onClick={completeSignup}
                   disabled={!profile.name || !profile.email || !phoneVerified || (method === "kakao" && phoneDuplicate) || (method === "email" && (!pwStrong(emailPw.password) || emailPw.password !== emailPw.confirm))}
                   className="mt-6 h-12 w-full rounded-2xl bg-primary text-white text-[14px] font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-2 shadow-pop"
                 >
-                  {role === "trainer" ? (<><ArrowRight className="h-4 w-4" /> 다음: 내 프로필 미리보기</>) : (<><Check className="h-4 w-4" /> 회원가입 완료</>)}
+                  <Check className="h-4 w-4" /> 회원가입 완료
                 </button>
                 <p className="mt-3 text-center text-[11px] text-ink-soft">가입 정보는 안전하게 계정에 저장됩니다.</p>
                 </div>
               </div>
-            )}
-
-            {step === "preview" && (
-              <TrainerPreview
-                name={profile.name}
-                avatar={profile.avatar}
-                gym={trainerGym}
-                specs={trainerSpecs}
-                intro={trainerIntro}
-                paletteId={palette}
-                onBack={() => setStep("confirm")}
-                onConfirm={completeSignup}
-              />
             )}
           </div>
           <div className="mt-10 pb-8">
@@ -1028,7 +938,7 @@ function AuthStatusOverlay({
 }
 
 function Stepper({ step }: { step: Step }) {
-  const order: Step[] = ["consent", "role", "confirm", "preview"];
+  const order: Step[] = ["consent", "role", "confirm"];
   const idx = order.indexOf(step);
   if (idx < 0) return null;
   return (
@@ -1047,9 +957,7 @@ function MobileSignupConfirm({
   setProfile,
   emailPw,
   setEmailPw,
-  role,
   emailBusy,
-  onTrainerNext,
   onComplete,
   phoneVerified,
   onPhoneVerified,
@@ -1059,9 +967,7 @@ function MobileSignupConfirm({
   setProfile: Dispatch<SetStateAction<{ name: string; email: string; phone: string; avatar: string }>>;
   emailPw: { email: string; password: string; confirm: string };
   setEmailPw: Dispatch<SetStateAction<{ email: string; password: string; confirm: string }>>;
-  role: Role | null;
   emailBusy: boolean;
-  onTrainerNext: () => void;
   onComplete: () => void;
   phoneVerified: boolean;
   onPhoneVerified: () => void;
@@ -1119,7 +1025,6 @@ function MobileSignupConfirm({
     if (!current.valid) return;
     const next = steps[currentIndex + 1];
     if (next) setActive(next.key);
-    else if (role === "trainer") onTrainerNext();
     else onComplete();
   };
 
@@ -1174,25 +1079,29 @@ function MobileSignupConfirm({
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[12px] font-extrabold text-white/55">{current.label}</p>
-                {current.key === "phone" && <PhoneVerifyTrigger otp={phoneOtp} tone="dark" />}
-              </div>
+              <p className="text-[12px] font-extrabold text-white/55">{current.label}</p>
               <p className="mt-0.5 text-[19px] font-black leading-tight">{mobileQuestion(current.key)}</p>
             </div>
           </div>
-          <input
-            autoFocus
-            type={current.key === "password" || current.key === "confirm" ? "password" : current.key === "email" ? "email" : "text"}
-            inputMode={current.key === "phone" ? "numeric" : current.key === "email" ? "email" : "text"}
-            value={current.value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") moveNext();
-            }}
-            placeholder={mobilePlaceholder(current.key)}
-            className="mt-4 h-14 w-full rounded-2xl border border-white/10 bg-white px-4 text-[17px] font-black text-ink outline-none placeholder:text-ink-soft/45 focus:ring-4 focus:ring-primary/30"
-          />
+          <span className="relative mt-4 block">
+            <input
+              autoFocus
+              type={current.key === "password" || current.key === "confirm" ? "password" : current.key === "email" ? "email" : "text"}
+              inputMode={current.key === "phone" ? "numeric" : current.key === "email" ? "email" : "text"}
+              value={current.value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") moveNext();
+              }}
+              placeholder={mobilePlaceholder(current.key)}
+              className={`h-14 w-full rounded-2xl border border-white/10 bg-white px-4 text-[17px] font-black text-ink outline-none placeholder:text-ink-soft/45 focus:ring-4 focus:ring-primary/30 ${current.key === "phone" ? "pr-[92px]" : ""}`}
+            />
+            {current.key === "phone" && (
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                <PhoneVerifyTrigger otp={phoneOtp} />
+              </span>
+            )}
+          </span>
           {current.key === "password" && emailPw.password.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               <PwRule ok={emailPw.password.length >= 8} label="8자 이상" />
@@ -1233,76 +1142,6 @@ function mobilePlaceholder(key: "name" | "phone" | "email" | "password" | "confi
   if (key === "password") return "영문+숫자+특수문자, 8자 이상";
   if (key === "confirm") return "비밀번호 확인";
   return "";
-}
-
-function TrainerPreview({
-  name, avatar, gym, specs, intro, paletteId, onBack, onConfirm,
-}: {
-  name: string; avatar: string; gym: string; specs: string[]; intro: string;
-  paletteId: string; onBack: () => void; onConfirm: () => void;
-}) {
-  const p = PALETTES.find((x) => x.id === paletteId) ?? PALETTES[0];
-  const initial = name?.[0] || "?";
-  return (
-    <div className="mt-6">
-      <h2 className="text-[22px] font-black leading-tight">내 프로필 미리보기</h2>
-      <p className="mt-2 text-[13px] text-ink-soft">학생이 보게 될 예약 페이지예요. 마음에 들면 회원가입을 완료해주세요.</p>
-
-      {/* Mock booking header */}
-      <div className="mt-5 rounded-2xl overflow-hidden border border-border bg-white shadow-pop">
-        <div className="relative h-20 sm:h-24 px-5" style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})` }}>
-          <div className="absolute inset-0 bg-grid opacity-[0.12]" />
-          <span className="absolute top-3 right-3 chip bg-white/20 text-white backdrop-blur">미니홈피 · {p.label}</span>
-        </div>
-        <div className="px-5 pb-5">
-          <div className="-mt-10 relative z-10">
-            {avatar ? (
-              <img src={avatar} alt="" className="h-20 w-20 rounded-2xl object-cover ring-4 ring-white bg-muted" />
-            ) : (
-              <div className="h-20 w-20 rounded-2xl bg-white ring-4 ring-white grid place-items-center text-[28px] font-black text-ink shadow">
-                {initial}
-              </div>
-            )}
-          </div>
-          <div className="mt-3">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider" style={{ color: p.from }}>PickGymPT 트레이너</p>
-            <h3 className="mt-1 text-[20px] font-black tracking-tight text-ink leading-tight">{name || "이름"} 트레이너</h3>
-            <p className="mt-0.5 text-[12px] text-ink-soft">{gym || "소속 헬스장"}</p>
-          </div>
-
-          {specs.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {specs.map((s, i) => (
-                <span key={i} className="inline-flex items-center px-2.5 h-7 rounded-full bg-primary/10 text-primary text-[11.5px] font-bold">{s}</span>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-4 rounded-xl bg-surface-muted border border-border p-3.5">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">트레이너 소개</p>
-            <p className="mt-1.5 text-[13px] text-ink leading-relaxed whitespace-pre-wrap">
-              {intro || "(아직 소개글이 비어있어요)"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 flex gap-2">
-        <button
-          onClick={onBack}
-          className="h-12 flex-1 rounded-2xl bg-white border border-border-strong text-ink text-[13px] font-extrabold hover:bg-muted"
-        >
-          수정하기
-        </button>
-        <button
-          onClick={onConfirm}
-          className="h-12 flex-[1.6] rounded-2xl bg-primary text-white text-[14px] font-extrabold inline-flex items-center justify-center gap-2 shadow-pop hover:brightness-110"
-        >
-          <Check className="h-4 w-4" /> 마음에 들어요, 회원가입 완료
-        </button>
-      </div>
-    </div>
-  );
 }
 
 function CheckRow({ label, checked, onChange, link, bold }: { label: string; checked: boolean; onChange: () => void; link?: string; bold?: boolean }) {
@@ -1351,15 +1190,29 @@ function GymSearchField({
 }) {
   const [focused, setFocused] = useState(false);
   const query = value.trim();
+  const showingPopular = !query;
   const results = useMemo(() => {
-    if (!query) return gyms.slice(0, 8);
+    if (!query) {
+      return gyms
+        .filter((gym) => gym.popularity_rank != null)
+        .sort((a, b) => (a.popularity_rank ?? 999) - (b.popularity_rank ?? 999))
+        .slice(0, 5);
+    }
+    const compactQuery = query.toLowerCase().replace(/[\s\-_.()&/]+/g, "");
     return gyms
-      .filter((gym) =>
-        matchesKoreanSearch(
-          `${gym.name} ${gym.address} ${gym.sido ?? ""} ${gym.district ?? ""} ${gym.dong ?? ""}`,
-          query,
-        ),
-      )
+      .map((gym) => {
+        const haystack = `${gym.name} ${gym.address} ${gym.sido ?? ""} ${gym.district ?? ""} ${gym.dong ?? ""}`;
+        const compactName = gym.name.toLowerCase().replace(/[\s\-_.()&/]+/g, "");
+        let score = 100;
+        if (compactName === compactQuery) score = 0;
+        else if (compactName.startsWith(compactQuery)) score = 1;
+        else if (gym.name.toLowerCase().includes(query.toLowerCase())) score = 2;
+        else if (matchesKoreanSearch(haystack, query)) score = 3;
+        return { gym, score };
+      })
+      .filter((item) => item.score < 100)
+      .sort((a, b) => a.score - b.score || a.gym.name.localeCompare(b.gym.name, "ko"))
+      .map((item) => item.gym)
       .slice(0, 8);
   }, [gyms, query]);
 
@@ -1372,9 +1225,9 @@ function GymSearchField({
     <label className="relative block">
       <span className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft inline-flex items-center gap-2 flex-wrap">
-          소속 헬스장
+          {"\uC18C\uC18D \uD5EC\uC2A4\uC7A5"}
           <span className="text-[10.5px] font-medium normal-case tracking-normal text-muted-foreground">
-            · 초성/이름/주소 검색
+            {"\u00B7 \uCD08\uC131/\uC774\uB984/\uC8FC\uC18C \uAC80\uC0C9"}
           </span>
         </span>
       </span>
@@ -1393,12 +1246,17 @@ function GymSearchField({
               pick(results[0]);
             }
           }}
-          placeholder="ㄱ, 가, 강남, 센터명으로 검색"
+          placeholder={"\u3131, \uAC00, \uC5D0\uC774\uBE14\uC9D0, \uAC15\uB0A8\uC73C\uB85C \uAC80\uC0C9"}
           className="h-full min-w-0 flex-1 bg-transparent text-[14px] font-semibold text-ink outline-none placeholder:text-ink-soft/60"
         />
       </div>
       {focused && (query || results.length > 0) && (
         <div className="absolute left-0 right-0 top-[74px] z-30 overflow-hidden rounded-2xl border border-border bg-white shadow-pop">
+          {showingPopular && (
+            <div className="border-b border-border bg-primary/5 px-3.5 py-2 text-[11px] font-black text-primary">
+              {"\uD604\uC7AC \uC778\uAE30 \uD5EC\uC2A4\uC7A5"}
+            </div>
+          )}
           {results.length > 0 ? (
             results.map((gym) => (
               <button
@@ -1408,7 +1266,13 @@ function GymSearchField({
                 onClick={() => pick(gym)}
                 className="flex w-full items-start gap-2 border-b border-border/70 px-3.5 py-3 text-left last:border-0 hover:bg-surface-muted"
               >
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                {gym.popularity_rank ? (
+                  <span className="mt-0.5 grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-primary/10 px-1.5 text-[10px] font-black tabular-nums text-primary">
+                    {gym.popularity_rank}
+                  </span>
+                ) : (
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                )}
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-black text-ink">{gym.name}</span>
                   <span className="mt-0.5 block truncate text-[11.5px] font-semibold text-ink-soft">
@@ -1419,7 +1283,7 @@ function GymSearchField({
             ))
           ) : (
             <div className="px-3.5 py-4 text-[12px] font-semibold text-ink-soft">
-              검색 결과가 없어요. 직접 입력해도 됩니다.
+              {"\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC5B4\uC694. \uC9C1\uC811 \uC785\uB825\uD574\uB3C4 \uB429\uB2C8\uB2E4."}
             </div>
           )}
         </div>
@@ -1431,20 +1295,22 @@ function GymSearchField({
 function Field({ label, value, onChange, placeholder, type = "text", hint, action }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; hint?: string; action?: ReactNode }) {
   return (
     <label className="block">
-      <span className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft inline-flex items-center gap-2 flex-wrap">
-          {label}
-          {hint && <span className="text-[10.5px] font-medium normal-case tracking-normal text-muted-foreground">· {hint}</span>}
-        </span>
-        {action}
+      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft inline-flex items-center gap-2 flex-wrap">
+        {label}
+        {hint && <span className="text-[10.5px] font-medium normal-case tracking-normal text-muted-foreground">· {hint}</span>}
       </span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="mt-1.5 h-11 w-full px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[14px] font-semibold text-ink"
-      />
+      <span className="relative mt-1.5 block">
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`h-11 w-full px-3.5 rounded-xl bg-surface-muted border border-border focus:bg-white focus:border-ink outline-none text-[14px] font-semibold text-ink ${action ? "pr-[88px]" : ""}`}
+        />
+        {action && (
+          <span className="absolute right-2 top-1/2 -translate-y-1/2">{action}</span>
+        )}
+      </span>
     </label>
   );
 }

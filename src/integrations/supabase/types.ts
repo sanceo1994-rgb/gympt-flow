@@ -161,6 +161,57 @@ export type Database = {
           },
         ]
       }
+      gyms: {
+        Row: {
+          address: string
+          created_at: string
+          district: string | null
+          dong: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          phone: string | null
+          popularity_rank: number | null
+          search_text: string
+          sido: string | null
+          updated_at: string
+          walking_distance: number | null
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          district?: string | null
+          dong?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          phone?: string | null
+          popularity_rank?: number | null
+          search_text?: string
+          sido?: string | null
+          updated_at?: string
+          walking_distance?: number | null
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          district?: string | null
+          dong?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          phone?: string | null
+          popularity_rank?: number | null
+          search_text?: string
+          sido?: string | null
+          updated_at?: string
+          walking_distance?: number | null
+        }
+        Relationships: []
+      }
       phone_otps: {
         Row: {
           attempts: number
@@ -696,6 +747,45 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          active_student_limit: number
+          created_at: string
+          display_order: number
+          extra_alimtalk_100_price: number | null
+          extra_alimtalk_purchase_enabled: boolean
+          id: string
+          monthly_alimtalk_limit: number
+          monthly_price: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active_student_limit: number
+          created_at?: string
+          display_order?: number
+          extra_alimtalk_100_price?: number | null
+          extra_alimtalk_purchase_enabled?: boolean
+          id: string
+          monthly_alimtalk_limit: number
+          monthly_price?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active_student_limit?: number
+          created_at?: string
+          display_order?: number
+          extra_alimtalk_100_price?: number | null
+          extra_alimtalk_purchase_enabled?: boolean
+          id?: string
+          monthly_alimtalk_limit?: number
+          monthly_price?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       time_slots: {
         Row: {
           capacity: number
@@ -750,9 +840,43 @@ export type Database = {
           },
         ]
       }
+      trainer_default_closed_slots: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          hour: number
+          id: string
+          trainer_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          hour: number
+          id?: string
+          trainer_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          hour?: number
+          id?: string
+          trainer_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_default_closed_slots_trainer_profile_id_fkey"
+            columns: ["trainer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainer_profiles: {
         Row: {
           avatar_url: string | null
+          booking_end_hour: number
+          booking_start_hour: number
           branch_name: string | null
           created_at: string
           display_name: string
@@ -766,6 +890,8 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          booking_end_hour?: number
+          booking_start_hour?: number
           branch_name?: string | null
           created_at?: string
           display_name: string
@@ -779,6 +905,8 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          booking_end_hour?: number
+          booking_start_hour?: number
           branch_name?: string | null
           created_at?: string
           display_name?: string
@@ -802,6 +930,8 @@ export type Database = {
           instagram_url: string | null
           intro: string | null
           name: string
+          onboarding_seen: string[]
+          subscription_plan: string
           theme_from: string
           theme_to: string
           updated_at: string
@@ -816,6 +946,8 @@ export type Database = {
           instagram_url?: string | null
           intro?: string | null
           name: string
+          onboarding_seen?: string[]
+          subscription_plan?: string
           theme_from?: string
           theme_to?: string
           updated_at?: string
@@ -830,12 +962,22 @@ export type Database = {
           instagram_url?: string | null
           intro?: string | null
           name?: string
+          onboarding_seen?: string[]
+          subscription_plan?: string
           theme_from?: string
           theme_to?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trainers_subscription_plan_fkey"
+            columns: ["subscription_plan"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -955,6 +1097,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      current_trainer_active_student_limit: {
+        Args: { _trainer_id: string }
+        Returns: number
+      }
       current_user_owns_schedule: {
         Args: { _schedule_id: string }
         Returns: boolean
@@ -978,6 +1124,10 @@ export type Database = {
       get_week_points: {
         Args: { _user_id: string; _week_start: string }
         Returns: number
+      }
+      mark_onboarding_seen: {
+        Args: { p_key: string; p_user_id: string }
+        Returns: undefined
       }
       mark_schedule_requested: {
         Args: { p_roster_ids?: string[]; p_schedule_id: string }
